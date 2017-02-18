@@ -11,52 +11,11 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
-using System;
-using Microsoft.WindowsAzure;
-using Microsoft.WindowsAzure.Diagnostics;
 using Microsoft.WindowsAzure.ServiceRuntime;
 
 namespace Conference.Web.Admin
 {
     public class WebRole : RoleEntryPoint
     {
-        public override bool OnStart()
-        {
-            var config = DiagnosticMonitor.GetDefaultInitialConfiguration();
-
-            var cloudStorageAccount = CloudStorageAccount.Parse(RoleEnvironment.GetConfigurationSettingValue("Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString"));
-
-            TimeSpan transferPeriod;
-            if (!TimeSpan.TryParse(RoleEnvironment.GetConfigurationSettingValue("Diagnostics.ScheduledTransferPeriod"), out transferPeriod)) {
-                transferPeriod = TimeSpan.FromMinutes(1);
-            }
-
-            TimeSpan sampleRate;
-            if (!TimeSpan.TryParse(RoleEnvironment.GetConfigurationSettingValue("Diagnostics.PerformanceCounterSampleRate"), out sampleRate)) {
-                sampleRate = TimeSpan.FromSeconds(30);
-            }
-
-            LogLevel logLevel;
-            if (!Enum.TryParse(RoleEnvironment.GetConfigurationSettingValue("Diagnostics.LogLevelFilter"), out logLevel)) {
-                logLevel = LogLevel.Verbose;
-            }
-
-            // Setup performance counters
-            config.PerformanceCounters.DataSources.Add(
-                new PerformanceCounterConfiguration {
-                    CounterSpecifier = @"\Processor(_Total)\% Processor Time",
-                    SampleRate = sampleRate
-                });
-            config.PerformanceCounters.ScheduledTransferPeriod = transferPeriod;
-
-            // Setup logs
-            config.Logs.ScheduledTransferPeriod = transferPeriod;
-            config.Logs.ScheduledTransferLogLevelFilter = logLevel;
-
-            //            DiagnosticMonitor.Start(cloudStorageAccount, config);
-            DiagnosticMonitor.Start("Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString", config);
-
-            return base.OnStart();
-        }
     }
 }

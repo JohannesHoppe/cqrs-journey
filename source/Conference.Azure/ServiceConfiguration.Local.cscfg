@@ -7,8 +7,8 @@
       <Setting name="Diagnostics.ScheduledTransferPeriod" value="00:02:00" />
       <Setting name="Diagnostics.LogLevelFilter" value="Verbose" />
       <Setting name="Diagnostics.PerformanceCounterSampleRate" value="00:00:30" />
-      <Setting name="DbContext.ConferenceManagement" value="Data Source=.\sqlexpress;Initial Catalog=conference;Integrated Security=True" />
-      <Setting name="DbContext.SqlBus" value="Data Source=.\sqlexpress;Initial Catalog=conference;Integrated Security=True" />
+      <Setting name="DbContext.ConferenceManagement" value="Data Source=(localdb)\mssqllocaldb;Initial Catalog=conference;Integrated Security=True" />
+      <Setting name="DbContext.SqlBus" value="Data Source=(localdb)\mssqllocaldb;Initial Catalog=conference;Integrated Security=True" />
       <Setting name="MaintenanceMode" value="false" />
     </ConfigurationSettings>
   </Role>
@@ -19,10 +19,10 @@
       <Setting name="Diagnostics.ScheduledTransferPeriod" value="00:02:00" />
       <Setting name="Diagnostics.LogLevelFilter" value="Verbose" />
       <Setting name="Diagnostics.PerformanceCounterSampleRate" value="00:00:30" />
-      <Setting name="DbContext.Payments" value="Data Source=.\sqlexpress;Initial Catalog=conference;Integrated Security=True" />
-      <Setting name="DbContext.ConferenceRegistration" value="Data Source=.\sqlexpress;Initial Catalog=conference;Integrated Security=True" />
-      <Setting name="DbContext.SqlBus" value="Data Source=.\sqlexpress;Initial Catalog=conference;Integrated Security=True" />
-      <Setting name="DbContext.BlobStorage" value="Data Source=.\sqlexpress;Initial Catalog=conference;Integrated Security=True" />
+      <Setting name="DbContext.Payments" value="Data Source=(localdb)\mssqllocaldb;Initial Catalog=conference;Integrated Security=True" />
+      <Setting name="DbContext.ConferenceRegistration" value="Data Source=(localdb)\mssqllocaldb;Initial Catalog=conference;Integrated Security=True" />
+      <Setting name="DbContext.SqlBus" value="Data Source=(localdb)\mssqllocaldb;Initial Catalog=conference;Integrated Security=True" />
+      <Setting name="DbContext.BlobStorage" value="Data Source=(localdb)\mssqllocaldb;Initial Catalog=conference;Integrated Security=True" />
       <Setting name="MaintenanceMode" value="false" />
       <Setting name="InstrumentationEnabled" value="false" />
     </ConfigurationSettings>
@@ -34,15 +34,15 @@
       <Setting name="Diagnostics.ScheduledTransferPeriod" value="00:02:00" />
       <Setting name="Diagnostics.LogLevelFilter" value="Verbose" />
       <Setting name="Diagnostics.PerformanceCounterSampleRate" value="00:00:30" />
-      <Setting name="DbContext.Payments" value="Data Source=.\sqlexpress;Initial Catalog=conference;Integrated Security=True" />
-      <Setting name="DbContext.EventStore" value="Data Source=.\sqlexpress;Initial Catalog=conference;Integrated Security=True" />
-      <Setting name="DbContext.BlobStorage" value="Data Source=.\sqlexpress;Initial Catalog=conference;Integrated Security=True" />
-      <Setting name="DbContext.ConferenceRegistrationProcesses" value="Data Source=.\sqlexpress;Initial Catalog=conference;Integrated Security=True" />
-      <Setting name="DbContext.ConferenceRegistration" value="Data Source=.\sqlexpress;Initial Catalog=conference;Integrated Security=True" />
-      <Setting name="DbContext.SqlBus" value="Data Source=.\sqlexpress;Initial Catalog=conference;Integrated Security=True" />
-      <Setting name="DbContext.ConferenceManagement" value="Data Source=.\sqlexpress;Initial Catalog=conference;Integrated Security=True" />
+      <Setting name="DbContext.Payments" value="Data Source=(localdb)\mssqllocaldb;Initial Catalog=conference;Integrated Security=True" />
+      <Setting name="DbContext.EventStore" value="Data Source=(localdb)\mssqllocaldb;Initial Catalog=conference;Integrated Security=True" />
+      <Setting name="DbContext.BlobStorage" value="Data Source=(localdb)\mssqllocaldb;Initial Catalog=conference;Integrated Security=True" />
+      <Setting name="DbContext.ConferenceRegistrationProcesses" value="Data Source=(localdb)\mssqllocaldb;Initial Catalog=conference;Integrated Security=True" />
+      <Setting name="DbContext.ConferenceRegistration" value="Data Source=(localdb)\mssqllocaldb;Initial Catalog=conference;Integrated Security=True" />
+      <Setting name="DbContext.SqlBus" value="Data Source=(localdb)\mssqllocaldb;Initial Catalog=conference;Integrated Security=True" />
+      <Setting name="DbContext.ConferenceManagement" value="Data Source=(localdb)\mssqllocaldb;Initial Catalog=conference;Integrated Security=True" />
       <Setting name="MaintenanceMode" value="false" />
-      <Setting name="DbContext.MessageLog" value="Data Source=.\sqlexpress;Initial Catalog=conference;Integrated Security=True" />
+      <Setting name="DbContext.MessageLog" value="Data Source=(localdb)\mssqllocaldb;Initial Catalog=conference;Integrated Security=True" />
       <Setting name="InstrumentationEnabled" value="false" />
     </ConfigurationSettings>
   </Role>
