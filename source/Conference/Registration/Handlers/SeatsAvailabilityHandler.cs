@@ -11,14 +11,14 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using Infrastructure.EventSourcing;
+using Infrastructure.Messaging.Handling;
+using Registration.Commands;
+
 namespace Registration.Handlers
 {
-    using Infrastructure.EventSourcing;
-    using Infrastructure.Messaging.Handling;
-    using Registration.Commands;
-
     /// <summary>
-    /// Handles commands issued to the seats availability aggregate.
+    ///     Handles commands issued to the seats availability aggregate.
     /// </summary>
     public class SeatsAvailabilityHandler :
         ICommandHandler<MakeSeatReservation>,
@@ -34,47 +34,49 @@ namespace Registration.Handlers
             this.repository = repository;
         }
 
-        public void Handle(MakeSeatReservation command)
-        {
-            var availability = this.repository.Get(command.ConferenceId);
-            availability.MakeReservation(command.ReservationId, command.Seats);
-            this.repository.Save(availability, command.Id.ToString());
-        }
-
-        public void Handle(CancelSeatReservation command)
-        {
-            var availability = this.repository.Get(command.ConferenceId);
-            availability.CancelReservation(command.ReservationId);
-            this.repository.Save(availability, command.Id.ToString());
-        }
-
-        public void Handle(CommitSeatReservation command)
-        {
-            var availability = this.repository.Get(command.ConferenceId);
-            availability.CommitReservation(command.ReservationId);
-            this.repository.Save(availability, command.Id.ToString());
-        }
-
         // Commands created from events from the conference BC
 
         public void Handle(AddSeats command)
         {
-            var availability = this.repository.Find(command.ConferenceId);
-            if (availability == null)
+            var availability = repository.Find(command.ConferenceId);
+            if (availability == null) {
                 availability = new SeatsAvailability(command.ConferenceId);
+            }
 
             availability.AddSeats(command.SeatType, command.Quantity);
-            this.repository.Save(availability, command.Id.ToString());
+            repository.Save(availability, command.Id.ToString());
+        }
+
+        public void Handle(CancelSeatReservation command)
+        {
+            var availability = repository.Get(command.ConferenceId);
+            availability.CancelReservation(command.ReservationId);
+            repository.Save(availability, command.Id.ToString());
+        }
+
+        public void Handle(CommitSeatReservation command)
+        {
+            var availability = repository.Get(command.ConferenceId);
+            availability.CommitReservation(command.ReservationId);
+            repository.Save(availability, command.Id.ToString());
+        }
+
+        public void Handle(MakeSeatReservation command)
+        {
+            var availability = repository.Get(command.ConferenceId);
+            availability.MakeReservation(command.ReservationId, command.Seats);
+            repository.Save(availability, command.Id.ToString());
         }
 
         public void Handle(RemoveSeats command)
         {
-            var availability = this.repository.Find(command.ConferenceId);
-            if (availability == null)
+            var availability = repository.Find(command.ConferenceId);
+            if (availability == null) {
                 availability = new SeatsAvailability(command.ConferenceId);
+            }
 
             availability.RemoveSeats(command.SeatType, command.Quantity);
-            this.repository.Save(availability, command.Id.ToString());
+            repository.Save(availability, command.Id.ToString());
         }
     }
 }

@@ -11,13 +11,13 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Data.Entity;
+using Conference.Common.Entity;
+
 namespace Conference.Web.Admin
 {
-    using System.Data.Entity;
-    using Conference.Common.Entity;
-
     /// <summary>
-    /// Initializes the EF infrastructure.
+    ///     Initializes the EF infrastructure.
     /// </summary>
     internal static class DatabaseSetup
     {

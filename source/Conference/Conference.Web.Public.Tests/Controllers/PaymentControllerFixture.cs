@@ -11,32 +11,35 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Specialized;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+using Conference.Web.Public.Controllers;
+using Infrastructure.Messaging;
+using Moq;
+using Payments;
+using Payments.Contracts.Commands;
+using Payments.ReadModel;
+using Xunit;
+
 namespace Conference.Web.Public.Tests.Controllers.PaymentControllerFixture
 {
-    using System;
-    using System.Collections.Specialized;
-    using System.Web;
-    using System.Web.Mvc;
-    using System.Web.Routing;
-    using Conference.Web.Public.Controllers;
-    using Infrastructure.Messaging;
-    using Moq;
-    using Payments.Contracts.Commands;
-    using Payments.ReadModel;
-    using Xunit;
-
     public class given_controller
     {
-        private PaymentController sut;
-        private Mock<ICommandBus> commandBusMock;
-        private Mock<IPaymentDao> paymentDaoMock;
+        private readonly Mock<ICommandBus> commandBusMock;
+
+        private readonly Mock<IPaymentDao> paymentDaoMock;
+
+        private readonly PaymentController sut;
 
         public given_controller()
         {
             var routes = new RouteCollection();
-            routes.MapRoute("PaymentAccept", "accept", new { controller = "Payment", action = "ThirdPartyProcessorPaymentAccepted" });
-            routes.MapRoute("PaymentReject", "reject", new { controller = "Payment", action = "ThirdPartyProcessorPaymentRejected" });
-            routes.MapRoute("Pay", "payment", new { controller = "ThirdPartyProcessorPayment", action = "Pay" });
+            routes.MapRoute("PaymentAccept", "accept", new {controller = "Payment", action = "ThirdPartyProcessorPaymentAccepted"});
+            routes.MapRoute("PaymentReject", "reject", new {controller = "Payment", action = "ThirdPartyProcessorPaymentRejected"});
+            routes.MapRoute("Pay", "payment", new {controller = "ThirdPartyProcessorPayment", action = "Pay"});
 
             var requestMock = new Mock<HttpRequestBase>(MockBehavior.Strict);
             requestMock.SetupGet(x => x.ApplicationPath).Returns("/");
@@ -48,11 +51,11 @@ namespace Conference.Web.Public.Tests.Controllers.PaymentControllerFixture
 
             var context = Mock.Of<HttpContextBase>(c => c.Request == requestMock.Object && c.Response == responseMock.Object);
 
-            this.commandBusMock = new Mock<ICommandBus>();
-            this.paymentDaoMock = new Mock<IPaymentDao>();
-            this.sut = new PaymentController(this.commandBusMock.Object, this.paymentDaoMock.Object);
-            this.sut.ControllerContext = new ControllerContext(context, new RouteData(), this.sut);
-            this.sut.Url = new UrlHelper(new RequestContext(context, new RouteData()), routes);
+            commandBusMock = new Mock<ICommandBus>();
+            paymentDaoMock = new Mock<IPaymentDao>();
+            sut = new PaymentController(commandBusMock.Object, paymentDaoMock.Object);
+            sut.ControllerContext = new ControllerContext(context, new RouteData(), sut);
+            sut.Url = new UrlHelper(new RequestContext(context, new RouteData()), routes);
         }
 
         [Fact]
@@ -60,12 +63,12 @@ namespace Conference.Web.Public.Tests.Controllers.PaymentControllerFixture
         {
             // Arrange
             var paymentId = Guid.NewGuid();
-            this.paymentDaoMock
+            paymentDaoMock
                 .Setup(dao => dao.GetThirdPartyProcessorPaymentDetails(It.IsAny<Guid>()))
-                .Returns(new ThirdPartyProcessorPaymentDetails(Guid.NewGuid(), Payments.ThirdPartyProcessorPayment.States.Initiated, Guid.NewGuid(), "payment", 100));
+                .Returns(new ThirdPartyProcessorPaymentDetails(Guid.NewGuid(), ThirdPartyProcessorPayment.States.Initiated, Guid.NewGuid(), "payment", 100));
 
             // Act
-            var result = (RedirectResult)this.sut.ThirdPartyProcessorPayment("conference", paymentId, "accept", "reject");
+            var result = (RedirectResult) sut.ThirdPartyProcessorPayment("conference", paymentId, "accept", "reject");
 
             // Assert
             Assert.False(result.Permanent);
@@ -79,7 +82,7 @@ namespace Conference.Web.Public.Tests.Controllers.PaymentControllerFixture
             var paymentId = Guid.NewGuid();
 
             // Act
-            var result = (RedirectResult)this.sut.ThirdPartyProcessorPaymentAccepted("conference", paymentId, "accept");
+            var result = (RedirectResult) sut.ThirdPartyProcessorPaymentAccepted("conference", paymentId, "accept");
 
             // Assert
             Assert.Equal("accept", result.Url);
@@ -93,11 +96,11 @@ namespace Conference.Web.Public.Tests.Controllers.PaymentControllerFixture
             var paymentId = Guid.NewGuid();
 
             // Act
-            var result = (RedirectResult)this.sut.ThirdPartyProcessorPaymentAccepted("conference", paymentId, "accept");
+            var result = (RedirectResult) sut.ThirdPartyProcessorPaymentAccepted("conference", paymentId, "accept");
 
             // Assert
-            this.commandBusMock.Verify(
-                cb => cb.Send(It.Is<Envelope<ICommand>>(e => ((CompleteThirdPartyProcessorPayment)e.Body).PaymentId == paymentId)),
+            commandBusMock.Verify(
+                cb => cb.Send(It.Is<Envelope<ICommand>>(e => ((CompleteThirdPartyProcessorPayment) e.Body).PaymentId == paymentId)),
                 Times.Once());
         }
 
@@ -108,7 +111,7 @@ namespace Conference.Web.Public.Tests.Controllers.PaymentControllerFixture
             var paymentId = Guid.NewGuid();
 
             // Act
-            var result = (RedirectResult)this.sut.ThirdPartyProcessorPaymentRejected("conference", paymentId, "reject");
+            var result = (RedirectResult) sut.ThirdPartyProcessorPaymentRejected("conference", paymentId, "reject");
 
             // Assert
             Assert.Equal("reject", result.Url);
@@ -122,11 +125,11 @@ namespace Conference.Web.Public.Tests.Controllers.PaymentControllerFixture
             var paymentId = Guid.NewGuid();
 
             // Act
-            var result = (RedirectResult)this.sut.ThirdPartyProcessorPaymentRejected("conference", paymentId, "reject");
+            var result = (RedirectResult) sut.ThirdPartyProcessorPaymentRejected("conference", paymentId, "reject");
 
             // Assert
-            this.commandBusMock.Verify(
-                cb => cb.Send(It.Is<Envelope<ICommand>>(e => ((CancelThirdPartyProcessorPayment)e.Body).PaymentId == paymentId)),
+            commandBusMock.Verify(
+                cb => cb.Send(It.Is<Envelope<ICommand>>(e => ((CancelThirdPartyProcessorPayment) e.Body).PaymentId == paymentId)),
                 Times.Once());
         }
     }

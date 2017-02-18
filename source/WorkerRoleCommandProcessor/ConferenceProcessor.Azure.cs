@@ -11,47 +11,50 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Linq;
+using System.Runtime.Caching;
+using System.Threading;
+using Conference;
+using Infrastructure;
+using Infrastructure.Azure;
+using Infrastructure.Azure.BlobStorage;
+using Infrastructure.Azure.EventSourcing;
+using Infrastructure.Azure.Instrumentation;
+using Infrastructure.Azure.MessageLog;
+using Infrastructure.Azure.Messaging;
+using Infrastructure.Azure.Messaging.Handling;
+using Infrastructure.BlobStorage;
+using Infrastructure.EventSourcing;
+using Infrastructure.Messaging;
+using Infrastructure.Messaging.Handling;
+using Infrastructure.Serialization;
+using Microsoft.Practices.Unity;
+using Microsoft.WindowsAzure;
+using Registration;
+using Registration.Handlers;
+using Order = Registration.Order;
+
 namespace WorkerRoleCommandProcessor
 {
-    using System.Linq;
-    using System.Runtime.Caching;
-    using System.Threading;
-    using Infrastructure;
-    using Infrastructure.Azure;
-    using Infrastructure.Azure.BlobStorage;
-    using Infrastructure.Azure.EventSourcing;
-    using Infrastructure.Azure.Instrumentation;
-    using Infrastructure.Azure.MessageLog;
-    using Infrastructure.Azure.Messaging;
-    using Infrastructure.Azure.Messaging.Handling;
-    using Infrastructure.BlobStorage;
-    using Infrastructure.EventSourcing;
-    using Infrastructure.Messaging;
-    using Infrastructure.Messaging.Handling;
-    using Infrastructure.Serialization;
-    using Microsoft.Practices.Unity;
-    using Microsoft.WindowsAzure;
-    using Registration;
-    using Registration.Handlers;
-
     /// <summary>
-    /// Windows Azure side of the processor, which is included for compilation conditionally 
-    /// at the csproj level.
+    ///     Windows Azure side of the processor, which is included for compilation conditionally
+    ///     at the csproj level.
     /// </summary>
     /// <devdoc>
-    /// NOTE: this file is only compiled on non-DebugLocal configurations. In DebugLocal 
-    /// you will not see full syntax coloring, IntelliSense, etc.. But it is still 
-    /// much more readable and usable than a grayed-out piece of code inside an #if
+    ///     NOTE: this file is only compiled on non-DebugLocal configurations. In DebugLocal
+    ///     you will not see full syntax coloring, IntelliSense, etc.. But it is still
+    ///     much more readable and usable than a grayed-out piece of code inside an #if
     /// </devdoc>
     partial class ConferenceProcessor
     {
         private InfrastructureSettings azureSettings;
+
         private ServiceBusConfig busConfig;
 
         partial void OnCreating()
         {
-            this.azureSettings = InfrastructureSettings.Read("Settings.xml");
-            this.busConfig = new ServiceBusConfig(this.azureSettings.ServiceBus);
+            azureSettings = InfrastructureSettings.Read("Settings.xml");
+            busConfig = new ServiceBusConfig(azureSettings.ServiceBus);
 
             busConfig.Initialize();
         }
@@ -73,9 +76,13 @@ namespace WorkerRoleCommandProcessor
             var eventBus = new EventBus(eventsTopicSender, metadata, serializer);
 
             var sessionlessCommandProcessor =
-                new CommandProcessor(new SubscriptionReceiver(azureSettings.ServiceBus, Topics.Commands.Path, Topics.Commands.Subscriptions.Sessionless, false, new SubscriptionReceiverInstrumentation(Topics.Commands.Subscriptions.Sessionless, this.instrumentationEnabled)), serializer);
+                new CommandProcessor(
+                    new SubscriptionReceiver(azureSettings.ServiceBus, Topics.Commands.Path, Topics.Commands.Subscriptions.Sessionless, false,
+                        new SubscriptionReceiverInstrumentation(Topics.Commands.Subscriptions.Sessionless, instrumentationEnabled)), serializer);
             var seatsAvailabilityCommandProcessor =
-                new CommandProcessor(new SessionSubscriptionReceiver(azureSettings.ServiceBus, Topics.Commands.Path, Topics.Commands.Subscriptions.Seatsavailability, false, new SessionSubscriptionReceiverInstrumentation(Topics.Commands.Subscriptions.Seatsavailability, this.instrumentationEnabled)), serializer);
+                new CommandProcessor(
+                    new SessionSubscriptionReceiver(azureSettings.ServiceBus, Topics.Commands.Path, Topics.Commands.Subscriptions.Seatsavailability, false,
+                        new SessionSubscriptionReceiverInstrumentation(Topics.Commands.Subscriptions.Seatsavailability, instrumentationEnabled)), serializer);
 
             var synchronousCommandBus = new SynchronousCommandBusDecorator(commandBus);
             container.RegisterInstance<ICommandBus>(synchronousCommandBus);
@@ -115,20 +122,20 @@ namespace WorkerRoleCommandProcessor
         {
             container.RegisterType<RegistrationProcessManagerRouter>(new ContainerControlledLifetimeManager());
 
-            container.RegisterEventProcessor<RegistrationProcessManagerRouter>(this.busConfig, Topics.Events.Subscriptions.RegistrationPMNextSteps, this.instrumentationEnabled);
-            container.RegisterEventProcessor<PricedOrderViewModelGenerator>(this.busConfig, Topics.Events.Subscriptions.PricedOrderViewModelGeneratorV3, this.instrumentationEnabled);
-            container.RegisterEventProcessor<ConferenceViewModelGenerator>(this.busConfig, Topics.Events.Subscriptions.ConferenceViewModelGenerator, this.instrumentationEnabled);
+            container.RegisterEventProcessor<RegistrationProcessManagerRouter>(busConfig, Topics.Events.Subscriptions.RegistrationPMNextSteps, instrumentationEnabled);
+            container.RegisterEventProcessor<PricedOrderViewModelGenerator>(busConfig, Topics.Events.Subscriptions.PricedOrderViewModelGeneratorV3, instrumentationEnabled);
+            container.RegisterEventProcessor<ConferenceViewModelGenerator>(busConfig, Topics.Events.Subscriptions.ConferenceViewModelGenerator, instrumentationEnabled);
 
-            container.RegisterEventProcessor<RegistrationProcessManagerRouter>(this.busConfig, Topics.EventsOrders.Subscriptions.RegistrationPMOrderPlacedOrders, this.instrumentationEnabled);
-            container.RegisterEventProcessor<RegistrationProcessManagerRouter>(this.busConfig, Topics.EventsOrders.Subscriptions.RegistrationPMNextStepsOrders, this.instrumentationEnabled);
-            container.RegisterEventProcessor<DraftOrderViewModelGenerator>(this.busConfig, Topics.EventsOrders.Subscriptions.OrderViewModelGeneratorOrders, this.instrumentationEnabled);
-            container.RegisterEventProcessor<PricedOrderViewModelGenerator>(this.busConfig, Topics.EventsOrders.Subscriptions.PricedOrderViewModelOrders, this.instrumentationEnabled);
-            container.RegisterEventProcessor<SeatAssignmentsViewModelGenerator>(this.busConfig, Topics.EventsOrders.Subscriptions.SeatAssignmentsViewModelOrders, this.instrumentationEnabled);
-            container.RegisterEventProcessor<SeatAssignmentsHandler>(this.busConfig, Topics.EventsOrders.Subscriptions.SeatAssignmentsHandlerOrders, this.instrumentationEnabled);
-            container.RegisterEventProcessor<Conference.OrderEventHandler>(this.busConfig, Topics.EventsOrders.Subscriptions.OrderEventHandlerOrders, this.instrumentationEnabled);
+            container.RegisterEventProcessor<RegistrationProcessManagerRouter>(busConfig, Topics.EventsOrders.Subscriptions.RegistrationPMOrderPlacedOrders, instrumentationEnabled);
+            container.RegisterEventProcessor<RegistrationProcessManagerRouter>(busConfig, Topics.EventsOrders.Subscriptions.RegistrationPMNextStepsOrders, instrumentationEnabled);
+            container.RegisterEventProcessor<DraftOrderViewModelGenerator>(busConfig, Topics.EventsOrders.Subscriptions.OrderViewModelGeneratorOrders, instrumentationEnabled);
+            container.RegisterEventProcessor<PricedOrderViewModelGenerator>(busConfig, Topics.EventsOrders.Subscriptions.PricedOrderViewModelOrders, instrumentationEnabled);
+            container.RegisterEventProcessor<SeatAssignmentsViewModelGenerator>(busConfig, Topics.EventsOrders.Subscriptions.SeatAssignmentsViewModelOrders, instrumentationEnabled);
+            container.RegisterEventProcessor<SeatAssignmentsHandler>(busConfig, Topics.EventsOrders.Subscriptions.SeatAssignmentsHandlerOrders, instrumentationEnabled);
+            container.RegisterEventProcessor<OrderEventHandler>(busConfig, Topics.EventsOrders.Subscriptions.OrderEventHandlerOrders, instrumentationEnabled);
 
-            container.RegisterEventProcessor<RegistrationProcessManagerRouter>(this.busConfig, Topics.EventsAvailability.Subscriptions.RegistrationPMNextStepsAvail, this.instrumentationEnabled);
-            container.RegisterEventProcessor<ConferenceViewModelGenerator>(this.busConfig, Topics.EventsAvailability.Subscriptions.ConferenceViewModelAvail, this.instrumentationEnabled);
+            container.RegisterEventProcessor<RegistrationProcessManagerRouter>(busConfig, Topics.EventsAvailability.Subscriptions.RegistrationPMNextStepsAvail, instrumentationEnabled);
+            container.RegisterEventProcessor<ConferenceViewModelGenerator>(busConfig, Topics.EventsAvailability.Subscriptions.ConferenceViewModelAvail, instrumentationEnabled);
         }
 
         private static void RegisterCommandHandlers(IUnityContainer unityContainer, ICommandHandlerRegistry sessionlessRegistry, ICommandHandlerRegistry seatsAvailabilityRegistry)
@@ -137,8 +144,7 @@ namespace WorkerRoleCommandProcessor
             var seatsAvailabilityHandler = commandHandlers.First(x => x.GetType().IsAssignableFrom(typeof(SeatsAvailabilityHandler)));
 
             seatsAvailabilityRegistry.Register(seatsAvailabilityHandler);
-            foreach (var commandHandler in commandHandlers.Where(x => x != seatsAvailabilityHandler))
-            {
+            foreach (var commandHandler in commandHandlers.Where(x => x != seatsAvailabilityHandler)) {
                 sessionlessRegistry.Register(commandHandler);
             }
         }
@@ -146,9 +152,9 @@ namespace WorkerRoleCommandProcessor
         private void RegisterRepositories(UnityContainer container)
         {
             // repository
-            var eventSourcingAccount = CloudStorageAccount.Parse(this.azureSettings.EventSourcing.ConnectionString);
-            var ordersEventStore = new EventStore(eventSourcingAccount, this.azureSettings.EventSourcing.OrdersTableName);
-            var seatsAvailabilityEventStore = new EventStore(eventSourcingAccount, this.azureSettings.EventSourcing.SeatsAvailabilityTableName);
+            var eventSourcingAccount = CloudStorageAccount.Parse(azureSettings.EventSourcing.ConnectionString);
+            var ordersEventStore = new EventStore(eventSourcingAccount, azureSettings.EventSourcing.OrdersTableName);
+            var seatsAvailabilityEventStore = new EventStore(eventSourcingAccount, azureSettings.EventSourcing.SeatsAvailabilityTableName);
 
             container.RegisterInstance<IEventStore>("orders", ordersEventStore);
             container.RegisterInstance<IPendingEventsQueue>("orders", ordersEventStore);
@@ -162,14 +168,14 @@ namespace WorkerRoleCommandProcessor
                 new InjectionConstructor(
                     new ResolvedParameter<IMessageSender>("orders"),
                     new ResolvedParameter<IPendingEventsQueue>("orders"),
-                    new EventStoreBusPublisherInstrumentation("worker - orders", this.instrumentationEnabled)));
+                    new EventStoreBusPublisherInstrumentation("worker - orders", instrumentationEnabled)));
             container.RegisterType<IEventStoreBusPublisher, EventStoreBusPublisher>(
                 "seatsavailability",
                 new ContainerControlledLifetimeManager(),
                 new InjectionConstructor(
                     new ResolvedParameter<IMessageSender>("seatsavailability"),
                     new ResolvedParameter<IPendingEventsQueue>("seatsavailability"),
-                    new EventStoreBusPublisherInstrumentation("worker - seatsavailability", this.instrumentationEnabled)));
+                    new EventStoreBusPublisherInstrumentation("worker - seatsavailability", instrumentationEnabled)));
 
             var cache = new MemoryCache("RepositoryCache");
 
@@ -203,18 +209,19 @@ namespace WorkerRoleCommandProcessor
             // to satisfy the IProcessor requirements.
             container.RegisterInstance<IProcessor>(
                 "OrdersEventStoreBusPublisher",
-                new PublisherProcessorAdapter(container.Resolve<IEventStoreBusPublisher>("orders"), this.cancellationTokenSource.Token));
+                new PublisherProcessorAdapter(container.Resolve<IEventStoreBusPublisher>("orders"), cancellationTokenSource.Token));
             container.RegisterInstance<IProcessor>(
                 "SeatsAvailabilityEventStoreBusPublisher",
-                new PublisherProcessorAdapter(container.Resolve<IEventStoreBusPublisher>("seatsavailability"), this.cancellationTokenSource.Token));
+                new PublisherProcessorAdapter(container.Resolve<IEventStoreBusPublisher>("seatsavailability"), cancellationTokenSource.Token));
         }
 
         // to satisfy the IProcessor requirements.
         // TODO: we should unify and probably use token-based Start only processors.
         private class PublisherProcessorAdapter : IProcessor
         {
-            private IEventStoreBusPublisher publisher;
-            private CancellationToken token;
+            private readonly IEventStoreBusPublisher publisher;
+
+            private readonly CancellationToken token;
 
             public PublisherProcessorAdapter(IEventStoreBusPublisher publisher, CancellationToken token)
             {
@@ -224,7 +231,7 @@ namespace WorkerRoleCommandProcessor
 
             public void Start()
             {
-                this.publisher.Start(this.token);
+                publisher.Start(token);
             }
 
             public void Stop()

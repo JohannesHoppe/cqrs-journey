@@ -11,16 +11,16 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
+
 namespace Infrastructure
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Linq.Expressions;
-
     /// <summary>
-    /// Combines expressions. Based on the original post by Colin Meek:
-    /// http://blogs.msdn.com/b/meek/archive/2008/05/02/linq-to-entities-combining-predicates.aspx
+    ///     Combines expressions. Based on the original post by Colin Meek:
+    ///     http://blogs.msdn.com/b/meek/archive/2008/05/02/linq-to-entities-combining-predicates.aspx
     /// </summary>
     public static class ExpressionCombiner
     {
@@ -37,7 +37,7 @@ namespace Infrastructure
         private static Expression<T> Compose<T>(this Expression<T> first, Expression<T> second, Func<Expression, Expression, Expression> merge)
         {
             // build parameter map (from parameters of second to parameters of first)
-            var map = first.Parameters.Select((f, i) => new { f, s = second.Parameters[i] }).ToDictionary(p => p.s, p => p.f);
+            var map = first.Parameters.Select((f, i) => new {f, s = second.Parameters[i]}).ToDictionary(p => p.s, p => p.f);
 
             // replace parameters in the second lambda expression with parameters from the first
             var secondBody = ParameterRebinder.ReplaceParameters(map, second.Body);
@@ -46,7 +46,7 @@ namespace Infrastructure
             return Expression.Lambda<T>(merge(first.Body, secondBody), first.Parameters);
         }
 
-        partial class ParameterRebinder : ExpressionVisitor
+        private class ParameterRebinder : ExpressionVisitor
         {
             private readonly Dictionary<ParameterExpression, ParameterExpression> map;
 
@@ -63,8 +63,7 @@ namespace Infrastructure
             protected override Expression VisitParameter(ParameterExpression p)
             {
                 ParameterExpression replacement;
-                if (map.TryGetValue(p, out replacement))
-                {
+                if (map.TryGetValue(p, out replacement)) {
                     p = replacement;
                 }
                 return base.VisitParameter(p);

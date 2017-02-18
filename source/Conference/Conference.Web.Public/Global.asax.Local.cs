@@ -11,17 +11,17 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Data.Entity;
+using Infrastructure.BlobStorage;
+using Infrastructure.Messaging;
+using Infrastructure.Serialization;
+using Infrastructure.Sql.BlobStorage;
+using Infrastructure.Sql.Messaging;
+using Infrastructure.Sql.Messaging.Implementation;
+using Microsoft.Practices.Unity;
+
 namespace Conference.Web.Public
 {
-    using System.Data.Entity;
-    using Infrastructure.Messaging;
-    using Infrastructure.Serialization;
-    using Infrastructure.Sql.Messaging;
-    using Infrastructure.Sql.Messaging.Implementation;
-    using Microsoft.Practices.Unity;
-    using Infrastructure.BlobStorage;
-    using Infrastructure.Sql.BlobStorage;
-
     partial class MvcApplication
     {
         static partial void OnCreateContainer(UnityContainer container)

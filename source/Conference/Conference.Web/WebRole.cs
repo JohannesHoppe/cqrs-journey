@@ -11,13 +11,13 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using Microsoft.WindowsAzure;
+using Microsoft.WindowsAzure.Diagnostics;
+using Microsoft.WindowsAzure.ServiceRuntime;
+
 namespace Conference.Web.Admin
 {
-    using System;
-    using Microsoft.WindowsAzure;
-    using Microsoft.WindowsAzure.Diagnostics;
-    using Microsoft.WindowsAzure.ServiceRuntime;
-
     public class WebRole : RoleEntryPoint
     {
         public override bool OnStart()

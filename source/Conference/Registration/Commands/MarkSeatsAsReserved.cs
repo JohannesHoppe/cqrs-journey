@@ -11,26 +11,26 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using Infrastructure.Messaging;
+
 namespace Registration.Commands
 {
-    using System;
-    using System.Collections.Generic;
-    using Infrastructure.Messaging;
-
     public class MarkSeatsAsReserved : ICommand
     {
-        public MarkSeatsAsReserved()
-        {
-            this.Id = Guid.NewGuid();
-            this.Seats = new List<SeatQuantity>();
-        }
-
-        public Guid Id { get; set; }
-
         public Guid OrderId { get; set; }
 
         public List<SeatQuantity> Seats { get; set; }
 
         public DateTime Expiration { get; set; }
+
+        public MarkSeatsAsReserved()
+        {
+            Id = Guid.NewGuid();
+            Seats = new List<SeatQuantity>();
+        }
+
+        public Guid Id { get; set; }
     }
 }

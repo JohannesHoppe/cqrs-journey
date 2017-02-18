@@ -11,19 +11,18 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+
 namespace WorkerRoleCommandProcessor
 {
-    using System;
-
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             // Cleanup default EF DB initializers.
             DatabaseSetup.Initialize();
 
-            using (var processor = new ConferenceProcessor(false))
-            {
+            using (var processor = new ConferenceProcessor(false)) {
                 processor.Start();
 
                 Console.WriteLine("Host started");

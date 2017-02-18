@@ -11,10 +11,10 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using Infrastructure.EventSourcing;
+
 namespace Registration.Events
 {
-    using Infrastructure.EventSourcing;
-
     public class OrderTotalsCalculated : VersionedEvent
     {
         public decimal Total { get; set; }

@@ -11,41 +11,43 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Data.Entity;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Runtime.Caching;
+using System.Threading;
+using System.Web;
+using Conference.Common;
+using Infrastructure;
+using Infrastructure.Azure;
+using Infrastructure.Azure.BlobStorage;
+using Infrastructure.Azure.EventSourcing;
+using Infrastructure.Azure.Instrumentation;
+using Infrastructure.Azure.Messaging;
+using Infrastructure.BlobStorage;
+using Infrastructure.Database;
+using Infrastructure.EventSourcing;
+using Infrastructure.Messaging;
+using Infrastructure.Messaging.Handling;
+using Infrastructure.Serialization;
+using Infrastructure.Sql.Database;
+using Microsoft.Practices.Unity;
+using Microsoft.WindowsAzure;
+using Payments;
+using Payments.Database;
+using Payments.Handlers;
+using Registration;
+using Registration.Handlers;
+
 namespace Conference.Web.Public
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Data.Entity;
-    using System.Linq;
-    using System.Runtime.Caching;
-    using System.Threading;
-    using System.Web;
-    using Infrastructure;
-    using Infrastructure.Azure;
-    using Infrastructure.Azure.BlobStorage;
-    using Infrastructure.Azure.EventSourcing;
-    using Infrastructure.Azure.Instrumentation;
-    using Infrastructure.Azure.Messaging;
-    using Infrastructure.BlobStorage;
-    using Infrastructure.Database;
-    using Infrastructure.EventSourcing;
-    using Infrastructure.Messaging;
-    using Infrastructure.Messaging.Handling;
-    using Infrastructure.Serialization;
-    using Infrastructure.Sql.Database;
-    using Microsoft.Practices.Unity;
-    using Microsoft.WindowsAzure;
-    using Payments;
-    using Payments.Database;
-    using Payments.Handlers;
-    using Registration;
-    using Registration.Handlers;
-
     partial class MvcApplication
     {
         private List<IProcessor> processors;
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope", Justification = "By design")]
+        [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope", Justification = "By design")]
         static partial void OnCreateContainer(UnityContainer container)
         {
             var serializer = new JsonTextSerializer();
@@ -58,8 +60,7 @@ namespace Conference.Web.Public
             // command bus
 
             var settings = InfrastructureSettings.Read(HttpContext.Current.Server.MapPath(@"~\bin\Settings.xml"));
-            if (!Conference.Common.MaintenanceMode.IsInMaintainanceMode)
-            {
+            if (!MaintenanceMode.IsInMaintainanceMode) {
                 new ServiceBusConfig(settings.ServiceBus).Initialize();
             }
             var commandBus = new CommandBus(new TopicSender(settings.ServiceBus, "conference/commands"), metadata, serializer);
@@ -115,47 +116,47 @@ namespace Conference.Web.Public
 
         partial void OnStart()
         {
-            var commandHandlerRegistry = this.container.Resolve<ICommandHandlerRegistry>();
+            var commandHandlerRegistry = container.Resolve<ICommandHandlerRegistry>();
 
-            foreach (var commandHandler in this.container.ResolveAll<ICommandHandler>())
-            {
+            foreach (var commandHandler in container.ResolveAll<ICommandHandler>()) {
                 commandHandlerRegistry.Register(commandHandler);
             }
 
-            this.processors = this.container.ResolveAll<IProcessor>().ToList();
-            this.processors.ForEach(p => p.Start());
+            processors = container.ResolveAll<IProcessor>().ToList();
+            processors.ForEach(p => p.Start());
         }
 
         partial void OnStop()
         {
-            this.processors.ForEach(p => p.Stop());
+            processors.ForEach(p => p.Stop());
         }
 
         // to satisfy the IProcessor requirements.
         private class PublisherProcessorAdapter : IProcessor, IDisposable
         {
-            private IEventStoreBusPublisher publisher;
-            private CancellationTokenSource tokenSource;
+            private readonly IEventStoreBusPublisher publisher;
+
+            private readonly CancellationTokenSource tokenSource;
 
             public PublisherProcessorAdapter(IEventStoreBusPublisher publisher)
             {
                 this.publisher = publisher;
-                this.tokenSource = new CancellationTokenSource();
-            }
-
-            public void Start()
-            {
-                this.publisher.Start(this.tokenSource.Token);
-            }
-
-            public void Stop()
-            {
-                this.tokenSource.Cancel();
+                tokenSource = new CancellationTokenSource();
             }
 
             public void Dispose()
             {
-                this.tokenSource.Dispose();
+                tokenSource.Dispose();
+            }
+
+            public void Start()
+            {
+                publisher.Start(tokenSource.Token);
+            }
+
+            public void Stop()
+            {
+                tokenSource.Cancel();
             }
         }
     }

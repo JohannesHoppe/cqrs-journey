@@ -11,21 +11,22 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web.Mvc;
+using AutoMapper;
+using Infrastructure.Messaging;
+using Registration.Commands;
+using Registration.ReadModel;
+
 namespace Conference.Web.Public.Controllers
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Web.Mvc;
-    using AutoMapper;
-    using Infrastructure.Messaging;
-    using Registration.Commands;
-    using Registration.ReadModel;
-
     public class OrderController : ConferenceTenantController
     {
-        private readonly IOrderDao orderDao;
         private readonly ICommandBus bus;
+
+        private readonly IOrderDao orderDao;
 
         static OrderController()
         {
@@ -43,8 +44,9 @@ namespace Conference.Web.Public.Controllers
         public ActionResult Display(Guid orderId)
         {
             var order = orderDao.FindPricedOrder(orderId);
-            if (order == null)
-                return RedirectToAction("Find", new { conferenceCode = this.ConferenceCode });
+            if (order == null) {
+                return RedirectToAction("Find", new {conferenceCode = ConferenceCode});
+            }
 
             return View(order);
         }
@@ -54,21 +56,21 @@ namespace Conference.Web.Public.Controllers
         public RedirectToRouteResult AssignSeatsForOrder(Guid orderId)
         {
             var order = orderDao.FindPricedOrder(orderId);
-            if (order == null || !order.AssignmentsId.HasValue)
-            {
-                return RedirectToAction("Display", new { orderId });
+            if (order == null || !order.AssignmentsId.HasValue) {
+                return RedirectToAction("Display", new {orderId});
             }
 
-            return RedirectToAction("AssignSeats", new { assignmentsId = order.AssignmentsId });
+            return RedirectToAction("AssignSeats", new {assignmentsId = order.AssignmentsId});
         }
 
         [HttpGet]
         [OutputCache(Duration = 0, NoStore = true)]
         public ActionResult AssignSeats(Guid assignmentsId)
         {
-            var assignments = this.orderDao.FindOrderSeats(assignmentsId);
-            if (assignments == null)
-                return RedirectToAction("Find", new { conferenceCode = this.ConferenceCode });
+            var assignments = orderDao.FindOrderSeats(assignmentsId);
+            if (assignments == null) {
+                return RedirectToAction("Find", new {conferenceCode = ConferenceCode});
+            }
 
             return View(assignments);
         }
@@ -76,15 +78,16 @@ namespace Conference.Web.Public.Controllers
         [HttpPost]
         public ActionResult AssignSeats(Guid assignmentsId, List<OrderSeat> seats)
         {
-            var saved = this.orderDao.FindOrderSeats(assignmentsId);
-            if (saved == null)
-                return RedirectToAction("Find", new { conferenceCode = this.ConferenceCode });
+            var saved = orderDao.FindOrderSeats(assignmentsId);
+            if (saved == null) {
+                return RedirectToAction("Find", new {conferenceCode = ConferenceCode});
+            }
 
             var pairs = seats
                 // If a seat is null, it's because it's an invalid null entry 
                 // in the list of seats, so we ignore it.
                 .Where(seat => seat != null)
-                .Select(seat => new { Saved = saved.Seats.FirstOrDefault(x => x.Position == seat.Position), New = seat })
+                .Select(seat => new {Saved = saved.Seats.FirstOrDefault(x => x.Position == seat.Position), New = seat})
                 // Ignore posted seats that we don't have saved already: pair.Saved == null
                 // This may be because the client sent mangled or incorrect data so we couldn't 
                 // find a matching saved seat.
@@ -99,19 +102,18 @@ namespace Conference.Web.Public.Controllers
 
             var unassigned = pairs
                 .Where(x => !string.IsNullOrWhiteSpace(x.Saved.Attendee.Email) && string.IsNullOrWhiteSpace(x.New.Attendee.Email))
-                .Select(x => (ICommand)new UnassignSeat { SeatAssignmentsId = saved.AssignmentsId, Position = x.Saved.Position });
+                .Select(x => (ICommand) new UnassignSeat {SeatAssignmentsId = saved.AssignmentsId, Position = x.Saved.Position});
 
             var changed = pairs
                 .Where(x => x.Saved.Attendee != x.New.Attendee && x.New.Attendee.Email != null)
-                .Select(x => (ICommand)Mapper.Map(x.New, new AssignSeat { SeatAssignmentsId = saved.AssignmentsId }));
+                .Select(x => (ICommand) Mapper.Map(x.New, new AssignSeat {SeatAssignmentsId = saved.AssignmentsId}));
 
             var commands = unassigned.Union(changed).ToList();
-            if (commands.Count > 0)
-            {
-                this.bus.Send(commands);
+            if (commands.Count > 0) {
+                bus.Send(commands);
             }
 
-            return RedirectToAction("Display", new { orderId = saved.OrderId });
+            return RedirectToAction("Display", new {orderId = saved.OrderId});
         }
 
         [HttpGet]
@@ -125,13 +127,12 @@ namespace Conference.Web.Public.Controllers
         {
             var orderId = orderDao.LocateOrder(email, accessCode);
 
-            if (!orderId.HasValue)
-            {
+            if (!orderId.HasValue) {
                 // TODO: 404?
-                return RedirectToAction("Find", new { conferenceCode = this.ConferenceCode });
+                return RedirectToAction("Find", new {conferenceCode = ConferenceCode});
             }
 
-            return RedirectToAction("Display", new { conferenceCode = this.ConferenceCode, orderId = orderId.Value });
+            return RedirectToAction("Display", new {conferenceCode = ConferenceCode, orderId = orderId.Value});
         }
     }
 }

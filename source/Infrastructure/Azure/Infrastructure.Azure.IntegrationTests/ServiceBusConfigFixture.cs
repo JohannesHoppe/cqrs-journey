@@ -11,63 +11,60 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using Infrastructure.Azure.Messaging;
+using Infrastructure.Messaging;
+using Infrastructure.Messaging.Handling;
+using Infrastructure.Serialization;
+using Microsoft.Practices.EnterpriseLibrary.WindowsAzure.TransientFaultHandling.ServiceBus;
+using Microsoft.Practices.TransientFaultHandling;
+using Microsoft.ServiceBus;
+using Microsoft.ServiceBus.Messaging;
+using Moq;
+using Xunit;
+
 namespace Infrastructure.Azure.IntegrationTests.ServiceBusConfigFixture
 {
-    using System;
-    using System.Linq;
-    using System.Threading;
-    using Infrastructure.Azure.Messaging;
-    using Infrastructure.Messaging;
-    using Infrastructure.Messaging.Handling;
-    using Infrastructure.Serialization;
-    using Microsoft.Practices.EnterpriseLibrary.WindowsAzure.TransientFaultHandling.ServiceBus;
-    using Microsoft.Practices.TransientFaultHandling;
-    using Microsoft.ServiceBus;
-    using Microsoft.ServiceBus.Messaging;
-    using Moq;
-    using Xunit;
-
     public class given_service_bus_config : IDisposable
     {
-        private ServiceBusSettings settings;
-        private NamespaceManager namespaceManager;
-        private RetryPolicy<ServiceBusTransientErrorDetectionStrategy> retryPolicy;
-        private ServiceBusConfig sut;
+        private readonly NamespaceManager namespaceManager;
+
+        private readonly RetryPolicy<ServiceBusTransientErrorDetectionStrategy> retryPolicy;
+
+        private readonly ServiceBusSettings settings;
+
+        private readonly ServiceBusConfig sut;
 
         public given_service_bus_config()
         {
-            System.Diagnostics.Trace.Listeners.Clear();
-            this.settings = InfrastructureSettings.Read("Settings.xml").ServiceBus;
-            foreach (var topic in this.settings.Topics)
-            {
-                topic.Path = topic.Path + Guid.NewGuid().ToString();
+            Trace.Listeners.Clear();
+            settings = InfrastructureSettings.Read("Settings.xml").ServiceBus;
+            foreach (var topic in settings.Topics) {
+                topic.Path = topic.Path + Guid.NewGuid();
             }
 
-            var tokenProvider = TokenProvider.CreateSharedSecretTokenProvider(this.settings.TokenIssuer, this.settings.TokenAccessKey);
-            var serviceUri = ServiceBusEnvironment.CreateServiceUri(this.settings.ServiceUriScheme, this.settings.ServiceNamespace, this.settings.ServicePath);
-            this.namespaceManager = new NamespaceManager(serviceUri, tokenProvider);
+            var tokenProvider = TokenProvider.CreateSharedSecretTokenProvider(settings.TokenIssuer, settings.TokenAccessKey);
+            var serviceUri = ServiceBusEnvironment.CreateServiceUri(settings.ServiceUriScheme, settings.ServiceNamespace, settings.ServicePath);
+            namespaceManager = new NamespaceManager(serviceUri, tokenProvider);
 
             var retryStrategy = new Incremental(3, TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(1));
-            this.retryPolicy = new RetryPolicy<ServiceBusTransientErrorDetectionStrategy>(retryStrategy);
+            retryPolicy = new RetryPolicy<ServiceBusTransientErrorDetectionStrategy>(retryStrategy);
 
-            this.sut = new ServiceBusConfig(this.settings);
+            sut = new ServiceBusConfig(settings);
 
-            Cleanup();
-        }
-
-        public void Dispose()
-        {
             Cleanup();
         }
 
         private void Cleanup()
         {
-            foreach (var topic in this.settings.Topics)
-            {
-                retryPolicy.ExecuteAction(() =>
-                {
-                    try { this.namespaceManager.DeleteTopic(topic.Path); }
-                    catch (MessagingEntityNotFoundException) { }
+            foreach (var topic in settings.Topics) {
+                retryPolicy.ExecuteAction(() => {
+                    try {
+                        namespaceManager.DeleteTopic(topic.Path);
+                    } catch (MessagingEntityNotFoundException) { }
                 });
             }
         }
@@ -75,13 +72,13 @@ namespace Infrastructure.Azure.IntegrationTests.ServiceBusConfigFixture
         [Fact]
         public void when_initialized_then_creates_topics()
         {
-            this.sut.Initialize();
+            sut.Initialize();
 
-            var topics = this.settings.Topics.Select(topic => new
-                {
+            var topics = settings.Topics.Select(topic => new {
                     Topic = topic,
-                    Description = this.retryPolicy.ExecuteAction(() => this.namespaceManager.GetTopic(topic.Path))
-                }).ToList();
+                    Description = retryPolicy.ExecuteAction(() => namespaceManager.GetTopic(topic.Path))
+                })
+                .ToList();
 
             Assert.False(topics.Any(tuple => tuple.Description == null));
         }
@@ -89,22 +86,22 @@ namespace Infrastructure.Azure.IntegrationTests.ServiceBusConfigFixture
         [Fact]
         public void when_initialized_then_creates_subscriptions_with_filters()
         {
-            this.sut.Initialize();
+            sut.Initialize();
 
-            var subscriptions = this.settings.Topics
-                .SelectMany(topic => topic.Subscriptions.Select(subscription => new { Topic = topic, Subscription = subscription }))
-                .Select(tuple => new
-                    {
-                        Subscription = tuple.Subscription,
-                        Description = this.retryPolicy.ExecuteAction(() => this.namespaceManager.GetSubscription(tuple.Topic.Path, tuple.Subscription.Name)),
-                        Rule = this.retryPolicy.ExecuteAction(() => this.namespaceManager.GetRules(tuple.Topic.Path, tuple.Subscription.Name).FirstOrDefault(x => x.Name == "Custom"))
-                    }).ToList();
+            var subscriptions = settings.Topics
+                .SelectMany(topic => topic.Subscriptions.Select(subscription => new {Topic = topic, Subscription = subscription}))
+                .Select(tuple => new {
+                    tuple.Subscription,
+                    Description = retryPolicy.ExecuteAction(() => namespaceManager.GetSubscription(tuple.Topic.Path, tuple.Subscription.Name)),
+                    Rule = retryPolicy.ExecuteAction(() => namespaceManager.GetRules(tuple.Topic.Path, tuple.Subscription.Name).FirstOrDefault(x => x.Name == "Custom"))
+                })
+                .ToList();
 
             Assert.True(subscriptions.All(tuple => tuple.Description != null));
             Assert.True(subscriptions.All(tuple => tuple.Subscription.RequiresSession == tuple.Description.RequiresSession));
             Assert.True(subscriptions.All(tuple =>
-                (string.IsNullOrWhiteSpace(tuple.Subscription.SqlFilter) && tuple.Rule == null)
-                || (!string.IsNullOrWhiteSpace(tuple.Subscription.SqlFilter) && ((SqlFilter)tuple.Rule.Filter).SqlExpression == tuple.Subscription.SqlFilter)));
+                string.IsNullOrWhiteSpace(tuple.Subscription.SqlFilter) && tuple.Rule == null
+                || !string.IsNullOrWhiteSpace(tuple.Subscription.SqlFilter) && ((SqlFilter) tuple.Rule.Filter).SqlExpression == tuple.Subscription.SqlFilter));
         }
 
         [Fact]
@@ -115,48 +112,47 @@ namespace Infrastructure.Azure.IntegrationTests.ServiceBusConfigFixture
             topic.Subscriptions = topic.Subscriptions.Take(1).ToList();
             var subscription = topic.Subscriptions.First();
             subscription.SqlFilter = "TypeName='MyTypeA'";
-            this.sut.Initialize();
+            sut.Initialize();
 
-            var rule = this.retryPolicy.ExecuteAction(() => this.namespaceManager.GetRules(topic.Path, subscription.Name).Single());
-            Assert.Equal("TypeName='MyTypeA'", ((SqlFilter)rule.Filter).SqlExpression);
+            var rule = retryPolicy.ExecuteAction(() => namespaceManager.GetRules(topic.Path, subscription.Name).Single());
+            Assert.Equal("TypeName='MyTypeA'", ((SqlFilter) rule.Filter).SqlExpression);
 
             subscription.SqlFilter = "TypeName='MyTypeB'";
-            this.sut.Initialize();
+            sut.Initialize();
 
-            rule = this.retryPolicy.ExecuteAction(() => this.namespaceManager.GetRules(topic.Path, subscription.Name).Single());
-            Assert.Equal("TypeName='MyTypeB'", ((SqlFilter)rule.Filter).SqlExpression);
+            rule = retryPolicy.ExecuteAction(() => namespaceManager.GetRules(topic.Path, subscription.Name).Single());
+            Assert.Equal("TypeName='MyTypeB'", ((SqlFilter) rule.Filter).SqlExpression);
         }
 
         [Fact]
         public void when_creating_processor_with_uninitialized_config_then_throws()
         {
-            Assert.Throws<InvalidOperationException>(() => this.sut.CreateEventProcessor("all", Mock.Of<IEventHandler>(), Mock.Of<ITextSerializer>()));
+            Assert.Throws<InvalidOperationException>(() => sut.CreateEventProcessor("all", Mock.Of<IEventHandler>(), Mock.Of<ITextSerializer>()));
         }
 
         [Fact]
         public void when_creating_processor_but_no_event_bus_topic_then_throws()
         {
-            foreach (var topic in this.settings.Topics)
-            {
+            foreach (var topic in settings.Topics) {
                 topic.IsEventBus = false;
             }
-            this.sut.Initialize();
+            sut.Initialize();
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => this.sut.CreateEventProcessor("all", Mock.Of<IEventHandler>(), Mock.Of<ITextSerializer>()));
+            Assert.Throws<ArgumentOutOfRangeException>(() => sut.CreateEventProcessor("all", Mock.Of<IEventHandler>(), Mock.Of<ITextSerializer>()));
         }
 
         [Fact]
         public void when_creating_processor_for_unconfigured_subscription_then_throws()
         {
-            this.sut.Initialize();
+            sut.Initialize();
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => this.sut.CreateEventProcessor("a", Mock.Of<IEventHandler>(), Mock.Of<ITextSerializer>()));
+            Assert.Throws<ArgumentOutOfRangeException>(() => sut.CreateEventProcessor("a", Mock.Of<IEventHandler>(), Mock.Of<ITextSerializer>()));
         }
 
         [Fact]
         public void when_creating_processor_then_receives_from_specified_subscription()
         {
-            this.sut.Initialize();
+            sut.Initialize();
 
             var waiter = new ManualResetEventSlim();
             var handler = new Mock<IEventHandler<AnEvent>>();
@@ -165,11 +161,11 @@ namespace Infrastructure.Azure.IntegrationTests.ServiceBusConfigFixture
             handler.Setup(x => x.Handle(It.IsAny<AnEvent>()))
                 .Callback(() => waiter.Set());
 
-            var processor = this.sut.CreateEventProcessor("log", handler.Object, serializer);
+            var processor = sut.CreateEventProcessor("log", handler.Object, serializer);
 
             processor.Start();
 
-            var sender = new TopicSender(this.settings, this.settings.Topics.First(t => t.Path.StartsWith("conference/events")).Path);
+            var sender = new TopicSender(settings, settings.Topics.First(t => t.Path.StartsWith("conference/events")).Path);
             var bus = new EventBus(sender, new StandardMetadataProvider(), serializer);
             bus.Publish(ev);
 
@@ -187,16 +183,16 @@ namespace Infrastructure.Azure.IntegrationTests.ServiceBusConfigFixture
             topic.MigrationSupport.Clear();
             var subscription = topic.Subscriptions.First();
             subscription.SqlFilter = "TypeName='MyTypeA'";
-            this.sut.Initialize();
+            sut.Initialize();
 
-            var rule = this.retryPolicy.ExecuteAction(() => this.namespaceManager.GetRules(topic.Path, subscription.Name).Single());
-            Assert.Equal("TypeName='MyTypeA'", ((SqlFilter)rule.Filter).SqlExpression);
+            var rule = retryPolicy.ExecuteAction(() => namespaceManager.GetRules(topic.Path, subscription.Name).Single());
+            Assert.Equal("TypeName='MyTypeA'", ((SqlFilter) rule.Filter).SqlExpression);
 
-            topic.MigrationSupport.Add(new UpdateSubscriptionIfExists { Name = subscription.Name, SqlFilter = "1=0" });
-            this.sut.Initialize();
+            topic.MigrationSupport.Add(new UpdateSubscriptionIfExists {Name = subscription.Name, SqlFilter = "1=0"});
+            sut.Initialize();
 
-            rule = this.retryPolicy.ExecuteAction(() => this.namespaceManager.GetRules(topic.Path, subscription.Name).Single());
-            Assert.Equal("1=0", ((SqlFilter)rule.Filter).SqlExpression);
+            rule = retryPolicy.ExecuteAction(() => namespaceManager.GetRules(topic.Path, subscription.Name).Single());
+            Assert.Equal("1=0", ((SqlFilter) rule.Filter).SqlExpression);
         }
 
         [Fact]
@@ -206,19 +202,25 @@ namespace Infrastructure.Azure.IntegrationTests.ServiceBusConfigFixture
             var topic = settings.Topics.First();
             topic.Subscriptions.Clear();
             topic.MigrationSupport.Clear();
-            topic.MigrationSupport.Add(new UpdateSubscriptionIfExists { Name = "TestSubscription", SqlFilter = "1=0" });
-            this.sut.Initialize();
+            topic.MigrationSupport.Add(new UpdateSubscriptionIfExists {Name = "TestSubscription", SqlFilter = "1=0"});
+            sut.Initialize();
 
-            var subscriptions = this.retryPolicy.ExecuteAction(() => this.namespaceManager.GetSubscriptions(topic.Path)).ToList();
+            var subscriptions = retryPolicy.ExecuteAction(() => namespaceManager.GetSubscriptions(topic.Path)).ToList();
             Assert.Equal(0, subscriptions.Count);
+        }
+
+        public void Dispose()
+        {
+            Cleanup();
         }
 
         public class AnEvent : IEvent
         {
             public AnEvent()
             {
-                this.SourceId = Guid.NewGuid();
+                SourceId = Guid.NewGuid();
             }
+
             public Guid SourceId { get; set; }
         }
     }

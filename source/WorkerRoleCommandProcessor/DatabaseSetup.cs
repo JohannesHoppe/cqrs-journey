@@ -11,20 +11,20 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Data.Entity;
+using Conference.Common.Entity;
+using Infrastructure.Sql.BlobStorage;
+using Infrastructure.Sql.EventSourcing;
+using Infrastructure.Sql.MessageLog;
+using Payments.Database;
+using Payments.ReadModel.Implementation;
+using Registration.Database;
+using Registration.ReadModel.Implementation;
+
 namespace WorkerRoleCommandProcessor
 {
-    using System.Data.Entity;
-    using Conference.Common.Entity;
-    using Infrastructure.Sql.BlobStorage;
-    using Infrastructure.Sql.EventSourcing;
-    using Infrastructure.Sql.MessageLog;
-    using Payments.Database;
-    using Payments.ReadModel.Implementation;
-    using Registration.Database;
-    using Registration.ReadModel.Implementation;
-
     /// <summary>
-    /// Initializes the EF infrastructure.
+    ///     Initializes the EF infrastructure.
     /// </summary>
     internal static class DatabaseSetup
     {

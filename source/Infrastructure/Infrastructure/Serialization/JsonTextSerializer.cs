@@ -11,26 +11,24 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.IO;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters;
+using Newtonsoft.Json;
+
 namespace Infrastructure.Serialization
 {
-    using System.IO;
-    using System.Runtime.Serialization;
-    using Newtonsoft.Json;
-
     public class JsonTextSerializer : ITextSerializer
     {
         private readonly JsonSerializer serializer;
 
         public JsonTextSerializer()
-            : this(JsonSerializer.Create(new JsonSerializerSettings
-            {
+            : this(JsonSerializer.Create(new JsonSerializerSettings {
                 // Allows deserializing to the actual runtime type
                 TypeNameHandling = TypeNameHandling.All,
                 // In a version resilient way
-                TypeNameAssemblyFormat = System.Runtime.Serialization.Formatters.FormatterAssemblyStyle.Simple
-            }))
-        {
-        }
+                TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple
+            })) { }
 
         public JsonTextSerializer(JsonSerializer serializer)
         {
@@ -44,7 +42,7 @@ namespace Infrastructure.Serialization
             jsonWriter.Formatting = Formatting.Indented;
 #endif
 
-            this.serializer.Serialize(jsonWriter, graph);
+            serializer.Serialize(jsonWriter, graph);
 
             // We don't close the stream as it's owned by the message.
             writer.Flush();
@@ -54,12 +52,9 @@ namespace Infrastructure.Serialization
         {
             var jsonReader = new JsonTextReader(reader);
 
-            try
-            {
-                return this.serializer.Deserialize(jsonReader);
-            }
-            catch (JsonSerializationException e)
-            {
+            try {
+                return serializer.Deserialize(jsonReader);
+            } catch (JsonSerializationException e) {
                 // Wrap in a standard .NET exception.
                 throw new SerializationException(e.Message, e);
             }

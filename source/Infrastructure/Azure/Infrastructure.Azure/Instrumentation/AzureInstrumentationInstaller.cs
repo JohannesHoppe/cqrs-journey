@@ -11,31 +11,35 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.ComponentModel;
+using System.Configuration.Install;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+
 namespace Infrastructure.Azure.Instrumentation
 {
-    using System.ComponentModel;
-    using System.Diagnostics;
-
     [RunInstaller(true)]
-    public partial class AzureInstrumentationInstaller : System.Configuration.Install.Installer
+    public partial class AzureInstrumentationInstaller : Installer
     {
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope", Justification = "By design")]
+        [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope", Justification = "By design")]
         public AzureInstrumentationInstaller()
         {
             InitializeComponent();
 
             // Receiver performance counters
             {
-                var installer = new PerformanceCounterInstaller { CategoryName = Constants.ReceiversPerformanceCountersCategory, CategoryType = PerformanceCounterCategoryType.MultiInstance };
-                this.Installers.Add(installer);
+                var installer = new PerformanceCounterInstaller {CategoryName = Constants.ReceiversPerformanceCountersCategory, CategoryType = PerformanceCounterCategoryType.MultiInstance};
+                Installers.Add(installer);
 
                 installer.Counters.Add(new CounterCreationData(SessionSubscriptionReceiverInstrumentation.TotalSessionsCounterName, string.Empty, PerformanceCounterType.NumberOfItems32));
                 installer.Counters.Add(new CounterCreationData(SessionSubscriptionReceiverInstrumentation.CurrentSessionsCounterName, string.Empty, PerformanceCounterType.NumberOfItems32));
 
                 installer.Counters.Add(new CounterCreationData(SubscriptionReceiverInstrumentation.CurrentMessagesInProcessCounterName, string.Empty, PerformanceCounterType.NumberOfItems32));
                 installer.Counters.Add(new CounterCreationData(SubscriptionReceiverInstrumentation.TotalMessagesCounterName, string.Empty, PerformanceCounterType.NumberOfItems32));
-                installer.Counters.Add(new CounterCreationData(SubscriptionReceiverInstrumentation.TotalMessagesSuccessfullyProcessedCounterName, string.Empty, PerformanceCounterType.NumberOfItems32));
-                installer.Counters.Add(new CounterCreationData(SubscriptionReceiverInstrumentation.TotalMessagesUnsuccessfullyProcessedCounterName, string.Empty, PerformanceCounterType.NumberOfItems32));
+                installer.Counters.Add(new CounterCreationData(SubscriptionReceiverInstrumentation.TotalMessagesSuccessfullyProcessedCounterName, string.Empty,
+                    PerformanceCounterType.NumberOfItems32));
+                installer.Counters.Add(new CounterCreationData(SubscriptionReceiverInstrumentation.TotalMessagesUnsuccessfullyProcessedCounterName, string.Empty,
+                    PerformanceCounterType.NumberOfItems32));
                 installer.Counters.Add(new CounterCreationData(SubscriptionReceiverInstrumentation.TotalMessagesCompletedCounterName, string.Empty, PerformanceCounterType.NumberOfItems32));
                 installer.Counters.Add(new CounterCreationData(SubscriptionReceiverInstrumentation.TotalMessagesNotCompletedCounterName, string.Empty, PerformanceCounterType.NumberOfItems32));
 
@@ -47,15 +51,16 @@ namespace Infrastructure.Azure.Instrumentation
 
             // Event store publisher counters
             {
-                var installer = new PerformanceCounterInstaller { CategoryName = Constants.EventPublishersPerformanceCountersCategory, CategoryType = PerformanceCounterCategoryType.MultiInstance };
-                this.Installers.Add(installer);
-
+                var installer = new PerformanceCounterInstaller {CategoryName = Constants.EventPublishersPerformanceCountersCategory, CategoryType = PerformanceCounterCategoryType.MultiInstance};
+                Installers.Add(installer);
 
                 installer.Counters.Add(new CounterCreationData(EventStoreBusPublisherInstrumentation.TotalEventsPublishingRequestsCounterName, string.Empty, PerformanceCounterType.NumberOfItems32));
-                installer.Counters.Add(new CounterCreationData(EventStoreBusPublisherInstrumentation.EventPublishingRequestsPerSecondCounterName, string.Empty, PerformanceCounterType.RateOfCountsPerSecond32));
+                installer.Counters.Add(new CounterCreationData(EventStoreBusPublisherInstrumentation.EventPublishingRequestsPerSecondCounterName, string.Empty,
+                    PerformanceCounterType.RateOfCountsPerSecond32));
 
                 installer.Counters.Add(new CounterCreationData(EventStoreBusPublisherInstrumentation.TotalEventsPublishedCounterName, string.Empty, PerformanceCounterType.NumberOfItems32));
-                installer.Counters.Add(new CounterCreationData(EventStoreBusPublisherInstrumentation.EventsPublishedPerSecondCounterName, string.Empty, PerformanceCounterType.RateOfCountsPerSecond32));
+                installer.Counters.Add(new CounterCreationData(EventStoreBusPublisherInstrumentation.EventsPublishedPerSecondCounterName, string.Empty,
+                    PerformanceCounterType.RateOfCountsPerSecond32));
 
                 installer.Counters.Add(new CounterCreationData(EventStoreBusPublisherInstrumentation.CurrentEventPublishersCounterName, string.Empty, PerformanceCounterType.NumberOfItems32));
             }

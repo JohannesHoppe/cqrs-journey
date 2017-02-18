@@ -11,25 +11,27 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.Caching;
+
 namespace Registration.ReadModel.Implementation
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Runtime.Caching;
-
     /// <summary>
-    /// Decorator that wraps <see cref="ConferenceDao"/> and caches this data in memory, as it can be accessed several times.
-    /// This embraces eventual consistency, as we acknowledge the fact that the read model is stale even without caching.
+    ///     Decorator that wraps <see cref="ConferenceDao" /> and caches this data in memory, as it can be accessed several
+    ///     times.
+    ///     This embraces eventual consistency, as we acknowledge the fact that the read model is stale even without caching.
     /// </summary>
     /// <remarks>
-    /// For more information on the optimizations we did for V3
-    /// see <see cref="http://go.microsoft.com/fwlink/p/?LinkID=258557"> Journey chapter 7</see>.
+    ///     For more information on the optimizations we did for V3
+    ///     see <see cref="http://go.microsoft.com/fwlink/p/?LinkID=258557"> Journey chapter 7</see>.
     /// </remarks>
     public class CachingConferenceDao : IConferenceDao
     {
-        private readonly IConferenceDao decoratedDao;
         private readonly ObjectCache cache;
+
+        private readonly IConferenceDao decoratedDao;
 
         public CachingConferenceDao(IConferenceDao decoratedDao, ObjectCache cache)
         {
@@ -40,13 +42,11 @@ namespace Registration.ReadModel.Implementation
         public ConferenceDetails GetConferenceDetails(string conferenceCode)
         {
             var key = "ConferenceDao_Details_" + conferenceCode;
-            var conference = this.cache.Get(key) as ConferenceDetails;
-            if (conference == null)
-            {
-                conference = this.decoratedDao.GetConferenceDetails(conferenceCode);
-                if (conference != null)
-                {
-                    this.cache.Set(key, conference, new CacheItemPolicy { AbsoluteExpiration = DateTimeOffset.UtcNow.AddMinutes(10) });
+            var conference = cache.Get(key) as ConferenceDetails;
+            if (conference == null) {
+                conference = decoratedDao.GetConferenceDetails(conferenceCode);
+                if (conference != null) {
+                    cache.Set(key, conference, new CacheItemPolicy {AbsoluteExpiration = DateTimeOffset.UtcNow.AddMinutes(10)});
                 }
             }
 
@@ -56,13 +56,11 @@ namespace Registration.ReadModel.Implementation
         public ConferenceAlias GetConferenceAlias(string conferenceCode)
         {
             var key = "ConferenceDao_Alias_" + conferenceCode;
-            var conference = this.cache.Get(key) as ConferenceAlias;
-            if (conference == null)
-            {
-                conference = this.decoratedDao.GetConferenceAlias(conferenceCode);
-                if (conference != null)
-                {
-                    this.cache.Set(key, conference, new CacheItemPolicy { AbsoluteExpiration = DateTimeOffset.UtcNow.AddMinutes(20) });
+            var conference = cache.Get(key) as ConferenceAlias;
+            if (conference == null) {
+                conference = decoratedDao.GetConferenceAlias(conferenceCode);
+                if (conference != null) {
+                    cache.Set(key, conference, new CacheItemPolicy {AbsoluteExpiration = DateTimeOffset.UtcNow.AddMinutes(20)});
                 }
             }
 
@@ -72,13 +70,11 @@ namespace Registration.ReadModel.Implementation
         public IList<ConferenceAlias> GetPublishedConferences()
         {
             var key = "ConferenceDao_PublishedConferences";
-            var cached = this.cache.Get(key) as IList<ConferenceAlias>;
-            if (cached == null)
-            {
-                cached = this.decoratedDao.GetPublishedConferences();
-                if (cached != null)
-                {
-                    this.cache.Set(key, cached, new CacheItemPolicy { AbsoluteExpiration = DateTimeOffset.UtcNow.AddSeconds(10) });
+            var cached = cache.Get(key) as IList<ConferenceAlias>;
+            if (cached == null) {
+                cached = decoratedDao.GetPublishedConferences();
+                if (cached != null) {
+                    cache.Set(key, cached, new CacheItemPolicy {AbsoluteExpiration = DateTimeOffset.UtcNow.AddSeconds(10)});
                 }
             }
 
@@ -86,47 +82,37 @@ namespace Registration.ReadModel.Implementation
         }
 
         /// <summary>
-        /// Gets ifnromation about the seat types.
+        ///     Gets ifnromation about the seat types.
         /// </summary>
         /// <remarks>
-        /// Because the seat type contains the number of available seats, and this information can change often, notice
-        /// how we manage the risks associated with displaying data that is very stale by adjusting caching duration 
-        /// or not even caching at all if only a few seats remain.
-        /// For more information on the optimizations we did for V3
-        /// see <see cref="http://go.microsoft.com/fwlink/p/?LinkID=258557"> Journey chapter 7</see>.
+        ///     Because the seat type contains the number of available seats, and this information can change often, notice
+        ///     how we manage the risks associated with displaying data that is very stale by adjusting caching duration
+        ///     or not even caching at all if only a few seats remain.
+        ///     For more information on the optimizations we did for V3
+        ///     see <see cref="http://go.microsoft.com/fwlink/p/?LinkID=258557"> Journey chapter 7</see>.
         /// </remarks>
         public IList<SeatType> GetPublishedSeatTypes(Guid conferenceId)
         {
             var key = "ConferenceDao_PublishedSeatTypes_" + conferenceId;
-            var seatTypes = this.cache.Get(key) as IList<SeatType>;
-            if (seatTypes == null)
-            {
-                seatTypes = this.decoratedDao.GetPublishedSeatTypes(conferenceId);
-                if (seatTypes != null)
-                {
+            var seatTypes = cache.Get(key) as IList<SeatType>;
+            if (seatTypes == null) {
+                seatTypes = decoratedDao.GetPublishedSeatTypes(conferenceId);
+                if (seatTypes != null) {
                     // determine how long to cache depending on criticality of using stale data.
                     TimeSpan timeToCache;
-                    if (seatTypes.All(x => x.AvailableQuantity > 200 || x.AvailableQuantity <= 0))
-                    {
+                    if (seatTypes.All(x => x.AvailableQuantity > 200 || x.AvailableQuantity <= 0)) {
                         timeToCache = TimeSpan.FromMinutes(5);
-                    }
-                    else if (seatTypes.Any(x => x.AvailableQuantity < 30 && x.AvailableQuantity > 0))
-                    {
+                    } else if (seatTypes.Any(x => x.AvailableQuantity < 30 && x.AvailableQuantity > 0)) {
                         // there are just a few seats remaining. Do not cache.
                         timeToCache = TimeSpan.Zero;
-                    }
-                    else if (seatTypes.Any(x => x.AvailableQuantity < 100 && x.AvailableQuantity > 0))
-                    {
+                    } else if (seatTypes.Any(x => x.AvailableQuantity < 100 && x.AvailableQuantity > 0)) {
                         timeToCache = TimeSpan.FromSeconds(20);
-                    }
-                    else
-                    {
+                    } else {
                         timeToCache = TimeSpan.FromMinutes(1);
                     }
 
-                    if (timeToCache > TimeSpan.Zero)
-                    {
-                        this.cache.Set(key, seatTypes, new CacheItemPolicy { AbsoluteExpiration = DateTimeOffset.UtcNow.Add(timeToCache) });
+                    if (timeToCache > TimeSpan.Zero) {
+                        cache.Set(key, seatTypes, new CacheItemPolicy {AbsoluteExpiration = DateTimeOffset.UtcNow.Add(timeToCache)});
                     }
                 }
             }
@@ -136,7 +122,7 @@ namespace Registration.ReadModel.Implementation
 
         public IList<SeatTypeName> GetSeatTypeNames(IEnumerable<Guid> seatTypes)
         {
-            return this.decoratedDao.GetSeatTypeNames(seatTypes);
+            return decoratedDao.GetSeatTypeNames(seatTypes);
         }
     }
 }

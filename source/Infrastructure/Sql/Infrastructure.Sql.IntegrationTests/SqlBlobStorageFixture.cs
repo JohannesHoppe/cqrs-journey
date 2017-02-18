@@ -11,24 +11,21 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Text;
+using Infrastructure.Sql.BlobStorage;
+using Xunit;
+
 namespace Infrastructure.Sql.IntegrationTests
 {
-    using System;
-    using Infrastructure.Serialization;
-    using Infrastructure.Sql.BlobStorage;
-    using Xunit;
-    using System.Text;
-
     public class SqlBlobStorageFixture : IDisposable
     {
-        private string dbName = "SqlBlobStorageFixture_" + Guid.NewGuid().ToString();
+        private readonly string dbName = "SqlBlobStorageFixture_" + Guid.NewGuid();
 
         public SqlBlobStorageFixture()
         {
-            using (var context = new BlobStorageDbContext(dbName))
-            {
-                if (context.Database.Exists())
-                {
+            using (var context = new BlobStorageDbContext(dbName)) {
+                if (context.Database.Exists()) {
                     context.Database.Delete();
                 }
 
@@ -36,21 +33,10 @@ namespace Infrastructure.Sql.IntegrationTests
             }
         }
 
-        public void Dispose()
-        {
-            using (var context = new BlobStorageDbContext(dbName))
-            {
-                if (context.Database.Exists())
-                {
-                    context.Database.Delete();
-                }
-            }
-        }
-
         [Fact]
         public void when_saving_blob_then_can_read_it()
         {
-            var storage = new SqlBlobStorage(this.dbName);
+            var storage = new SqlBlobStorage(dbName);
 
             storage.Save("test", "text/plain", Encoding.UTF8.GetBytes("Hello"));
 
@@ -62,7 +48,7 @@ namespace Infrastructure.Sql.IntegrationTests
         [Fact]
         public void when_updating_existing_blob_then_can_read_changes()
         {
-            var storage = new SqlBlobStorage(this.dbName);
+            var storage = new SqlBlobStorage(dbName);
 
             storage.Save("test", "text/plain", Encoding.UTF8.GetBytes("Hello"));
             storage.Save("test", "text/plain", Encoding.UTF8.GetBytes("World"));
@@ -70,6 +56,15 @@ namespace Infrastructure.Sql.IntegrationTests
             var data = Encoding.UTF8.GetString(storage.Find("test"));
 
             Assert.Equal("World", data);
+        }
+
+        public void Dispose()
+        {
+            using (var context = new BlobStorageDbContext(dbName)) {
+                if (context.Database.Exists()) {
+                    context.Database.Delete();
+                }
+            }
         }
     }
 }

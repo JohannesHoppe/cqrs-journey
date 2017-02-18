@@ -11,40 +11,40 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Runtime.Caching;
+using Infrastructure.Azure.EventSourcing;
+using Infrastructure.Azure.Tests.Mocks;
+using Infrastructure.EventSourcing;
+using Infrastructure.Serialization;
+using Moq;
+using Xunit;
+
 namespace Infrastructure.Azure.Tests.EventSourcing.AzureEventSourcedRepositoryFixture
 {
-    using System;
-    using System.Collections.Generic;
-    using System.IO;
-    using System.Linq;
-    using System.Runtime.Caching;
-    using Infrastructure.Azure.EventSourcing;
-    using Infrastructure.Azure.Tests.Mocks;
-    using Infrastructure.EventSourcing;
-    using Infrastructure.Serialization;
-    using Moq;
-    using Xunit;
-
     public class when_saving_entity
     {
+        private readonly Mock<IEventStore> eventStore;
+
         private Guid id;
-        private Mock<IEventStore> eventStore;
-        private Mock<IEventStoreBusPublisher> publisher;
+
+        private readonly Mock<IEventStoreBusPublisher> publisher;
 
         public when_saving_entity()
         {
-            this.eventStore = new Mock<IEventStore>();
-            this.publisher = new Mock<IEventStoreBusPublisher>();
+            eventStore = new Mock<IEventStore>();
+            publisher = new Mock<IEventStoreBusPublisher>();
             var sut = new AzureEventSourcedRepository<TestEntity>(eventStore.Object, publisher.Object, new JsonTextSerializer(), new StandardMetadataProvider(), null);
-            this.id = Guid.NewGuid();
-            var entity = new TestEntity
-            {
+            id = Guid.NewGuid();
+            var entity = new TestEntity {
                 Id = id,
-                Events =
-                    {
-                        new TestEvent { SourceId = id, Version = 1, Foo = "Bar" },
-                        new TestEvent { SourceId = id, Version = 2, Foo = "Baz" }
-                    }
+                Events = {
+                    new TestEvent {SourceId = id, Version = 1, Foo = "Bar"},
+                    new TestEvent {SourceId = id, Version = 2, Foo = "Baz"}
+                }
             };
 
             sut.Save(entity, "correlation");
@@ -87,29 +87,31 @@ namespace Infrastructure.Azure.Tests.EventSourcing.AzureEventSourcedRepositoryFi
 
     public class when_saving_memento_originator_entity
     {
+        private readonly MemoryCache cache;
+
+        private readonly Mock<IEventStore> eventStore;
+
         private Guid id;
-        private Mock<IEventStore> eventStore;
-        private Mock<IEventStoreBusPublisher> publisher;
-        private IMemento memento;
-        private MemoryCache cache;
+
+        private readonly IMemento memento;
+
+        private readonly Mock<IEventStoreBusPublisher> publisher;
 
         public when_saving_memento_originator_entity()
         {
-            this.eventStore = new Mock<IEventStore>();
-            this.publisher = new Mock<IEventStoreBusPublisher>();
-            this.cache = new MemoryCache(Guid.NewGuid().ToString());
-            var sut = new AzureEventSourcedRepository<TestOriginatorEntity>(eventStore.Object, publisher.Object, new JsonTextSerializer(), new StandardMetadataProvider(), this.cache);
-            this.id = Guid.NewGuid();
-            this.memento = Mock.Of<IMemento>();
-            var entity = new TestOriginatorEntity
-            {
+            eventStore = new Mock<IEventStore>();
+            publisher = new Mock<IEventStoreBusPublisher>();
+            cache = new MemoryCache(Guid.NewGuid().ToString());
+            var sut = new AzureEventSourcedRepository<TestOriginatorEntity>(eventStore.Object, publisher.Object, new JsonTextSerializer(), new StandardMetadataProvider(), cache);
+            id = Guid.NewGuid();
+            memento = Mock.Of<IMemento>();
+            var entity = new TestOriginatorEntity {
                 Id = id,
-                Events =
-                    {
-                        new TestEvent { SourceId = id, Version = 1, Foo = "Bar" },
-                        new TestEvent { SourceId = id, Version = 2, Foo = "Baz" }
-                    },
-                Memento = memento,
+                Events = {
+                    new TestEvent {SourceId = id, Version = 1, Foo = "Bar"},
+                    new TestEvent {SourceId = id, Version = 2, Foo = "Baz"}
+                },
+                Memento = memento
             };
 
             sut.Save(entity, "correlation");
@@ -152,8 +154,8 @@ namespace Infrastructure.Azure.Tests.EventSourcing.AzureEventSourcedRepositoryFi
         [Fact]
         public void then_stores_memento_in_cache()
         {
-            var cached = (Tuple<IMemento, DateTime?>)this.cache["TestOriginatorEntity_" + id.ToString()];
-            Assert.Equal(this.memento, cached.Item1);
+            var cached = (Tuple<IMemento, DateTime?>) cache["TestOriginatorEntity_" + id];
+            Assert.Equal(memento, cached.Item1);
         }
     }
 
@@ -164,13 +166,12 @@ namespace Infrastructure.Azure.Tests.EventSourcing.AzureEventSourcedRepositoryFi
         [Fact]
         public void when_reading_entity_then_rehydrates()
         {
-            var events = new IVersionedEvent[]
-                             {
-                                 new TestEvent { SourceId = id, Version = 1, Foo = "Bar" },
-                                 new TestEvent { SourceId = id, Version = 2, Foo = "Baz" }                              
-                             };
-            var serialized = events.Select(x => new EventData { Version = x.Version, Payload = Serialize(x) });
-            this.id = Guid.NewGuid();
+            var events = new IVersionedEvent[] {
+                new TestEvent {SourceId = id, Version = 1, Foo = "Bar"},
+                new TestEvent {SourceId = id, Version = 2, Foo = "Baz"}
+            };
+            var serialized = events.Select(x => new EventData {Version = x.Version, Payload = Serialize(x)});
+            id = Guid.NewGuid();
             var eventStore = new Mock<IEventStore>();
             eventStore.Setup(x => x.Load(It.IsAny<string>(), It.IsAny<int>())).Returns(serialized);
             var sut = new AzureEventSourcedRepository<TestEntity>(eventStore.Object, Mock.Of<IEventStoreBusPublisher>(), new JsonTextSerializer(), new StandardMetadataProvider(), null);
@@ -194,21 +195,21 @@ namespace Infrastructure.Azure.Tests.EventSourcing.AzureEventSourcedRepositoryFi
     public class when_reading_cached_memento_originator_entity
     {
         private Guid id;
+
         private IMemento memento;
 
         [Fact]
         public void when_reading_entity_then_rehydrates()
         {
-            var newEvents = new IVersionedEvent[]
-                             {
-                                 new TestEvent { SourceId = id, Version = 2, Foo = "Baz" }                              
-                             };
-            var serialized = newEvents.Select(x => new EventData { Version = x.Version, Payload = Serialize(x) });
-            this.id = Guid.NewGuid();
+            var newEvents = new IVersionedEvent[] {
+                new TestEvent {SourceId = id, Version = 2, Foo = "Baz"}
+            };
+            var serialized = newEvents.Select(x => new EventData {Version = x.Version, Payload = Serialize(x)});
+            id = Guid.NewGuid();
             var eventStore = new Mock<IEventStore>();
-            this.memento = Mock.Of<IMemento>(x => x.Version == 1);
+            memento = Mock.Of<IMemento>(x => x.Version == 1);
             var cache = new MemoryCache(Guid.NewGuid().ToString());
-            cache.Add("TestOriginatorEntity_" + id.ToString(), new Tuple<IMemento, DateTime?>(this.memento, null), DateTimeOffset.UtcNow.AddMinutes(10));
+            cache.Add("TestOriginatorEntity_" + id, new Tuple<IMemento, DateTime?>(memento, null), DateTimeOffset.UtcNow.AddMinutes(10));
 
             eventStore.Setup(x => x.Load(It.IsAny<string>(), 2)).Returns(serialized);
             var sut = new AzureEventSourcedRepository<TestOriginatorEntity>(eventStore.Object, Mock.Of<IEventStoreBusPublisher>(), new JsonTextSerializer(), new StandardMetadataProvider(), cache);
@@ -232,15 +233,17 @@ namespace Infrastructure.Azure.Tests.EventSourcing.AzureEventSourcedRepositoryFi
 
     public class when_reading_inexistant_entity
     {
-        private Guid id;
-        private Mock<IEventStore> eventStore;
-        private AzureEventSourcedRepository<TestEntity> sut;
+        private readonly Mock<IEventStore> eventStore;
+
+        private readonly Guid id;
+
+        private readonly AzureEventSourcedRepository<TestEntity> sut;
 
         public when_reading_inexistant_entity()
         {
-            this.eventStore = new Mock<IEventStore>();
-            this.sut = new AzureEventSourcedRepository<TestEntity>(eventStore.Object, Mock.Of<IEventStoreBusPublisher>(), new JsonTextSerializer(), new StandardMetadataProvider(), null);
-            this.id = Guid.NewGuid();
+            eventStore = new Mock<IEventStore>();
+            sut = new AzureEventSourcedRepository<TestEntity>(eventStore.Object, Mock.Of<IEventStoreBusPublisher>(), new JsonTextSerializer(), new StandardMetadataProvider(), null);
+            id = Guid.NewGuid();
         }
 
         [Fact]

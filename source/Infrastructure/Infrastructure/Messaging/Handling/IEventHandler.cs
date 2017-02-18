@@ -14,7 +14,7 @@
 namespace Infrastructure.Messaging.Handling
 {
     /// <summary>
-    /// Marker interface that makes it easier to discover handlers via reflection.
+    ///     Marker interface that makes it easier to discover handlers via reflection.
     /// </summary>
     public interface IEventHandler { }
 

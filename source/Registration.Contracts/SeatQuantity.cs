@@ -11,31 +11,20 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+
 namespace Registration
 {
-    using System;
-
     public struct SeatQuantity
     {
-        private Guid seatType;
-        private int quantity;
-
         public SeatQuantity(Guid seatType, int quantity)
         {
-            this.seatType = seatType;
-            this.quantity = quantity;
+            SeatType = seatType;
+            Quantity = quantity;
         }
 
-        public Guid SeatType
-        {
-            get { return this.seatType; }
-            set { this.seatType = value; }
-        }
+        public Guid SeatType { get; set; }
 
-        public int Quantity
-        {
-            get { return this.quantity; }
-            set { this.quantity = value; }
-        }
+        public int Quantity { get; set; }
     }
 }

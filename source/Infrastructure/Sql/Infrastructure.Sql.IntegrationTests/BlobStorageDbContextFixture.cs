@@ -11,24 +11,21 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Text;
+using Infrastructure.Sql.BlobStorage;
+using Xunit;
+
 namespace Infrastructure.Sql.IntegrationTests
 {
-    using System;
-    using Infrastructure.Serialization;
-    using Infrastructure.Sql.BlobStorage;
-    using Xunit;
-    using System.Text;
-
     public class BlobStorageDbContextFixture : IDisposable
     {
-        private string dbName = "BlobStorageDbContextFixture_" + Guid.NewGuid().ToString();
+        private readonly string dbName = "BlobStorageDbContextFixture_" + Guid.NewGuid();
 
         public BlobStorageDbContextFixture()
         {
-            using (var context = new BlobStorageDbContext(dbName))
-            {
-                if (context.Database.Exists())
-                {
+            using (var context = new BlobStorageDbContext(dbName)) {
+                if (context.Database.Exists()) {
                     context.Database.Delete();
                 }
 
@@ -36,28 +33,14 @@ namespace Infrastructure.Sql.IntegrationTests
             }
         }
 
-        public void Dispose()
-        {
-            using (var context = new BlobStorageDbContext(dbName))
-            {
-                if (context.Database.Exists())
-                {
-                    context.Database.Delete();
-                }
-            }
-        }
-
-
         [Fact]
         public void when_saving_blob_then_can_read_it()
         {
-            using (var storage = new BlobStorageDbContext(this.dbName))
-            {
+            using (var storage = new BlobStorageDbContext(dbName)) {
                 storage.Save("test", "text/plain", Encoding.UTF8.GetBytes("Hello"));
             }
 
-            using (var storage = new BlobStorageDbContext(this.dbName))
-            {
+            using (var storage = new BlobStorageDbContext(dbName)) {
                 var data = Encoding.UTF8.GetString(storage.Find("test"));
 
                 Assert.Equal("Hello", data);
@@ -67,21 +50,27 @@ namespace Infrastructure.Sql.IntegrationTests
         [Fact]
         public void when_updating_existing_blob_then_can_read_changes()
         {
-            using (var storage = new BlobStorageDbContext(this.dbName))
-            {
+            using (var storage = new BlobStorageDbContext(dbName)) {
                 storage.Save("test", "text/plain", Encoding.UTF8.GetBytes("Hello"));
             }
 
-            using (var storage = new BlobStorageDbContext(this.dbName))
-            {
+            using (var storage = new BlobStorageDbContext(dbName)) {
                 storage.Save("test", "text/plain", Encoding.UTF8.GetBytes("World"));
             }
 
-            using (var storage = new BlobStorageDbContext(this.dbName))
-            {
+            using (var storage = new BlobStorageDbContext(dbName)) {
                 var data = Encoding.UTF8.GetString(storage.Find("test"));
 
                 Assert.Equal("World", data);
+            }
+        }
+
+        public void Dispose()
+        {
+            using (var context = new BlobStorageDbContext(dbName)) {
+                if (context.Database.Exists()) {
+                    context.Database.Delete();
+                }
             }
         }
     }

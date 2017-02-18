@@ -11,34 +11,25 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Data.Entity;
+using System.Linq;
+using Infrastructure.Database;
+using Infrastructure.Messaging;
+using Infrastructure.Sql.Database;
+using Moq;
+using Xunit;
+
 namespace Infrastructure.Sql.IntegrationTests
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Data.Entity;
-    using System.Linq;
-    using Infrastructure.Database;
-    using Infrastructure.Messaging;
-    using Infrastructure.Sql.Database;
-    using Moq;
-    using Xunit;
-
     public class SqlDataContextFixture : IDisposable
     {
         public SqlDataContextFixture()
         {
-            using (var dbContext = new TestDbContext())
-            {
+            using (var dbContext = new TestDbContext()) {
                 dbContext.Database.Delete();
                 dbContext.Database.Create();
-            }
-        }
-
-        public void Dispose()
-        {
-            using (var dbContext = new TestDbContext())
-            {
-                dbContext.Database.Delete();
             }
         }
 
@@ -47,15 +38,13 @@ namespace Infrastructure.Sql.IntegrationTests
         {
             var id = Guid.NewGuid();
 
-            using (var context = new SqlDataContext<TestAggregateRoot>(() => new TestDbContext(), Mock.Of<IEventBus>()))
-            {
-                var aggregateRoot = new TestAggregateRoot(id) { Title = "test" };
+            using (var context = new SqlDataContext<TestAggregateRoot>(() => new TestDbContext(), Mock.Of<IEventBus>())) {
+                var aggregateRoot = new TestAggregateRoot(id) {Title = "test"};
 
                 context.Save(aggregateRoot);
             }
 
-            using (var context = new SqlDataContext<TestAggregateRoot>(() => new TestDbContext(), Mock.Of<IEventBus>()))
-            {
+            using (var context = new SqlDataContext<TestAggregateRoot>(() => new TestDbContext(), Mock.Of<IEventBus>())) {
                 var aggregateRoot = context.Find(id);
 
                 Assert.NotNull(aggregateRoot);
@@ -68,22 +57,19 @@ namespace Infrastructure.Sql.IntegrationTests
         {
             var id = Guid.NewGuid();
 
-            using (var context = new SqlDataContext<TestAggregateRoot>(() => new TestDbContext(), Mock.Of<IEventBus>()))
-            {
+            using (var context = new SqlDataContext<TestAggregateRoot>(() => new TestDbContext(), Mock.Of<IEventBus>())) {
                 var aggregateRoot = new TestAggregateRoot(id);
                 context.Save(aggregateRoot);
             }
 
-            using (var context = new SqlDataContext<TestAggregateRoot>(() => new TestDbContext(), Mock.Of<IEventBus>()))
-            {
+            using (var context = new SqlDataContext<TestAggregateRoot>(() => new TestDbContext(), Mock.Of<IEventBus>())) {
                 var aggregateRoot = context.Find(id);
                 aggregateRoot.Title = "test";
 
                 context.Save(aggregateRoot);
             }
 
-            using (var context = new SqlDataContext<TestAggregateRoot>(() => new TestDbContext(), Mock.Of<IEventBus>()))
-            {
+            using (var context = new SqlDataContext<TestAggregateRoot>(() => new TestDbContext(), Mock.Of<IEventBus>())) {
                 var aggregateRoot = context.Find(id);
 
                 Assert.Equal("test", aggregateRoot.Title);
@@ -102,8 +88,7 @@ namespace Infrastructure.Sql.IntegrationTests
 
             var @event = new TestEvent();
 
-            using (var context = new SqlDataContext<TestEventPublishingAggregateRoot>(() => new TestDbContext(), busMock.Object))
-            {
+            using (var context = new SqlDataContext<TestEventPublishingAggregateRoot>(() => new TestDbContext(), busMock.Object)) {
                 var aggregate = new TestEventPublishingAggregateRoot(Guid.NewGuid());
                 aggregate.AddEvent(@event);
                 context.Save(aggregate);
@@ -113,16 +98,21 @@ namespace Infrastructure.Sql.IntegrationTests
             Assert.True(events.Contains(@event));
         }
 
+        public void Dispose()
+        {
+            using (var dbContext = new TestDbContext()) {
+                dbContext.Database.Delete();
+            }
+        }
+
         public class TestDbContext : DbContext
         {
-            public TestDbContext()
-                : base("TestDbContext")
-            {
-            }
-
             public DbSet<TestAggregateRoot> TestAggregateRoots { get; set; }
 
             public DbSet<TestEventPublishingAggregateRoot> TestEventPublishingAggregateRoot { get; set; }
+
+            public TestDbContext()
+                : base("TestDbContext") { }
         }
 
         public class TestEvent : IEvent
@@ -133,33 +123,34 @@ namespace Infrastructure.Sql.IntegrationTests
 
     public class TestAggregateRoot : IAggregateRoot
     {
+        public string Title { get; set; }
+
         protected TestAggregateRoot() { }
 
         public TestAggregateRoot(Guid id)
         {
-            this.Id = id;
+            Id = id;
         }
 
         public Guid Id { get; set; }
-        public string Title { get; set; }
     }
 
     public class TestEventPublishingAggregateRoot : TestAggregateRoot, IEventPublisher
     {
-        private List<IEvent> events = new List<IEvent>();
+        private readonly List<IEvent> events = new List<IEvent>();
 
         protected TestEventPublishingAggregateRoot() { }
 
         public TestEventPublishingAggregateRoot(Guid id)
-            : base(id)
-        {
-        }
+            : base(id) { }
 
         public void AddEvent(IEvent @event)
         {
-            this.events.Add(@event);
+            events.Add(@event);
         }
 
-        public IEnumerable<IEvent> Events { get { return this.events; } }
+        public IEnumerable<IEvent> Events {
+            get { return events; }
+        }
     }
 }

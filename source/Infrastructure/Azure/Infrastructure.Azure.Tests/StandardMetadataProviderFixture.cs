@@ -11,12 +11,12 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using Infrastructure.Messaging;
+using Xunit;
+
 namespace Infrastructure.Azure.Tests.StandardMetadataProviderFixture
 {
-    using System;
-    using Infrastructure.Messaging;
-    using Xunit;
-
     public class given_a_metadata_provider
     {
         [Fact]

@@ -11,23 +11,22 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+
 namespace Registration.Commands
 {
-    using System;
-    using Infrastructure.Messaging;
-
     /// <summary>
-    /// Adds seats to an existing seat type.
+    ///     Adds seats to an existing seat type.
     /// </summary>
     public class AddSeats : SeatsAvailabilityCommand
     {
         /// <summary>
-        /// Gets or sets the type of the seat.
+        ///     Gets or sets the type of the seat.
         /// </summary>
         public Guid SeatType { get; set; }
 
         /// <summary>
-        /// Gets or sets the quantity of seats added.
+        ///     Gets or sets the quantity of seats added.
         /// </summary>
         public int Quantity { get; set; }
     }

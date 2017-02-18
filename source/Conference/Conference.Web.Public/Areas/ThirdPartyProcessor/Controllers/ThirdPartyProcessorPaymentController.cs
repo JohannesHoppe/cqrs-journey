@@ -11,25 +11,26 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Web.Mvc;
+
 namespace Conference.Web.Public.Areas.ThirdPartyProcessor.Controllers
 {
-    using System.Web.Mvc;
-
     /// <summary>
-    /// Fake 'third party payment processor' web support
+    ///     Fake 'third party payment processor' web support
     /// </summary>
     public class ThirdPartyProcessorPaymentController : Controller
     {
         private const string returnUrlKey = "returnUrl";
+
         private const string cancelReturnUrlKey = "cancelReturnUrl";
 
         [HttpGet]
         public ActionResult Pay(string itemName, decimal itemAmount, string returnUrl, string cancelReturnUrl)
         {
-            this.ViewBag.ItemName = itemName;
-            this.ViewBag.ItemAmount = itemAmount;
-            this.ViewBag.ReturnUrl = returnUrl;
-            this.ViewBag.CancelReturnUrl = cancelReturnUrl;
+            ViewBag.ItemName = itemName;
+            ViewBag.ItemAmount = itemAmount;
+            ViewBag.ReturnUrl = returnUrl;
+            ViewBag.CancelReturnUrl = cancelReturnUrl;
 
             return View();
         }
@@ -39,12 +40,9 @@ namespace Conference.Web.Public.Areas.ThirdPartyProcessor.Controllers
         {
             string url;
 
-            if (paymentResult == "accepted")
-            {
+            if (paymentResult == "accepted") {
                 url = returnUrl;
-            }
-            else
-            {
+            } else {
                 url = cancelReturnUrl;
             }
 

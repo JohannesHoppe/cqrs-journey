@@ -11,42 +11,43 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+
 namespace Registration.ReadModel
 {
-    using System;
-    using System.Collections.Generic;
-    using System.ComponentModel.DataAnnotations;
-    using System.Linq;
-
     /// <summary>
-    /// Represents the read model for the set of individual 
-    /// seats purchased in an order, which can be assigned 
-    /// to attendees.
+    ///     Represents the read model for the set of individual
+    ///     seats purchased in an order, which can be assigned
+    ///     to attendees.
     /// </summary>
     public class OrderSeats
     {
-        public OrderSeats()
-        {
-            this.Seats = new List<OrderSeat>();
-        }
-
-        public OrderSeats(Guid assignmentsId, Guid orderId, IEnumerable<OrderSeat> seats)
-        {
-            this.AssignmentsId = assignmentsId;
-            this.OrderId = orderId;
-            this.Seats = seats.ToList();
-        }
-
         /// <summary>
-        /// Gets or sets the seat assignments AR identifier.
+        ///     Gets or sets the seat assignments AR identifier.
         /// </summary>
         [Key]
         public Guid AssignmentsId { get; set; }
 
         /// <summary>
-        /// Gets or sets the order id.
+        ///     Gets or sets the order id.
         /// </summary>
         public Guid OrderId { get; set; }
+
         public IList<OrderSeat> Seats { get; set; }
+
+        public OrderSeats()
+        {
+            Seats = new List<OrderSeat>();
+        }
+
+        public OrderSeats(Guid assignmentsId, Guid orderId, IEnumerable<OrderSeat> seats)
+        {
+            AssignmentsId = assignmentsId;
+            OrderId = orderId;
+            Seats = seats.ToList();
+        }
     }
 }

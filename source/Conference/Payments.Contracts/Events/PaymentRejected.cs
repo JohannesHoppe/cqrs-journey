@@ -11,15 +11,15 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using Infrastructure.Messaging;
+
 namespace Payments.Contracts.Events
 {
-    using System;
-    using Infrastructure.Messaging;
-
     public class PaymentRejected : IEvent
     {
-        public Guid SourceId { get; set; }
-
         public Guid PaymentSourceId { get; set; }
+
+        public Guid SourceId { get; set; }
     }
 }

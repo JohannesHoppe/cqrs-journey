@@ -11,50 +11,46 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Web.Mvc;
+using Registration.ReadModel;
+
 namespace Conference.Web.Public
 {
-    using System.Web.Mvc;
-    using Registration.ReadModel;
-
     public abstract class ConferenceTenantController : AsyncController
     {
         private ConferenceAlias conferenceAlias;
+
         private string conferenceCode;
+
+        public IConferenceDao ConferenceDao { get; }
+
+        public string ConferenceCode {
+            get {
+                return conferenceCode ??
+                    (conferenceCode = (string) ControllerContext.RouteData.Values["conferenceCode"]);
+            }
+            internal set { conferenceCode = value; }
+        }
+
+        public ConferenceAlias ConferenceAlias {
+            get {
+                return conferenceAlias ??
+                    (conferenceAlias = ConferenceDao.GetConferenceAlias(ConferenceCode));
+            }
+            internal set { conferenceAlias = value; }
+        }
 
         protected ConferenceTenantController(IConferenceDao conferenceDao)
         {
-            this.ConferenceDao = conferenceDao;
-        }
-
-        public IConferenceDao ConferenceDao { get; private set; }
-
-        public string ConferenceCode
-        {
-            get
-            {
-                return this.conferenceCode ??
-                    (this.conferenceCode = (string)ControllerContext.RouteData.Values["conferenceCode"]);
-            }
-            internal set { this.conferenceCode = value; }
-        }
-
-        public ConferenceAlias ConferenceAlias
-        {
-            get
-            {
-                return this.conferenceAlias ??
-                    (this.conferenceAlias = this.ConferenceDao.GetConferenceAlias(this.ConferenceCode));
-            }
-            internal set { this.conferenceAlias = value; }
+            ConferenceDao = conferenceDao;
         }
 
         protected override void OnActionExecuting(ActionExecutingContext filterContext)
         {
             base.OnActionExecuting(filterContext);
 
-            if (!string.IsNullOrEmpty(this.ConferenceCode) &&
-                this.ConferenceAlias == null)
-            {
+            if (!string.IsNullOrEmpty(ConferenceCode) &&
+                ConferenceAlias == null) {
                 filterContext.Result = new HttpNotFoundResult("Invalid conference code.");
             }
         }
@@ -63,9 +59,8 @@ namespace Conference.Web.Public
         {
             base.OnResultExecuting(filterContext);
 
-            if (filterContext.Result is ViewResultBase)
-            {
-                this.ViewBag.Conference = this.ConferenceAlias;
+            if (filterContext.Result is ViewResultBase) {
+                ViewBag.Conference = ConferenceAlias;
             }
         }
     }

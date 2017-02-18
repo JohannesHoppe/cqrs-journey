@@ -12,25 +12,27 @@
 // ==============================================================================================================
 
 $(function() {
-  var w = $(window);
-  var rti = $('.reg-time-info');
+    var w = $(window);
+    var rti = $(".reg-time-info");
     var currentScrollTop = 0;
-	w.scroll(function(){ 
-		currentScrollTop = w.scrollTop() - 285;
-		rti.css('top', currentScrollTop > 0 ? currentScrollTop : 0);
+    w.scroll(function() {
+        currentScrollTop = w.scrollTop() - 285;
+        rti.css("top", currentScrollTop > 0 ? currentScrollTop : 0);
     });
 
 
-	var Conference = {};
+    var Conference = {};
 
     Conference.StartTimer = function(element, timeoutCallback, formatCallback) {
-        timeoutCallback = (typeof timeoutCallback === 'undefined') ? Conference._DefaultTimeoutCallback(element) : timeoutCallback;
-        formatCallback = (typeof formatCallback === 'undefined') ? Conference._DefaultFormatCallback : formatCallback;
+        timeoutCallback = (typeof timeoutCallback === "undefined")
+            ? Conference._DefaultTimeoutCallback(element)
+            : timeoutCallback;
+        formatCallback = (typeof formatCallback === "undefined") ? Conference._DefaultFormatCallback : formatCallback;
 
-        var targetDate = new Date(parseInt(element.getAttribute('data-targetDate')));
+        var targetDate = new Date(parseInt(element.getAttribute("data-targetDate")));
 
         var timerCallback = function() {
-            var formattedMilliseconds = '';
+            var formattedMilliseconds = "";
             var currentDate = new Date();
 
             var dateDiff = targetDate.getTime() - currentDate.getTime();
@@ -55,19 +57,19 @@ $(function() {
         var hours = totalHours % 24;
         var days = Math.floor(totalHours / 24);
 
-        var secondsPart = [((seconds >= 10) ? '' : '0'), seconds.toString()].join('');
-        var minutesPart = [((minutes >= 10) ? '' : '0'), minutes.toString()].join('');
-        var hoursPart = [((hours >= 10) ? '' : '0'), hours.toString()].join('');
-        var daysPart = [((days >= 10) ? '' : '0'), days.toString()].join('');
+        var secondsPart = [((seconds >= 10) ? "" : "0"), seconds.toString()].join("");
+        var minutesPart = [((minutes >= 10) ? "" : "0"), minutes.toString()].join("");
+        var hoursPart = [((hours >= 10) ? "" : "0"), hours.toString()].join("");
+        var daysPart = [((days >= 10) ? "" : "0"), days.toString()].join("");
 
-        var result = '';
+        var result = "";
 
         if (days > 0) {
-            result = [daysPart, hoursPart, minutesPart, secondsPart].join(':');
+            result = [daysPart, hoursPart, minutesPart, secondsPart].join(":");
         } else if (hours > 0) {
-            result = [hoursPart, minutesPart, secondsPart].join(':');
+            result = [hoursPart, minutesPart, secondsPart].join(":");
         } else {
-            result = [minutesPart, secondsPart].join(':');
+            result = [minutesPart, secondsPart].join(":");
         }
 
         return result;
@@ -75,12 +77,12 @@ $(function() {
 
     Conference._DefaultTimeoutCallback = function(element) {
         return function() {
-            element.innerHTML = '';
+            element.innerHTML = "";
         };
     };
 
-    $('.reg-time-info__title').each(function() {
-        var redirectUrl = this.getAttribute('data-redirectUrl');
+    $(".reg-time-info__title").each(function() {
+        var redirectUrl = this.getAttribute("data-redirectUrl");
         Conference.StartTimer(this, function() { window.location = redirectUrl; });
     });
 });

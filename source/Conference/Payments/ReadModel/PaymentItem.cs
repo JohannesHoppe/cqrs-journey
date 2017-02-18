@@ -11,29 +11,27 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.ComponentModel.DataAnnotations;
+
 namespace Payments.ReadModel
 {
-    using System;
-    using System.ComponentModel.DataAnnotations;
-
     public class PaymentItem
     {
+        [Key]
+        public virtual Guid Id { get; }
+
+        public virtual string Description { get; }
+
+        public virtual decimal Price { get; }
+
         public PaymentItem(Guid id, string description, decimal price)
         {
-            this.Id = id;
-            this.Description = description;
-            this.Price = price;
+            Id = id;
+            Description = description;
+            Price = price;
         }
 
-        protected PaymentItem()
-        {
-        }
-
-        [Key]
-        public virtual Guid Id { get; private set; }
-
-        public virtual string Description { get; private set; }
-
-        public virtual decimal Price { get; private set; }
+        protected PaymentItem() { }
     }
 }

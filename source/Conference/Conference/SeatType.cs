@@ -11,19 +11,14 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.ComponentModel.DataAnnotations;
+using Infrastructure.Utils;
+
 namespace Conference
 {
-    using System;
-    using System.ComponentModel.DataAnnotations;
-    using Infrastructure.Utils;
-
     public class SeatType
     {
-        public SeatType()
-        {
-            this.Id = GuidUtil.NewSequentialId();
-        }
-
         public Guid Id { get; set; }
 
         [Required(AllowEmptyStrings = false)]
@@ -39,5 +34,10 @@ namespace Conference
 
         [Range(0, 50000)]
         public decimal Price { get; set; }
+
+        public SeatType()
+        {
+            Id = GuidUtil.NewSequentialId();
+        }
     }
 }

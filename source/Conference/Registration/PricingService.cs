@@ -11,46 +11,45 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using Registration.ReadModel;
+
 namespace Registration
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Globalization;
-    using System.IO;
-    using System.Linq;
-    using Registration.ReadModel;
-
     public class PricingService : IPricingService
     {
         private readonly IConferenceDao conferenceDao;
 
         public PricingService(IConferenceDao conferenceDao)
         {
-            if (conferenceDao == null) throw new ArgumentNullException("conferenceDao");
+            if (conferenceDao == null) {
+                throw new ArgumentNullException("conferenceDao");
+            }
 
             this.conferenceDao = conferenceDao;
         }
 
         public OrderTotal CalculateTotal(Guid conferenceId, ICollection<SeatQuantity> seatItems)
         {
-            var seatTypes = this.conferenceDao.GetPublishedSeatTypes(conferenceId);
+            var seatTypes = conferenceDao.GetPublishedSeatTypes(conferenceId);
             var lineItems = new List<OrderLine>();
-            foreach (var item in seatItems)
-            {
+            foreach (var item in seatItems) {
                 var seatType = seatTypes.FirstOrDefault(x => x.Id == item.SeatType);
-                if (seatType == null)
-                {
+                if (seatType == null) {
                     throw new InvalidDataException(string.Format(CultureInfo.InvariantCulture, "Invalid seat type ID '{0}' for conference with ID '{1}'", item.SeatType, conferenceId));
                 }
 
-                lineItems.Add(new SeatOrderLine { SeatType = item.SeatType, Quantity = item.Quantity, UnitPrice = seatType.Price, LineTotal = Math.Round(seatType.Price * item.Quantity, 2) });
+                lineItems.Add(new SeatOrderLine {SeatType = item.SeatType, Quantity = item.Quantity, UnitPrice = seatType.Price, LineTotal = Math.Round(seatType.Price * item.Quantity, 2)});
             }
 
-            return new OrderTotal
-                       {
-                           Total = lineItems.Sum(x => x.LineTotal),
-                           Lines = lineItems
-                       };
+            return new OrderTotal {
+                Total = lineItems.Sum(x => x.LineTotal),
+                Lines = lineItems
+            };
         }
     }
 }

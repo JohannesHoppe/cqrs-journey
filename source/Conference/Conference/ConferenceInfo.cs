@@ -11,18 +11,18 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel.DataAnnotations;
+using Conference.Common.Utils;
+using Conference.Properties;
+using Infrastructure.Utils;
+
 namespace Conference
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Collections.ObjectModel;
-    using System.ComponentModel.DataAnnotations;
-    using Common.Utils;
-    using Conference.Properties;
-    using Infrastructure.Utils;
-
     /// <summary>
-    /// Editable information about a conference.
+    ///     Editable information about a conference.
     /// </summary>
     public class EditableConferenceInfo
     {
@@ -36,6 +36,7 @@ namespace Conference
         public string Location { get; set; }
 
         public string Tagline { get; set; }
+
         public string TwitterSearch { get; set; }
 
         [DisplayFormat(ApplyFormatInEditMode = true, DataFormatString = "{0:yyyy/MM/dd}")]
@@ -51,22 +52,15 @@ namespace Conference
     }
 
     /// <summary>
-    /// The full conference information.
+    ///     The full conference information.
     /// </summary>
     /// <remarks>
-    /// This class inherits from <see cref="EditableConferenceInfo"/> 
-    /// and exposes more information that is not user-editable once 
-    /// it has been generated or provided.
+    ///     This class inherits from <see cref="EditableConferenceInfo" />
+    ///     and exposes more information that is not user-editable once
+    ///     it has been generated or provided.
     /// </remarks>
     public class ConferenceInfo : EditableConferenceInfo
     {
-        public ConferenceInfo()
-        {
-            this.Id = GuidUtil.NewSequentialId();
-            this.Seats = new ObservableCollection<SeatType>();
-            this.AccessCode = HandleGenerator.Generate(6);
-        }
-
         public Guid Id { get; set; }
 
         [StringLength(6, MinimumLength = 6)]
@@ -88,5 +82,12 @@ namespace Conference
         public bool WasEverPublished { get; set; }
 
         public virtual ICollection<SeatType> Seats { get; set; }
+
+        public ConferenceInfo()
+        {
+            Id = GuidUtil.NewSequentialId();
+            Seats = new ObservableCollection<SeatType>();
+            AccessCode = HandleGenerator.Generate(6);
+        }
     }
 }

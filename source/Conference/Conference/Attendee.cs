@@ -16,14 +16,16 @@ using System.ComponentModel.DataAnnotations;
 namespace Conference
 {
     /// <summary>
-    /// Represents an attendee to the conference, someone who has been 
-    /// assigned to a purchased seat.
+    ///     Represents an attendee to the conference, someone who has been
+    ///     assigned to a purchased seat.
     /// </summary>
     [ComplexType]
     public class Attendee
     {
         public string FirstName { get; set; }
+
         public string LastName { get; set; }
+
         // NOTE: we validate incoming data (this is filled from an event coming 
         // from the registration BC) so that when EF saves it will fail if it's invalid.
         [RegularExpression(@"[\w-]+(\.?[\w-])*\@[\w-]+(\.[\w-]+)+")]

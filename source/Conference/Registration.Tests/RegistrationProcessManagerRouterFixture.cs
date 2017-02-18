@@ -11,18 +11,19 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
+using Infrastructure.Messaging;
+using Infrastructure.Processes;
+using Payments.Contracts.Events;
+using Registration.Commands;
+using Registration.Events;
+using Xunit;
+
 namespace Registration.Tests
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Linq.Expressions;
-    using Infrastructure.Messaging;
-    using Infrastructure.Processes;
-    using Payments.Contracts.Events;
-    using Registration.Events;
-    using Xunit;
-
     public class RegistrationProcessManagerRouterFixture
     {
         [Fact]
@@ -31,7 +32,7 @@ namespace Registration.Tests
             var context = new StubProcessManagerDataContext<RegistrationProcessManager>();
             var router = new RegistrationProcessManagerRouter(() => context);
 
-            router.Handle(new OrderPlaced { SourceId = Guid.NewGuid(), ConferenceId = Guid.NewGuid(), Seats = new SeatQuantity[0] });
+            router.Handle(new OrderPlaced {SourceId = Guid.NewGuid(), ConferenceId = Guid.NewGuid(), Seats = new SeatQuantity[0]});
 
             Assert.Equal(1, context.SavedProcesses.Count);
             Assert.True(context.DisposeCalled);
@@ -40,18 +41,17 @@ namespace Registration.Tests
         [Fact]
         public void when_order_placed_is_is_reprocessed_then_routes_and_saves()
         {
-            var pm = new RegistrationProcessManager
-            {
+            var pm = new RegistrationProcessManager {
                 State = RegistrationProcessManager.ProcessState.AwaitingReservationConfirmation,
                 OrderId = Guid.NewGuid(),
                 ReservationId = Guid.NewGuid(),
                 ConferenceId = Guid.NewGuid(),
                 ReservationAutoExpiration = DateTime.UtcNow.AddMinutes(10)
             };
-            var context = new StubProcessManagerDataContext<RegistrationProcessManager> { Store = { pm } };
+            var context = new StubProcessManagerDataContext<RegistrationProcessManager> {Store = {pm}};
             var router = new RegistrationProcessManagerRouter(() => context);
 
-            router.Handle(new OrderPlaced { SourceId = pm.OrderId, ConferenceId = pm.ConferenceId, Seats = new SeatQuantity[0] });
+            router.Handle(new OrderPlaced {SourceId = pm.OrderId, ConferenceId = pm.ConferenceId, Seats = new SeatQuantity[0]});
 
             Assert.Equal(1, context.SavedProcesses.Count);
             Assert.True(context.DisposeCalled);
@@ -60,17 +60,16 @@ namespace Registration.Tests
         [Fact]
         public void when_order_updated_then_routes_and_saves()
         {
-            var pm = new RegistrationProcessManager
-            {
+            var pm = new RegistrationProcessManager {
                 State = RegistrationProcessManager.ProcessState.AwaitingReservationConfirmation,
                 ReservationId = Guid.NewGuid(),
                 ConferenceId = Guid.NewGuid(),
                 ReservationAutoExpiration = DateTime.UtcNow.AddMinutes(10)
             };
-            var context = new StubProcessManagerDataContext<RegistrationProcessManager> { Store = { pm } };
+            var context = new StubProcessManagerDataContext<RegistrationProcessManager> {Store = {pm}};
             var router = new RegistrationProcessManagerRouter(() => context);
 
-            router.Handle(new OrderUpdated { SourceId = pm.OrderId, Seats = new SeatQuantity[0] });
+            router.Handle(new OrderUpdated {SourceId = pm.OrderId, Seats = new SeatQuantity[0]});
 
             Assert.Equal(1, context.SavedProcesses.Count);
             Assert.True(context.DisposeCalled);
@@ -79,23 +78,21 @@ namespace Registration.Tests
         [Fact]
         public void when_reservation_accepted_then_routes_and_saves()
         {
-            var pm = new RegistrationProcessManager
-            {
+            var pm = new RegistrationProcessManager {
                 State = RegistrationProcessManager.ProcessState.AwaitingReservationConfirmation,
                 ReservationId = Guid.NewGuid(),
                 ConferenceId = Guid.NewGuid(),
                 SeatReservationCommandId = Guid.NewGuid(),
                 ReservationAutoExpiration = DateTime.UtcNow.AddMinutes(10)
             };
-            var context = new StubProcessManagerDataContext<RegistrationProcessManager> { Store = { pm } };
+            var context = new StubProcessManagerDataContext<RegistrationProcessManager> {Store = {pm}};
             var router = new RegistrationProcessManagerRouter(() => context);
 
             router.Handle(
                 new Envelope<SeatsReserved>(
-                    new SeatsReserved { SourceId = pm.ConferenceId, ReservationId = pm.ReservationId, ReservationDetails = new SeatQuantity[0] })
-                    {
-                        CorrelationId = pm.SeatReservationCommandId.ToString()
-                    });
+                    new SeatsReserved {SourceId = pm.ConferenceId, ReservationId = pm.ReservationId, ReservationDetails = new SeatQuantity[0]}) {
+                    CorrelationId = pm.SeatReservationCommandId.ToString()
+                });
 
             Assert.Equal(1, context.SavedProcesses.Count);
             Assert.True(context.DisposeCalled);
@@ -104,16 +101,15 @@ namespace Registration.Tests
         [Fact]
         public void when_payment_received_then_routes_and_saves()
         {
-            var pm = new RegistrationProcessManager
-            {
+            var pm = new RegistrationProcessManager {
                 State = RegistrationProcessManager.ProcessState.ReservationConfirmationReceived,
                 OrderId = Guid.NewGuid(),
-                ReservationAutoExpiration = DateTime.UtcNow.AddMinutes(10),
+                ReservationAutoExpiration = DateTime.UtcNow.AddMinutes(10)
             };
-            var context = new StubProcessManagerDataContext<RegistrationProcessManager> { Store = { pm } };
+            var context = new StubProcessManagerDataContext<RegistrationProcessManager> {Store = {pm}};
             var router = new RegistrationProcessManagerRouter(() => context);
 
-            router.Handle(new PaymentCompleted { PaymentSourceId = pm.OrderId });
+            router.Handle(new PaymentCompleted {PaymentSourceId = pm.OrderId});
 
             Assert.Equal(1, context.SavedProcesses.Count);
             Assert.True(context.DisposeCalled);
@@ -122,16 +118,15 @@ namespace Registration.Tests
         [Fact]
         public void when_order_confirmed_received_then_routes_and_saves()
         {
-            var pm = new RegistrationProcessManager
-            {
+            var pm = new RegistrationProcessManager {
                 State = RegistrationProcessManager.ProcessState.PaymentConfirmationReceived,
                 OrderId = Guid.NewGuid(),
-                ReservationAutoExpiration = DateTime.UtcNow.AddMinutes(10),
+                ReservationAutoExpiration = DateTime.UtcNow.AddMinutes(10)
             };
-            var context = new StubProcessManagerDataContext<RegistrationProcessManager> { Store = { pm } };
+            var context = new StubProcessManagerDataContext<RegistrationProcessManager> {Store = {pm}};
             var router = new RegistrationProcessManagerRouter(() => context);
 
-            router.Handle(new OrderConfirmed { SourceId = pm.OrderId });
+            router.Handle(new OrderConfirmed {SourceId = pm.OrderId});
 
             Assert.Equal(1, context.SavedProcesses.Count);
             Assert.True(context.DisposeCalled);
@@ -140,25 +135,25 @@ namespace Registration.Tests
         [Fact]
         public void when_order_expired_then_routes_and_saves()
         {
-            var pm = new RegistrationProcessManager
-            {
+            var pm = new RegistrationProcessManager {
                 State = RegistrationProcessManager.ProcessState.AwaitingReservationConfirmation,
                 ReservationId = Guid.NewGuid(),
                 OrderId = Guid.NewGuid(),
                 ReservationAutoExpiration = DateTime.UtcNow.AddMinutes(10)
             };
-            var context = new StubProcessManagerDataContext<RegistrationProcessManager> { Store = { pm } };
+            var context = new StubProcessManagerDataContext<RegistrationProcessManager> {Store = {pm}};
 
             var router = new RegistrationProcessManagerRouter(() => context);
 
-            router.Handle(new Commands.ExpireRegistrationProcess { ProcessId = pm.Id });
+            router.Handle(new ExpireRegistrationProcess {ProcessId = pm.Id});
 
             Assert.Equal(1, context.SavedProcesses.Count);
             Assert.True(context.DisposeCalled);
         }
     }
 
-    class StubProcessManagerDataContext<T> : IProcessManagerDataContext<T> where T : class, IProcessManager
+    internal class StubProcessManagerDataContext<T> : IProcessManagerDataContext<T>
+        where T : class, IProcessManager
     {
         public readonly List<T> SavedProcesses = new List<T>();
 
@@ -168,22 +163,22 @@ namespace Registration.Tests
 
         public T Find(Guid id)
         {
-            return this.Store.SingleOrDefault(x => x.Id == id);
+            return Store.SingleOrDefault(x => x.Id == id);
         }
 
         public void Save(T processManager)
         {
-            this.SavedProcesses.Add(processManager);
+            SavedProcesses.Add(processManager);
         }
 
         public T Find(Expression<Func<T, bool>> predicate, bool includeCompleted = false)
         {
-            return this.Store.AsQueryable().Where(x => includeCompleted || !x.Completed).SingleOrDefault(predicate);
+            return Store.AsQueryable().Where(x => includeCompleted || !x.Completed).SingleOrDefault(predicate);
         }
 
         public void Dispose()
         {
-            this.DisposeCalled = true;
+            DisposeCalled = true;
         }
     }
 }

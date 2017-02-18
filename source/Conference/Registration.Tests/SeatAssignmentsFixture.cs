@@ -11,51 +11,51 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Linq;
+using Conference.Common.Utils;
+using Infrastructure.EventSourcing;
+using Moq;
+using Registration.Commands;
+using Registration.Events;
+using Registration.Handlers;
+using Xunit;
+
 namespace Registration.Tests.SeatAssignmentsFixture
 {
-    using System;
-    using System.Linq;
-    using Conference.Common.Utils;
-    using Infrastructure.EventSourcing;
-    using Moq;
-    using Registration.Commands;
-    using Registration.Events;
-    using Registration.Handlers;
-    using Xunit;
-
     public class given_a_paid_order
     {
-        private Guid orderId = Guid.NewGuid();
-        private EventSourcingTestHelper<SeatAssignments> sut;
-        private EventSourcingTestHelper<Order> orderHelper;
+        private readonly EventSourcingTestHelper<Order> orderHelper;
+
+        private readonly Guid orderId = Guid.NewGuid();
+
+        private readonly EventSourcingTestHelper<SeatAssignments> sut;
 
         public given_a_paid_order()
         {
-            this.sut = new EventSourcingTestHelper<SeatAssignments>();
-            this.orderHelper = new EventSourcingTestHelper<Order>();
-            this.orderHelper.Setup(new OrderCommandHandler(this.orderHelper.Repository, Mock.Of<IPricingService>()));
-            this.orderHelper.Given(
-                new OrderPlaced
-                {
+            sut = new EventSourcingTestHelper<SeatAssignments>();
+            orderHelper = new EventSourcingTestHelper<Order>();
+            orderHelper.Setup(new OrderCommandHandler(orderHelper.Repository, Mock.Of<IPricingService>()));
+            orderHelper.Given(
+                new OrderPlaced {
                     SourceId = orderId,
                     ConferenceId = Guid.NewGuid(),
-                    Seats = new[] 
-                    {
-                        new SeatQuantity(Guid.NewGuid(), 5), 
-                        new SeatQuantity(Guid.NewGuid(), 10),
+                    Seats = new[] {
+                        new SeatQuantity(Guid.NewGuid(), 5),
+                        new SeatQuantity(Guid.NewGuid(), 10)
                     },
                     ReservationAutoExpiration = DateTime.UtcNow.AddDays(1),
-                    AccessCode = HandleGenerator.Generate(6),
+                    AccessCode = HandleGenerator.Generate(6)
                 },
-                new OrderPaymentConfirmed { SourceId = orderId });
+                new OrderPaymentConfirmed {SourceId = orderId});
 
-            this.sut.Setup(new SeatAssignmentsHandler(this.orderHelper.Repository, this.sut.Repository));
+            sut.Setup(new SeatAssignmentsHandler(orderHelper.Repository, sut.Repository));
         }
 
         [Fact]
         public void when_order_confirmed_then_seats_assignments_created()
         {
-            sut.When(new OrderConfirmed { SourceId = orderId });
+            sut.When(new OrderConfirmed {SourceId = orderId});
 
             var @event = sut.ThenHasSingle<SeatAssignmentsCreated>();
             // We do not reuse the order id.
@@ -68,50 +68,48 @@ namespace Registration.Tests.SeatAssignmentsFixture
     public class given_seat_assignments
     {
         protected Guid assignmentsId = Guid.NewGuid();
+
         protected Guid orderId = Guid.NewGuid();
+
         protected Guid seatType = Guid.NewGuid();
+
         protected EventSourcingTestHelper<SeatAssignments> sut;
 
         public given_seat_assignments()
         {
-            this.sut = new EventSourcingTestHelper<SeatAssignments>();
-            this.sut.Setup(new SeatAssignmentsHandler(Mock.Of<IEventSourcedRepository<Order>>(), this.sut.Repository));
-            this.sut.Given(new SeatAssignmentsCreated
-            {
-                SourceId = assignmentsId,
-                OrderId = orderId,
-                Seats = Enumerable.Range(0, 5).Select(i =>
-                    new SeatAssignmentsCreated.SeatAssignmentInfo
-                    {
-                        Position = i,
-                        SeatType = seatType,
-                    })
-            },
-            new SeatAssigned(assignmentsId)
-            {
-                Position = 0,
-                SeatType = seatType,
-                Attendee = new PersonalInfo
-                {
-                    Email = "a@a.com",
-                    FirstName = "A",
-                    LastName = "Z",
-                }
-            });
+            sut = new EventSourcingTestHelper<SeatAssignments>();
+            sut.Setup(new SeatAssignmentsHandler(Mock.Of<IEventSourcedRepository<Order>>(), sut.Repository));
+            sut.Given(new SeatAssignmentsCreated {
+                    SourceId = assignmentsId,
+                    OrderId = orderId,
+                    Seats = Enumerable.Range(0, 5)
+                        .Select(i =>
+                            new SeatAssignmentsCreated.SeatAssignmentInfo {
+                                Position = i,
+                                SeatType = seatType
+                            })
+                },
+                new SeatAssigned(assignmentsId) {
+                    Position = 0,
+                    SeatType = seatType,
+                    Attendee = new PersonalInfo {
+                        Email = "a@a.com",
+                        FirstName = "A",
+                        LastName = "Z"
+                    }
+                });
         }
 
         [Fact]
         public void when_assigning_unassigned_seat_then_seat_is_assigned()
         {
-            var command = new AssignSeat
-            {
+            var command = new AssignSeat {
                 SeatAssignmentsId = assignmentsId,
                 Position = 1,
-                Attendee = new PersonalInfo
-                {
+                Attendee = new PersonalInfo {
                     Email = "a@a.com",
                     FirstName = "A",
-                    LastName = "Z",
+                    LastName = "Z"
                 }
             };
             sut.When(command);
@@ -127,10 +125,9 @@ namespace Registration.Tests.SeatAssignmentsFixture
         [Fact]
         public void when_unassigning_seat_then_seat_is_unassigned()
         {
-            var command = new UnassignSeat
-            {
+            var command = new UnassignSeat {
                 SeatAssignmentsId = assignmentsId,
-                Position = 0,
+                Position = 0
             };
             sut.When(command);
 
@@ -143,10 +140,9 @@ namespace Registration.Tests.SeatAssignmentsFixture
         [Fact]
         public void when_unassigning_already_unnassigned_seat_then_no_event_is_raised()
         {
-            var command = new UnassignSeat
-            {
+            var command = new UnassignSeat {
                 SeatAssignmentsId = assignmentsId,
-                Position = 1,
+                Position = 1
             };
             sut.When(command);
 
@@ -156,15 +152,13 @@ namespace Registration.Tests.SeatAssignmentsFixture
         [Fact]
         public void when_assigning_previously_assigned_seat_to_new_email_then_reassigns_seat_with_two_events()
         {
-            var command = new AssignSeat
-            {
+            var command = new AssignSeat {
                 SeatAssignmentsId = assignmentsId,
                 Position = 0,
-                Attendee = new PersonalInfo
-                {
+                Attendee = new PersonalInfo {
                     Email = "b@b.com",
                     FirstName = "B",
-                    LastName = "Z",
+                    LastName = "Z"
                 }
             };
             sut.When(command);
@@ -185,15 +179,13 @@ namespace Registration.Tests.SeatAssignmentsFixture
         [Fact]
         public void when_assigning_previously_assigned_seat_to_same_email_then_updates_assignment()
         {
-            var command = new AssignSeat
-            {
+            var command = new AssignSeat {
                 SeatAssignmentsId = assignmentsId,
                 Position = 0,
-                Attendee = new PersonalInfo
-                {
+                Attendee = new PersonalInfo {
                     Email = "a@a.com",
                     FirstName = "B",
-                    LastName = "Z",
+                    LastName = "Z"
                 }
             };
             sut.When(command);

@@ -11,22 +11,22 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using Infrastructure.Messaging;
+
 namespace Registration.Commands
 {
-    using System;
-    using Infrastructure.Messaging;
-
     // Note: ConfirmOrderPayment was renamed to this from V1. Make sure there are no commands pending for processing when this is deployed,
     // otherwise the ConfirmOrderPayment commands will not be processed.
     public class ConfirmOrder : ICommand
     {
+        public Guid OrderId { get; set; }
+
         public ConfirmOrder()
         {
-            this.Id = Guid.NewGuid();
+            Id = Guid.NewGuid();
         }
 
         public Guid Id { get; set; }
-
-        public Guid OrderId { get; set; }
     }
 }

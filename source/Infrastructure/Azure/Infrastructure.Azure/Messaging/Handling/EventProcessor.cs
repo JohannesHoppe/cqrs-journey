@@ -11,16 +11,15 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using Infrastructure.Messaging;
+using Infrastructure.Messaging.Handling;
+using Infrastructure.Serialization;
+
 namespace Infrastructure.Azure.Messaging.Handling
 {
-    using Infrastructure.Azure.Messaging;
-    using Infrastructure.Messaging;
-    using Infrastructure.Messaging.Handling;
-    using Infrastructure.Serialization;
-
     /// <summary>
-    /// Processes incoming events from the bus and routes them to the appropriate 
-    /// handlers.
+    ///     Processes incoming events from the bus and routes them to the appropriate
+    ///     handlers.
     /// </summary>
     // TODO: now that we have just one handler per subscription, it doesn't make 
     // much sense to have this processor doing multi dispatch.
@@ -31,21 +30,20 @@ namespace Infrastructure.Azure.Messaging.Handling
         public EventProcessor(IMessageReceiver receiver, ITextSerializer serializer)
             : base(receiver, serializer)
         {
-            this.eventDispatcher = new EventDispatcher();
-        }
-
-        public void Register(IEventHandler eventHandler)
-        {
-            this.eventDispatcher.Register(eventHandler);
+            eventDispatcher = new EventDispatcher();
         }
 
         protected override void ProcessMessage(string traceIdentifier, object payload, string messageId, string correlationId)
         {
             var @event = payload as IEvent;
-            if (@event != null)
-            {
-                this.eventDispatcher.DispatchMessage(@event, messageId, correlationId, traceIdentifier);
+            if (@event != null) {
+                eventDispatcher.DispatchMessage(@event, messageId, correlationId, traceIdentifier);
             }
+        }
+
+        public void Register(IEventHandler eventHandler)
+        {
+            eventDispatcher.Register(eventHandler);
         }
     }
 }

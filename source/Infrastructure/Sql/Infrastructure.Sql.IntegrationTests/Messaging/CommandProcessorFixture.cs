@@ -11,44 +11,45 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.IO;
+using Infrastructure.Messaging;
+using Infrastructure.Messaging.Handling;
+using Infrastructure.Serialization;
+using Infrastructure.Sql.Messaging;
+using Infrastructure.Sql.Messaging.Handling;
+using Moq;
+using Xunit;
+
 namespace Infrastructure.Sql.IntegrationTests.Messaging.CommandProcessorFixture
 {
-    using System;
-    using System.IO;
-    using Infrastructure.Messaging;
-    using Infrastructure.Messaging.Handling;
-    using Infrastructure.Serialization;
-    using Infrastructure.Sql.Messaging;
-    using Infrastructure.Sql.Messaging.Handling;
-    using Moq;
-    using Xunit;
-
     public class given_command_processor
     {
-        private Mock<IMessageReceiver> receiverMock;
-        private CommandProcessor processor;
+        private readonly CommandProcessor processor;
+
+        private readonly Mock<IMessageReceiver> receiverMock;
 
         public given_command_processor()
         {
-            this.receiverMock = new Mock<IMessageReceiver>();
-            this.processor = new CommandProcessor(this.receiverMock.Object, CreateSerializer());
+            receiverMock = new Mock<IMessageReceiver>();
+            processor = new CommandProcessor(receiverMock.Object, CreateSerializer());
         }
 
         [Fact]
         public void when_starting_then_starts_receiver()
         {
-            this.processor.Start();
+            processor.Start();
 
-            this.receiverMock.Verify(r => r.Start());
+            receiverMock.Verify(r => r.Start());
         }
 
         [Fact]
         public void when_stopping_after_starting_then_stops_receiver()
         {
-            this.processor.Start();
-            this.processor.Stop();
+            processor.Start();
+            processor.Stop();
 
-            this.receiverMock.Verify(r => r.Stop());
+            receiverMock.Verify(r => r.Stop());
         }
 
         [Fact]
@@ -60,16 +61,16 @@ namespace Infrastructure.Sql.IntegrationTests.Messaging.CommandProcessorFixture
             var handlerBMock = new Mock<ICommandHandler>();
             handlerBMock.As<ICommandHandler<Command2>>();
 
-            this.processor.Register(handlerAMock.Object);
-            this.processor.Register(handlerBMock.Object);
+            processor.Register(handlerAMock.Object);
+            processor.Register(handlerBMock.Object);
 
-            this.processor.Start();
+            processor.Start();
 
-            var command1 = new Command1 { Id = Guid.NewGuid() };
-            var command2 = new Command2 { Id = Guid.NewGuid() };
+            var command1 = new Command1 {Id = Guid.NewGuid()};
+            var command2 = new Command2 {Id = Guid.NewGuid()};
 
-            this.receiverMock.Raise(r => r.MessageReceived += null, new MessageReceivedEventArgs(new Message(Serialize(command1))));
-            this.receiverMock.Raise(r => r.MessageReceived += null, new MessageReceivedEventArgs(new Message(Serialize(command2))));
+            receiverMock.Raise(r => r.MessageReceived += null, new MessageReceivedEventArgs(new Message(Serialize(command1))));
+            receiverMock.Raise(r => r.MessageReceived += null, new MessageReceivedEventArgs(new Message(Serialize(command2))));
 
             handlerAMock.As<ICommandHandler<Command1>>().Verify(h => h.Handle(It.Is<Command1>(e => e.Id == command1.Id)));
             handlerBMock.As<ICommandHandler<Command2>>().Verify(h => h.Handle(It.Is<Command2>(e => e.Id == command2.Id)));
@@ -79,8 +80,7 @@ namespace Infrastructure.Sql.IntegrationTests.Messaging.CommandProcessorFixture
         {
             var serializer = CreateSerializer();
 
-            using (var writer = new StringWriter())
-            {
+            using (var writer = new StringWriter()) {
                 serializer.Serialize(writer, payload);
                 return writer.ToString();
             }

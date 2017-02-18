@@ -11,16 +11,17 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using Infrastructure.Azure.Messaging;
+using Microsoft.ServiceBus.Messaging;
+
 namespace Infrastructure.Azure.MessageLog
 {
-    using System;
-    using Infrastructure.Azure.Messaging;
-    using Microsoft.ServiceBus.Messaging;
-
     public class AzureMessageLogListener : IProcessor, IDisposable
     {
-        private IAzureMessageLogWriter eventLog;
-        private IMessageReceiver receiver;
+        private readonly IAzureMessageLogWriter eventLog;
+
+        private readonly IMessageReceiver receiver;
 
         public AzureMessageLogListener(IAzureMessageLogWriter eventLog, IMessageReceiver receiver)
         {
@@ -30,17 +31,14 @@ namespace Infrastructure.Azure.MessageLog
 
         public void SaveMessage(BrokeredMessage brokeredMessage)
         {
-            this.eventLog.Save(brokeredMessage.ToMessageLogEntity());
+            eventLog.Save(brokeredMessage.ToMessageLogEntity());
         }
 
-        public void Start()
+        protected virtual void Dispose(bool disposing)
         {
-            this.receiver.Start(m => { this.SaveMessage(m); return MessageReleaseAction.CompleteMessage; });
-        }
-
-        public void Stop()
-        {
-            this.receiver.Stop();
+            if (disposing) {
+                using (receiver as IDisposable) { }
+            }
         }
 
         public void Dispose()
@@ -49,12 +47,17 @@ namespace Infrastructure.Azure.MessageLog
             GC.SuppressFinalize(this);
         }
 
-        protected virtual void Dispose(bool disposing)
+        public void Start()
         {
-            if (disposing)
-            {
-                using (this.receiver as IDisposable) { }
-            }
+            receiver.Start(m => {
+                SaveMessage(m);
+                return MessageReleaseAction.CompleteMessage;
+            });
+        }
+
+        public void Stop()
+        {
+            receiver.Stop();
         }
     }
 }

@@ -11,27 +11,17 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Data.Entity;
+
 namespace Registration.Database
 {
-    using System.Data.Entity;
-    using System.Linq;
-
     public class RegistrationProcessManagerDbContextInitializer : IDatabaseInitializer<RegistrationProcessManagerDbContext>
     {
-        private IDatabaseInitializer<RegistrationProcessManagerDbContext> innerInitializer;
+        private readonly IDatabaseInitializer<RegistrationProcessManagerDbContext> innerInitializer;
 
         public RegistrationProcessManagerDbContextInitializer(IDatabaseInitializer<RegistrationProcessManagerDbContext> innerInitializer)
         {
             this.innerInitializer = innerInitializer;
-        }
-
-        public void InitializeDatabase(RegistrationProcessManagerDbContext context)
-        {
-            this.innerInitializer.InitializeDatabase(context);
-
-            CreateIndexes(context);
-
-            context.SaveChanges();
         }
 
         public static void CreateIndexes(DbContext context)
@@ -43,8 +33,17 @@ CREATE NONCLUSTERED INDEX IX_RegistrationProcessManager_Completed ON [" + Regist
 IF NOT EXISTS (SELECT name FROM sys.indexes WHERE name = 'IX_RegistrationProcessManager_OrderId')
 CREATE NONCLUSTERED INDEX IX_RegistrationProcessManager_OrderId ON [" + RegistrationProcessManagerDbContext.SchemaName + @"].[RegistrationProcess]( OrderId )");
 
-//IF NOT EXISTS (SELECT name FROM sys.indexes WHERE name = 'IX_RegistrationProcessManager_ReservationId')
-//CREATE NONCLUSTERED INDEX IX_RegistrationProcessManager_ReservationId ON [" + RegistrationProcessDbContext.SchemaName + @"].[RegistrationProcess]( ReservationId )
+            //IF NOT EXISTS (SELECT name FROM sys.indexes WHERE name = 'IX_RegistrationProcessManager_ReservationId')
+            //CREATE NONCLUSTERED INDEX IX_RegistrationProcessManager_ReservationId ON [" + RegistrationProcessDbContext.SchemaName + @"].[RegistrationProcess]( ReservationId )
+        }
+
+        public void InitializeDatabase(RegistrationProcessManagerDbContext context)
+        {
+            innerInitializer.InitializeDatabase(context);
+
+            CreateIndexes(context);
+
+            context.SaveChanges();
         }
     }
 }

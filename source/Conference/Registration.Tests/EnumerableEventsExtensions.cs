@@ -11,18 +11,18 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Linq;
+using Infrastructure.EventSourcing;
+using Infrastructure.Messaging;
+
 namespace Registration.Tests
 {
-    using System.Linq;
-    using Infrastructure.EventSourcing;
-    using Infrastructure.Messaging;
-
     public static class EnumerableEventsExtensions
     {
-        public static TEvent SingleEvent<TEvent> (this IEventSourced aggregate)
-            where TEvent: IEvent
+        public static TEvent SingleEvent<TEvent>(this IEventSourced aggregate)
+            where TEvent : IEvent
         {
-            return (TEvent)aggregate.Events.Single();
+            return (TEvent) aggregate.Events.Single();
         }
     }
 }

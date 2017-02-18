@@ -11,18 +11,13 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+
 namespace Conference.Web.Public.Models
 {
-    using System;
-    using System.Collections.Generic;
-
     public class OrderViewModel
     {
-        public OrderViewModel()
-        {
-            this.Items = new List<OrderItemViewModel>();
-        }
-
         public Guid OrderId { get; set; }
 
         public int OrderVersion { get; set; }
@@ -36,5 +31,10 @@ namespace Conference.Web.Public.Models
         public IList<OrderItemViewModel> Items { get; set; }
 
         public long ReservationExpirationDate { get; set; }
+
+        public OrderViewModel()
+        {
+            Items = new List<OrderItemViewModel>();
+        }
     }
 }

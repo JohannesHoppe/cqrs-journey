@@ -11,29 +11,27 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using Infrastructure.Utils;
+
 namespace Payments
 {
-    using System;
-    using Infrastructure.Utils;
-
     public class ThidPartyProcessorPaymentItem
     {
+        public Guid Id { get; }
+
+        public string Description { get; }
+
+        public decimal Amount { get; }
+
         public ThidPartyProcessorPaymentItem(string description, decimal amount)
         {
-            this.Id = GuidUtil.NewSequentialId();
+            Id = GuidUtil.NewSequentialId();
 
-            this.Description = description;
-            this.Amount = amount;
+            Description = description;
+            Amount = amount;
         }
 
-        protected ThidPartyProcessorPaymentItem()
-        {
-        }
-
-        public Guid Id { get; private set; }
-
-        public string Description { get; private set; }
-
-        public decimal Amount { get; private set; }
+        protected ThidPartyProcessorPaymentItem() { }
     }
 }

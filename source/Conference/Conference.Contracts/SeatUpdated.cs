@@ -11,30 +11,33 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using Infrastructure.Messaging;
+
 namespace Conference
 {
-    using System;
-    using Infrastructure.Messaging;
-
     /// <summary>
-    /// Event raised when a new seat type is created. Note 
-    /// that when a seat type is created.
+    ///     Event raised when a new seat type is created. Note
+    ///     that when a seat type is created.
     /// </summary>
     public class SeatUpdated : IEvent
     {
         /// <summary>
-        /// Gets or sets the conference identifier.
+        ///     Gets or sets the conference identifier.
         /// </summary>
         public Guid ConferenceId { get; set; }
 
+        public string Name { get; set; }
+
+        public string Description { get; set; }
+
+        public decimal Price { get; set; }
+
+        public int Quantity { get; set; }
+
         /// <summary>
-        /// Gets or sets the source seat type identifier.
+        ///     Gets or sets the source seat type identifier.
         /// </summary>
         public Guid SourceId { get; set; }
-
-        public string Name { get; set; }
-        public string Description { get; set; }
-        public decimal Price { get; set; }
-        public int Quantity { get; set; }
     }
 }

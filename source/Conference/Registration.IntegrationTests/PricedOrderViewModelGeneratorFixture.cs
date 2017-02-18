@@ -11,60 +11,61 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Linq;
+using Conference;
+using Infrastructure.Serialization;
+using Registration.Events;
+using Registration.Handlers;
+using Registration.ReadModel;
+using Registration.ReadModel.Implementation;
+using Xunit;
+
 namespace Registration.IntegrationTests.PricedOrderViewModelGeneratorFixture
 {
-    using System;
-    using System.Linq;
-    using Conference;
-    using Infrastructure.Serialization;
-    using Registration.Events;
-    using Registration.Handlers;
-    using Registration.ReadModel;
-    using Registration.ReadModel.Implementation;
-    using Xunit;
-
     public class given_a_read_model_generator : given_a_read_model_database
     {
+        private readonly IOrderDao dao;
+
         protected PricedOrderViewModelGenerator sut;
-        private IOrderDao dao;
 
         public given_a_read_model_generator()
         {
             var blobStorage = new MemoryBlobStorage();
-            this.sut = new PricedOrderViewModelGenerator(() => new ConferenceRegistrationDbContext(dbName));
-            this.dao = new OrderDao(() => new ConferenceRegistrationDbContext(dbName), blobStorage, new JsonTextSerializer());
+            sut = new PricedOrderViewModelGenerator(() => new ConferenceRegistrationDbContext(dbName));
+            dao = new OrderDao(() => new ConferenceRegistrationDbContext(dbName), blobStorage, new JsonTextSerializer());
         }
 
         public class given_some_initial_seats : given_a_read_model_generator
         {
             protected SeatCreated[] seatCreatedEvents;
+
             public given_some_initial_seats()
             {
-                this.seatCreatedEvents = new[]
-                                     {
-                                         new SeatCreated { SourceId = Guid.NewGuid(), Name = "General" },
-                                         new SeatCreated { SourceId = Guid.NewGuid(), Name = "Precon" }
-                                     };
-                this.sut.Handle(this.seatCreatedEvents[0]);
-                this.sut.Handle(this.seatCreatedEvents[1]);
+                seatCreatedEvents = new[] {
+                    new SeatCreated {SourceId = Guid.NewGuid(), Name = "General"},
+                    new SeatCreated {SourceId = Guid.NewGuid(), Name = "Precon"}
+                };
+                sut.Handle(seatCreatedEvents[0]);
+                sut.Handle(seatCreatedEvents[1]);
             }
         }
 
         public class given_a_placed_order : given_some_initial_seats
         {
             protected static readonly Guid orderId = Guid.NewGuid();
+
             protected readonly OrderPlaced orderPlaced;
 
             public given_a_placed_order()
             {
-                this.orderPlaced = new OrderPlaced
-                {
+                orderPlaced = new OrderPlaced {
                     SourceId = orderId,
                     ReservationAutoExpiration = DateTime.UtcNow.AddMinutes(10),
-                    Version = 2,
+                    Version = 2
                 };
 
-                this.sut.Handle(orderPlaced);
+                sut.Handle(orderPlaced);
             }
         }
 
@@ -74,7 +75,7 @@ namespace Registration.IntegrationTests.PricedOrderViewModelGeneratorFixture
 
             public when_reading_order()
             {
-                this.dto = this.dao.FindPricedOrder(orderId);
+                dto = dao.FindPricedOrder(orderId);
             }
 
             [Fact]
@@ -88,9 +89,9 @@ namespace Registration.IntegrationTests.PricedOrderViewModelGeneratorFixture
             [Fact]
             public void then_order_placed_is_idempotent()
             {
-                this.sut.Handle(orderPlaced);
+                sut.Handle(orderPlaced);
 
-                dto = this.dao.FindPricedOrder(orderId);
+                dto = dao.FindPricedOrder(orderId);
 
                 Assert.NotNull(dto);
                 Assert.InRange(dto.ReservationExpirationDate.Value, orderPlaced.ReservationAutoExpiration.AddSeconds(-1), orderPlaced.ReservationAutoExpiration.AddSeconds(1));
@@ -104,25 +105,22 @@ namespace Registration.IntegrationTests.PricedOrderViewModelGeneratorFixture
 
             public given_a_calculated_order()
             {
-                this.sut.Handle(new OrderTotalsCalculated
-                {
+                sut.Handle(new OrderTotalsCalculated {
                     SourceId = orderId,
-                    Lines = new[]
-                    {
-                        new SeatOrderLine 
-                        { 
-                            LineTotal = 50, 
-                            SeatType = this.seatCreatedEvents[0].SourceId, 
-                            Quantity = 10, 
-                            UnitPrice = 5 
-                        },
+                    Lines = new[] {
+                        new SeatOrderLine {
+                            LineTotal = 50,
+                            SeatType = seatCreatedEvents[0].SourceId,
+                            Quantity = 10,
+                            UnitPrice = 5
+                        }
                     },
                     Total = 50,
                     IsFreeOfCharge = true,
-                    Version = 4,
+                    Version = 4
                 });
 
-                this.dto = this.dao.FindPricedOrder(orderId);
+                dto = dao.FindPricedOrder(orderId);
             }
 
             [Fact]
@@ -157,24 +155,21 @@ namespace Registration.IntegrationTests.PricedOrderViewModelGeneratorFixture
             [Fact]
             public void when_recalculated_then_replaces_line()
             {
-                this.sut.Handle(new OrderTotalsCalculated
-                {
+                sut.Handle(new OrderTotalsCalculated {
                     SourceId = orderId,
-                    Lines = new[]
-                    {
-                        new SeatOrderLine 
-                        { 
-                            LineTotal = 20, 
-                            SeatType = this.seatCreatedEvents[1].SourceId, 
-                            Quantity = 2, 
-                            UnitPrice = 10 
-                        },
+                    Lines = new[] {
+                        new SeatOrderLine {
+                            LineTotal = 20,
+                            SeatType = seatCreatedEvents[1].SourceId,
+                            Quantity = 2,
+                            UnitPrice = 10
+                        }
                     },
                     Total = 20,
-                    Version = 8,
+                    Version = 8
                 });
 
-                this.dto = this.dao.FindPricedOrder(orderId);
+                dto = dao.FindPricedOrder(orderId);
 
                 Assert.Equal(1, dto.Lines.Count);
                 Assert.Equal(20, dto.Lines[0].LineTotal);
@@ -188,9 +183,9 @@ namespace Registration.IntegrationTests.PricedOrderViewModelGeneratorFixture
             [Fact]
             public void when_expired_then_deletes_priced_order()
             {
-                this.sut.Handle(new OrderExpired { SourceId = orderId });
+                sut.Handle(new OrderExpired {SourceId = orderId});
 
-                this.dto = this.dao.FindPricedOrder(orderId);
+                dto = dao.FindPricedOrder(orderId);
 
                 Assert.Null(dto);
             }
@@ -198,10 +193,10 @@ namespace Registration.IntegrationTests.PricedOrderViewModelGeneratorFixture
             [Fact]
             public void expiration_is_idempotent()
             {
-                this.sut.Handle(new OrderExpired { SourceId = orderId, Version = 15 });
-                this.sut.Handle(new OrderExpired { SourceId = orderId, Version = 15 });
+                sut.Handle(new OrderExpired {SourceId = orderId, Version = 15});
+                sut.Handle(new OrderExpired {SourceId = orderId, Version = 15});
 
-                this.dto = this.dao.FindPricedOrder(orderId);
+                dto = dao.FindPricedOrder(orderId);
 
                 Assert.Null(dto);
             }
@@ -210,13 +205,12 @@ namespace Registration.IntegrationTests.PricedOrderViewModelGeneratorFixture
             public void when_seat_assignments_created_then_updates_order_with_assignments_id()
             {
                 var assignmentsId = Guid.NewGuid();
-                this.sut.Handle(new SeatAssignmentsCreated
-                                    {
-                                        SourceId = assignmentsId,
-                                        OrderId = orderId,
-                                    });
+                sut.Handle(new SeatAssignmentsCreated {
+                    SourceId = assignmentsId,
+                    OrderId = orderId
+                });
 
-                this.dto = this.dao.FindPricedOrder(orderId);
+                dto = dao.FindPricedOrder(orderId);
 
                 Assert.Equal(assignmentsId, dto.AssignmentsId);
                 Assert.Equal(4, dto.OrderVersion);
@@ -225,9 +219,9 @@ namespace Registration.IntegrationTests.PricedOrderViewModelGeneratorFixture
             [Fact]
             public void when_confirmed_then_removes_expiration()
             {
-                this.sut.Handle(new OrderConfirmed { SourceId = orderId, Version = 15 });
+                sut.Handle(new OrderConfirmed {SourceId = orderId, Version = 15});
 
-                this.dto = this.dao.FindPricedOrder(orderId);
+                dto = dao.FindPricedOrder(orderId);
 
                 Assert.Null(dto.ReservationExpirationDate);
                 Assert.Equal(15, dto.OrderVersion);
@@ -237,14 +231,14 @@ namespace Registration.IntegrationTests.PricedOrderViewModelGeneratorFixture
         public class given_changes_to_seats : given_some_initial_seats
         {
             protected SeatUpdated[] seatUpdatedEvents;
+
             public given_changes_to_seats()
             {
-                this.seatUpdatedEvents = new[]
-                                     {
-                                         new SeatUpdated { SourceId = seatCreatedEvents[0].SourceId, Name = "General_Updated" },
-                                         new SeatUpdated { SourceId = seatCreatedEvents[1].SourceId, Name = "Precon_Updated" },
-                                     };
-                this.sut.Handle(this.seatUpdatedEvents[0]);
+                seatUpdatedEvents = new[] {
+                    new SeatUpdated {SourceId = seatCreatedEvents[0].SourceId, Name = "General_Updated"},
+                    new SeatUpdated {SourceId = seatCreatedEvents[1].SourceId, Name = "Precon_Updated"}
+                };
+                sut.Handle(seatUpdatedEvents[0]);
             }
         }
 
@@ -252,42 +246,37 @@ namespace Registration.IntegrationTests.PricedOrderViewModelGeneratorFixture
         {
             private static readonly Guid orderId = Guid.NewGuid();
 
-            private PricedOrder dto;
+            private readonly PricedOrder dto;
 
             public given_a_new_calculated_order()
             {
-                this.sut.Handle(new OrderPlaced
-                {
+                sut.Handle(new OrderPlaced {
                     SourceId = orderId,
                     ReservationAutoExpiration = DateTime.UtcNow.AddMinutes(10),
-                    Version = 2,
+                    Version = 2
                 });
-                this.sut.Handle(new OrderTotalsCalculated
-                {
+                sut.Handle(new OrderTotalsCalculated {
                     SourceId = orderId,
-                    Lines = new[]
-                    {
-                        new SeatOrderLine 
-                        { 
-                            LineTotal = 50, 
-                            SeatType = this.seatCreatedEvents[0].SourceId, 
-                            Quantity = 10, 
-                            UnitPrice = 5 
+                    Lines = new[] {
+                        new SeatOrderLine {
+                            LineTotal = 50,
+                            SeatType = seatCreatedEvents[0].SourceId,
+                            Quantity = 10,
+                            UnitPrice = 5
                         },
-                        new SeatOrderLine 
-                        { 
-                            LineTotal = 10, 
-                            SeatType = this.seatCreatedEvents[1].SourceId, 
-                            Quantity = 1, 
-                            UnitPrice = 10 
-                        },
+                        new SeatOrderLine {
+                            LineTotal = 10,
+                            SeatType = seatCreatedEvents[1].SourceId,
+                            Quantity = 1,
+                            UnitPrice = 10
+                        }
                     },
                     Total = 60,
                     IsFreeOfCharge = true,
-                    Version = 9,
+                    Version = 9
                 });
 
-                this.dto = this.dao.FindPricedOrder(orderId);
+                dto = dao.FindPricedOrder(orderId);
             }
 
             [Fact]
@@ -300,32 +289,28 @@ namespace Registration.IntegrationTests.PricedOrderViewModelGeneratorFixture
             [Fact]
             public void when_recalculated__after_new_update_then_replaces_line()
             {
-                this.sut.Handle(seatUpdatedEvents[1]);
-                this.sut.Handle(new OrderTotalsCalculated
-                {
+                sut.Handle(seatUpdatedEvents[1]);
+                sut.Handle(new OrderTotalsCalculated {
                     SourceId = orderId,
-                    Lines = new[]
-                    {
-                        new SeatOrderLine 
-                        { 
-                            LineTotal = 10, 
-                            SeatType = this.seatCreatedEvents[0].SourceId, 
-                            Quantity = 2, 
-                            UnitPrice = 5 
+                    Lines = new[] {
+                        new SeatOrderLine {
+                            LineTotal = 10,
+                            SeatType = seatCreatedEvents[0].SourceId,
+                            Quantity = 2,
+                            UnitPrice = 5
                         },
-                        new SeatOrderLine 
-                        { 
-                            LineTotal = 20, 
-                            SeatType = this.seatCreatedEvents[1].SourceId, 
-                            Quantity = 2, 
-                            UnitPrice = 10 
-                        },
+                        new SeatOrderLine {
+                            LineTotal = 20,
+                            SeatType = seatCreatedEvents[1].SourceId,
+                            Quantity = 2,
+                            UnitPrice = 10
+                        }
                     },
                     Total = 30,
-                    Version = 12,
+                    Version = 12
                 });
 
-                var dto = this.dao.FindPricedOrder(orderId);
+                var dto = dao.FindPricedOrder(orderId);
 
                 Assert.Contains("General_Updated", dto.Lines.Select(x => x.Description));
                 Assert.Contains("Precon_Updated", dto.Lines.Select(x => x.Description));

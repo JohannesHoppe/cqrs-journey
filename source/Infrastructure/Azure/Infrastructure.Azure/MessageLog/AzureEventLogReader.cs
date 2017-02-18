@@ -11,34 +11,45 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Infrastructure.MessageLog;
+using Infrastructure.Messaging;
+using Infrastructure.Serialization;
+using Microsoft.WindowsAzure;
+using Microsoft.WindowsAzure.StorageClient;
+
 namespace Infrastructure.Azure.MessageLog
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using Infrastructure.MessageLog;
-    using Infrastructure.Messaging;
-    using Infrastructure.Serialization;
-    using Microsoft.WindowsAzure;
-    using Microsoft.WindowsAzure.StorageClient;
-
     public class AzureEventLogReader : IEventLogReader
     {
         private readonly CloudStorageAccount account;
-        private readonly string tableName;
+
         private readonly CloudTableClient tableClient;
-        private ITextSerializer serializer;
+
+        private readonly string tableName;
+
+        private readonly ITextSerializer serializer;
 
         public AzureEventLogReader(CloudStorageAccount account, string tableName, ITextSerializer serializer)
         {
-            if (account == null) throw new ArgumentNullException("account");
-            if (tableName == null) throw new ArgumentNullException("tableName");
-            if (string.IsNullOrWhiteSpace(tableName)) throw new ArgumentException("tableName");
-            if (serializer == null) throw new ArgumentNullException("serializer");
+            if (account == null) {
+                throw new ArgumentNullException("account");
+            }
+            if (tableName == null) {
+                throw new ArgumentNullException("tableName");
+            }
+            if (string.IsNullOrWhiteSpace(tableName)) {
+                throw new ArgumentException("tableName");
+            }
+            if (serializer == null) {
+                throw new ArgumentNullException("serializer");
+            }
 
             this.account = account;
             this.tableName = tableName;
-            this.tableClient = account.CreateCloudTableClient();
+            tableClient = account.CreateCloudTableClient();
             this.serializer = serializer;
         }
 
@@ -47,18 +58,19 @@ namespace Infrastructure.Azure.MessageLog
         // expose events.
         public IEnumerable<IEvent> Query(QueryCriteria criteria)
         {
-            var context = this.tableClient.GetDataServiceContext();
-            var query = (IQueryable<MessageLogEntity>)context.CreateQuery<MessageLogEntity>(this.tableName)
+            var context = tableClient.GetDataServiceContext();
+            var query = context.CreateQuery<MessageLogEntity>(tableName)
                 .Where(x => x.Kind == StandardMetadata.EventKind);
 
             var where = criteria.ToExpression();
-            if (where != null)
+            if (where != null) {
                 query = query.Where(where);
+            }
 
             return query
                 .AsTableServiceQuery()
                 .Execute()
-                .Select(e => this.serializer.Deserialize<IEvent>(e.Payload));
+                .Select(e => serializer.Deserialize<IEvent>(e.Payload));
         }
     }
 }

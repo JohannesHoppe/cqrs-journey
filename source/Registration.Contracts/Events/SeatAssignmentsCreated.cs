@@ -11,21 +11,23 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using Infrastructure.EventSourcing;
+
 namespace Registration.Events
 {
-    using System;
-    using System.Collections.Generic;
-    using Infrastructure.EventSourcing;
-
     public class SeatAssignmentsCreated : VersionedEvent
     {
+        public Guid OrderId { get; set; }
+
+        public IEnumerable<SeatAssignmentInfo> Seats { get; set; }
+
         public class SeatAssignmentInfo
         {
             public int Position { get; set; }
+
             public Guid SeatType { get; set; }
         }
-
-        public Guid OrderId { get; set; }
-        public IEnumerable<SeatAssignmentInfo> Seats { get; set; }
     }
 }

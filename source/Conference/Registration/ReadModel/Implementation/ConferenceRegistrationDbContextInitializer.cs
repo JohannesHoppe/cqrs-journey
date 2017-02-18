@@ -11,26 +11,17 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Data.Entity;
+
 namespace Registration.ReadModel.Implementation
 {
-    using System.Data.Entity;
-
     public class ConferenceRegistrationDbContextInitializer : IDatabaseInitializer<ConferenceRegistrationDbContext>
     {
-        private IDatabaseInitializer<ConferenceRegistrationDbContext> innerInitializer;
+        private readonly IDatabaseInitializer<ConferenceRegistrationDbContext> innerInitializer;
 
         public ConferenceRegistrationDbContextInitializer(IDatabaseInitializer<ConferenceRegistrationDbContext> innerInitializer)
         {
             this.innerInitializer = innerInitializer;
-        }
-
-        public void InitializeDatabase(ConferenceRegistrationDbContext context)
-        {
-            this.innerInitializer.InitializeDatabase(context);
-
-            CreateIndexes(context);
-
-            context.SaveChanges();
         }
 
         public static void CreateIndexes(DbContext context)
@@ -38,6 +29,15 @@ namespace Registration.ReadModel.Implementation
             context.Database.ExecuteSqlCommand(@"
 IF NOT EXISTS (SELECT name FROM sys.indexes WHERE name = 'IX_SeatTypesView_ConferenceId')
 CREATE NONCLUSTERED INDEX IX_SeatTypesView_ConferenceId ON [" + ConferenceRegistrationDbContext.SchemaName + "].[ConferenceSeatTypesView]( ConferenceId )");
+        }
+
+        public void InitializeDatabase(ConferenceRegistrationDbContext context)
+        {
+            innerInitializer.InitializeDatabase(context);
+
+            CreateIndexes(context);
+
+            context.SaveChanges();
         }
     }
 }

@@ -11,29 +11,13 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.ComponentModel.DataAnnotations;
+
 namespace Registration.ReadModel
 {
-    using System;
-    using System.ComponentModel.DataAnnotations;
-
     public class SeatType
     {
-        public SeatType(Guid id, Guid conferenceId, string name, string description, decimal price, int quantity)
-        {
-            this.Id = id;
-            this.ConferenceId = conferenceId;
-            this.Name = name;
-            this.Description = description;
-            this.Price = price;
-            this.Quantity = quantity;
-            this.AvailableQuantity = 0;
-            this.SeatsAvailabilityVersion = -1;
-        }
-
-        protected SeatType()
-        {
-        }
-
         [Key]
         public Guid Id { get; set; }
 
@@ -41,10 +25,29 @@ namespace Registration.ReadModel
         public Guid ConferenceId { get; set; }
 
         public string Name { get; set; }
+
         public string Description { get; set; }
+
         public decimal Price { get; set; }
+
         public int Quantity { get; set; }
+
         public int AvailableQuantity { get; set; }
+
         public int SeatsAvailabilityVersion { get; set; }
+
+        public SeatType(Guid id, Guid conferenceId, string name, string description, decimal price, int quantity)
+        {
+            Id = id;
+            ConferenceId = conferenceId;
+            Name = name;
+            Description = description;
+            Price = price;
+            Quantity = quantity;
+            AvailableQuantity = 0;
+            SeatsAvailabilityVersion = -1;
+        }
+
+        protected SeatType() { }
     }
 }

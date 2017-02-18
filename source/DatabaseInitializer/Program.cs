@@ -11,36 +11,35 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Configuration;
+using System.Data.Entity;
+using System.Data.Entity.Infrastructure;
+using Conference;
+using Infrastructure.Sql.BlobStorage;
+using Infrastructure.Sql.EventSourcing;
+using Infrastructure.Sql.MessageLog;
+using Infrastructure.Sql.Messaging.Implementation;
+using Payments.Database;
+using Payments.ReadModel.Implementation;
+using Registration.Database;
+using Registration.ReadModel.Implementation;
+
 namespace DatabaseInitializer
 {
-    using System.Configuration;
-    using System.Data.Entity;
-    using System.Data.Entity.Infrastructure;
-    using Conference;
-    using Infrastructure.Sql.BlobStorage;
-    using Infrastructure.Sql.MessageLog;
-    using Infrastructure.Sql.EventSourcing;
-    using Infrastructure.Sql.Messaging.Implementation;
-    using Payments.Database;
-    using Payments.ReadModel.Implementation;
-    using Registration.Database;
-    using Registration.ReadModel.Implementation;
-
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             var connectionString = ConfigurationManager.AppSettings["defaultConnection"];
-            if (args.Length > 0)
-            {
+            if (args.Length > 0) {
                 connectionString = args[0];
             }
 
             // Use ConferenceContext as entry point for dropping and recreating DB
-            using (var context = new ConferenceContext(connectionString))
-            {
-                if (context.Database.Exists())
+            using (var context = new ConferenceContext(connectionString)) {
+                if (context.Database.Exists()) {
                     context.Database.Delete();
+                }
 
                 context.Database.Create();
             }
@@ -52,40 +51,31 @@ namespace DatabaseInitializer
             Database.SetInitializer<RegistrationProcessManagerDbContext>(null);
             Database.SetInitializer<PaymentsDbContext>(null);
 
-            DbContext[] contexts =
-                new DbContext[] 
-                { 
-                    new EventStoreDbContext(connectionString),
-                    new MessageLogDbContext(connectionString),
-                    new BlobStorageDbContext(connectionString),
-                    new PaymentsDbContext(connectionString),
-                    new RegistrationProcessManagerDbContext(connectionString),
-                    new ConferenceRegistrationDbContext(connectionString),
-                };
+            DbContext[] contexts = {
+                new EventStoreDbContext(connectionString),
+                new MessageLogDbContext(connectionString),
+                new BlobStorageDbContext(connectionString),
+                new PaymentsDbContext(connectionString),
+                new RegistrationProcessManagerDbContext(connectionString),
+                new ConferenceRegistrationDbContext(connectionString)
+            };
 
-            foreach (DbContext context in contexts)
-            {
-                var adapter = (IObjectContextAdapter)context;
-
+            foreach (var context in contexts) {
+                var adapter = (IObjectContextAdapter) context;
                 var script = adapter.ObjectContext.CreateDatabaseScript();
-
                 context.Database.ExecuteSqlCommand(script);
-
                 context.Dispose();
             }
 
-            using (var context = new ConferenceRegistrationDbContext(connectionString))
-            {
+            using (var context = new ConferenceRegistrationDbContext(connectionString)) {
                 ConferenceRegistrationDbContextInitializer.CreateIndexes(context);
             }
 
-            using (var context = new RegistrationProcessManagerDbContext(connectionString))
-            {
+            using (var context = new RegistrationProcessManagerDbContext(connectionString)) {
                 RegistrationProcessManagerDbContextInitializer.CreateIndexes(context);
             }
 
-            using (var context = new PaymentsDbContext(connectionString))
-            {
+            using (var context = new PaymentsDbContext(connectionString)) {
                 PaymentsReadDbContextInitializer.CreateViews(context);
             }
 

@@ -11,33 +11,37 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using Infrastructure.Azure.EventSourcing;
+using Infrastructure.Azure.Instrumentation;
+using Infrastructure.Azure.Tests.Mocks;
+using Moq;
+using Xunit;
+
 namespace Infrastructure.Azure.Tests.EventSourcing.EventStoreBusPublisherFixture
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Linq;
-    using System.Threading;
-    using Infrastructure.Azure.EventSourcing;
-    using Infrastructure.Azure.Instrumentation;
-    using Infrastructure.Azure.Tests.Mocks;
-    using Moq;
-    using Xunit;
-
     public class when_calling_publish
     {
-        private Mock<IPendingEventsQueue> queue;
-        private MessageSenderMock sender;
-        private string partitionKey;
-        private string version;
-        private IEventRecord testEvent;
+        private readonly string partitionKey;
+
+        private readonly Mock<IPendingEventsQueue> queue;
+
+        private readonly MessageSenderMock sender;
+
+        private readonly IEventRecord testEvent;
+
+        private readonly string version;
 
         public when_calling_publish()
         {
-            this.partitionKey = Guid.NewGuid().ToString();
-            this.version = "0001";
-            string rowKey = "Unpublished_" + version;
-            this.testEvent = Mock.Of<IEventRecord>(x =>
+            partitionKey = Guid.NewGuid().ToString();
+            version = "0001";
+            var rowKey = "Unpublished_" + version;
+            testEvent = Mock.Of<IEventRecord>(x =>
                 x.PartitionKey == partitionKey
                 && x.RowKey == rowKey
                 && x.TypeName == "TestEventType"
@@ -48,10 +52,10 @@ namespace Infrastructure.Azure.Tests.EventSourcing.EventStoreBusPublisherFixture
                 && x.AssemblyName == "Assembly"
                 && x.Namespace == "Namespace"
                 && x.FullName == "Namespace.TestEventType");
-            this.queue = new Mock<IPendingEventsQueue>();
+            queue = new Mock<IPendingEventsQueue>();
             queue.Setup(x => x.GetPendingAsync(partitionKey, It.IsAny<Action<IEnumerable<IEventRecord>, bool>>(), It.IsAny<Action<Exception>>()))
-                .Callback<string, Action<IEnumerable<IEventRecord>, bool>, Action<Exception>>((key, success, error) => success(new[] { testEvent }, false));
-            this.sender = new MessageSenderMock();
+                .Callback<string, Action<IEnumerable<IEventRecord>, bool>, Action<Exception>>((key, success, error) => success(new[] {testEvent}, false));
+            sender = new MessageSenderMock();
             var sut = new EventStoreBusPublisher(sender, queue.Object, new MockEventStoreBusPublisherInstrumentation());
             var cancellationTokenSource = new CancellationTokenSource();
             sut.Start(cancellationTokenSource.Token);
@@ -65,7 +69,7 @@ namespace Infrastructure.Azure.Tests.EventSourcing.EventStoreBusPublisherFixture
         [Fact]
         public void then_sends_unpublished_event_with_deterministic_message_id_for_detecting_duplicates()
         {
-            string expectedMessageId = string.Format("{0}_{1}", partitionKey, version);
+            var expectedMessageId = string.Format("{0}_{1}", partitionKey, version);
             Assert.Equal(expectedMessageId, sender.Sent.Single().MessageId);
         }
 
@@ -91,43 +95,44 @@ namespace Infrastructure.Azure.Tests.EventSourcing.EventStoreBusPublisherFixture
 
     public class when_starting_with_pending_events
     {
-        private Mock<IPendingEventsQueue> queue;
-        private MessageSenderMock sender;
-        private string version;
-        private string[] pendingKeys;
-        private string rowKey;
+        private readonly string[] pendingKeys;
+
+        private readonly Mock<IPendingEventsQueue> queue;
+
+        private readonly string rowKey;
+
+        private readonly MessageSenderMock sender;
+
+        private readonly string version;
 
         public when_starting_with_pending_events()
         {
-            this.version = "0001";
-            this.rowKey = "Unpublished_" + version;
+            version = "0001";
+            rowKey = "Unpublished_" + version;
 
-            this.pendingKeys = new[] { "Key1", "Key2", "Key3" };
-            this.queue = new Mock<IPendingEventsQueue>();
+            pendingKeys = new[] {"Key1", "Key2", "Key3"};
+            queue = new Mock<IPendingEventsQueue>();
             queue.Setup(x => x.GetPendingAsync(It.IsAny<string>(), It.IsAny<Action<IEnumerable<IEventRecord>, bool>>(), It.IsAny<Action<Exception>>()))
                 .Callback<string, Action<IEnumerable<IEventRecord>, bool>, Action<Exception>>(
-                (key, success, error) => 
-                    success(new[]
-                           {
-                               Mock.Of<IEventRecord>(
-                                   x => x.PartitionKey == key
+                    (key, success, error) =>
+                        success(new[] {
+                                Mock.Of<IEventRecord>(
+                                    x => x.PartitionKey == key
                                         && x.RowKey == rowKey
                                         && x.TypeName == "TestEventType"
                                         && x.SourceId == "TestId"
                                         && x.SourceType == "TestSourceType"
                                         && x.Payload == "serialized event")
-                           },
-                    false));
-            
-                
+                            },
+                            false));
+
             queue.Setup(x => x.GetPartitionsWithPendingEvents()).Returns(pendingKeys);
-            this.sender = new MessageSenderMock();
+            sender = new MessageSenderMock();
             var sut = new EventStoreBusPublisher(sender, queue.Object, new MockEventStoreBusPublisherInstrumentation());
             var cancellationTokenSource = new CancellationTokenSource();
             sut.Start(cancellationTokenSource.Token);
 
-            for (int i = 0; i < pendingKeys.Length; i++)
-            {
+            for (var i = 0; i < pendingKeys.Length; i++) {
                 Assert.True(sender.SendSignal.WaitOne(5000));
             }
             cancellationTokenSource.Cancel();
@@ -136,9 +141,8 @@ namespace Infrastructure.Azure.Tests.EventSourcing.EventStoreBusPublisherFixture
         [Fact]
         public void then_sends_unpublished_event_with_deterministic_message_id_for_detecting_duplicates()
         {
-            for (int i = 0; i < pendingKeys.Length; i++)
-            {
-                string expectedMessageId = string.Format("{0}_{1}", pendingKeys[i], version);
+            for (var i = 0; i < pendingKeys.Length; i++) {
+                var expectedMessageId = string.Format("{0}_{1}", pendingKeys[i], version);
                 Assert.True(sender.Sent.Any(x => x.MessageId == expectedMessageId));
             }
         }
@@ -146,8 +150,7 @@ namespace Infrastructure.Azure.Tests.EventSourcing.EventStoreBusPublisherFixture
         [Fact]
         public void then_sent_event_contains_friendly_metadata()
         {
-            for (int i = 0; i < pendingKeys.Length; i++)
-            {
+            for (var i = 0; i < pendingKeys.Length; i++) {
                 var message = sender.Sent.ElementAt(i);
                 Assert.Equal("TestId", message.Properties[StandardMetadata.SourceId]);
                 Assert.Equal("TestSourceType", message.Properties["SourceType"]);
@@ -159,8 +162,7 @@ namespace Infrastructure.Azure.Tests.EventSourcing.EventStoreBusPublisherFixture
         [Fact]
         public void then_deletes_message_after_publishing()
         {
-            for (int i = 0; i < pendingKeys.Length; i++)
-            {
+            for (var i = 0; i < pendingKeys.Length; i++) {
                 queue.Verify(q => q.DeletePendingAsync(pendingKeys[i], rowKey, It.IsAny<Action<bool>>(), It.IsAny<Action<Exception>>()));
             }
         }
@@ -168,35 +170,40 @@ namespace Infrastructure.Azure.Tests.EventSourcing.EventStoreBusPublisherFixture
 
     public class given_event_store_with_events_after_it_is_started : IDisposable
     {
-        private Mock<IPendingEventsQueue> queue;
-        private MessageSenderMock sender;
-        private string version;
-        private string[] partitionKeys;
-        private string rowKey;
-        private EventStoreBusPublisher sut;
-        private CancellationTokenSource cancellationTokenSource;
+        private readonly CancellationTokenSource cancellationTokenSource;
+
+        private readonly string[] partitionKeys;
+
+        private readonly Mock<IPendingEventsQueue> queue;
+
+        private readonly string rowKey;
+
+        private readonly MessageSenderMock sender;
+
+        private readonly EventStoreBusPublisher sut;
+
+        private readonly string version;
 
         public given_event_store_with_events_after_it_is_started()
         {
-            this.version = "0001";
-            this.rowKey = "Unpublished_" + version;
+            version = "0001";
+            rowKey = "Unpublished_" + version;
 
-            this.partitionKeys = Enumerable.Range(0, 200).Select(i => "Key" + i).ToArray();
-            this.queue = new Mock<IPendingEventsQueue>();
+            partitionKeys = Enumerable.Range(0, 200).Select(i => "Key" + i).ToArray();
+            queue = new Mock<IPendingEventsQueue>();
             queue.Setup(x => x.GetPendingAsync(It.IsAny<string>(), It.IsAny<Action<IEnumerable<IEventRecord>, bool>>(), It.IsAny<Action<Exception>>()))
                 .Callback<string, Action<IEnumerable<IEventRecord>, bool>, Action<Exception>>(
-                (key, success, error) =>
-                    success(new[]
-                                {
-                                    Mock.Of<IEventRecord>(
-                                        x => x.PartitionKey == key
-                                            && x.RowKey == rowKey
-                                            && x.TypeName == "TestEventType"
-                                            && x.SourceId == "TestId"
-                                            && x.SourceType == "TestSourceType"
-                                            && x.Payload == "serialized event")
-                                },
-                    false));
+                    (key, success, error) =>
+                        success(new[] {
+                                Mock.Of<IEventRecord>(
+                                    x => x.PartitionKey == key
+                                        && x.RowKey == rowKey
+                                        && x.TypeName == "TestEventType"
+                                        && x.SourceId == "TestId"
+                                        && x.SourceType == "TestSourceType"
+                                        && x.Payload == "serialized event")
+                            },
+                            false));
 
             queue.Setup(x => x.GetPartitionsWithPendingEvents()).Returns(Enumerable.Empty<string>());
             queue
@@ -207,31 +214,28 @@ namespace Infrastructure.Azure.Tests.EventSourcing.EventStoreBusPublisherFixture
                         It.IsAny<Action<bool>>(),
                         It.IsAny<Action<Exception>>()))
                 .Callback<string, string, Action<bool>, Action<Exception>>((p, r, s, e) => s(true));
-            this.sender = new MessageSenderMock();
-            this.sut = new EventStoreBusPublisher(sender, queue.Object, new MockEventStoreBusPublisherInstrumentation());
-            this.cancellationTokenSource = new CancellationTokenSource();
+            sender = new MessageSenderMock();
+            sut = new EventStoreBusPublisher(sender, queue.Object, new MockEventStoreBusPublisherInstrumentation());
+            cancellationTokenSource = new CancellationTokenSource();
             sut.Start(cancellationTokenSource.Token);
         }
 
         [Fact]
         public void when_sending_multiple_partitions_immediately_then_publishes_all_events()
         {
-            for (int i = 0; i < partitionKeys.Length; i++)
-            {
-                this.sut.SendAsync(partitionKeys[i], 0);
+            for (var i = 0; i < partitionKeys.Length; i++) {
+                sut.SendAsync(partitionKeys[i], 0);
             }
 
             var timeout = TimeSpan.FromSeconds(20);
             var stopwatch = Stopwatch.StartNew();
-            while (sender.Sent.Count < partitionKeys.Length && stopwatch.Elapsed < timeout)
-            {
+            while (sender.Sent.Count < partitionKeys.Length && stopwatch.Elapsed < timeout) {
                 Thread.Sleep(300);
             }
 
             Assert.Equal(partitionKeys.Length, sender.Sent.Count);
-            for (int i = 0; i < partitionKeys.Length; i++)
-            {
-                string expectedMessageId = string.Format("{0}_{1}", partitionKeys[i], version);
+            for (var i = 0; i < partitionKeys.Length; i++) {
+                var expectedMessageId = string.Format("{0}_{1}", partitionKeys[i], version);
                 Assert.NotNull(sender.Sent.Single(x => x.MessageId == expectedMessageId));
             }
         }
@@ -239,10 +243,9 @@ namespace Infrastructure.Azure.Tests.EventSourcing.EventStoreBusPublisherFixture
         [Fact]
         public void when_send_takes_time_then_still_publishes_events_concurrently_with_throttling()
         {
-            this.sender.ShouldWaitForCallback = true;
-            for (int i = 0; i < partitionKeys.Length; i++)
-            {
-                this.sut.SendAsync(partitionKeys[i], 0);
+            sender.ShouldWaitForCallback = true;
+            for (var i = 0; i < partitionKeys.Length; i++) {
+                sut.SendAsync(partitionKeys[i], 0);
             }
 
             Thread.Sleep(1000);
@@ -250,38 +253,38 @@ namespace Infrastructure.Azure.Tests.EventSourcing.EventStoreBusPublisherFixture
             Assert.True(sender.Sent.Count < partitionKeys.Length);
             Assert.True(sender.AsyncSuccessCallbacks.Count < partitionKeys.Length);
 
-            this.sender.ShouldWaitForCallback = false;
-            foreach (var callback in sender.AsyncSuccessCallbacks)
-            {
+            sender.ShouldWaitForCallback = false;
+            foreach (var callback in sender.AsyncSuccessCallbacks) {
                 callback.Invoke();
             }
 
             // once all events can be sent, verify that it sends all.
             var stopwatch = Stopwatch.StartNew();
-            while (sender.Sent.Count < partitionKeys.Length && stopwatch.Elapsed < TimeSpan.FromSeconds(20))
-            {
+            while (sender.Sent.Count < partitionKeys.Length && stopwatch.Elapsed < TimeSpan.FromSeconds(20)) {
                 Thread.Sleep(300);
             }
 
             Assert.Equal(partitionKeys.Length, sender.Sent.Count);
-            for (int i = 0; i < partitionKeys.Length; i++)
-            {
-                string expectedMessageId = string.Format("{0}_{1}", partitionKeys[i], version);
+            for (var i = 0; i < partitionKeys.Length; i++) {
+                var expectedMessageId = string.Format("{0}_{1}", partitionKeys[i], version);
                 Assert.NotNull(sender.Sent.Single(x => x.MessageId == expectedMessageId));
             }
         }
 
         public void Dispose()
         {
-            this.cancellationTokenSource.Cancel();
+            cancellationTokenSource.Cancel();
         }
     }
 
-    class MockEventStoreBusPublisherInstrumentation : IEventStoreBusPublisherInstrumentation
+    internal class MockEventStoreBusPublisherInstrumentation : IEventStoreBusPublisherInstrumentation
     {
         void IEventStoreBusPublisherInstrumentation.EventsPublishingRequested(int eventCount) { }
+
         void IEventStoreBusPublisherInstrumentation.EventPublished() { }
+
         void IEventStoreBusPublisherInstrumentation.EventPublisherStarted() { }
+
         void IEventStoreBusPublisherInstrumentation.EventPublisherFinished() { }
     }
 }

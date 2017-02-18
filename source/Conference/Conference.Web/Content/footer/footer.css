@@ -14,31 +14,36 @@ See the License for the specific language governing permissions and limitations 
 */
 
 .footer {
-	min-height: 100px;
+    margin: 0 auto 0;
+    min-height: 100px;
     width: 1130px;
-	margin: 0 auto 0;
-	}
+}
+
 footer {
-	font-size: 11px;
-	min-height: 100px;
-    width: 1130px;
+    font-size: 11px;
     margin: 55px auto 0;
+    min-height: 100px;
+    width: 1130px;
 }
+
 .footer__logo {
-    margin: 1px 0 0 -2px;
     float: left;
+    margin: 1px 0 0 -2px;
 }
-.footer__content {
-    margin-left: 250px;
-}
-.footer__content p {padding-top: 12px;}
-.footer__content p:first-child {padding-top: 0;}
+
+.footer__content { margin-left: 250px; }
+
+.footer__content p { padding-top: 12px; }
+
+.footer__content p:first-child { padding-top: 0; }
+
 .footer__content a {
-    text-decoration: none;
     border-bottom: 1px solid;
+    text-decoration: none;
 }
+
 .footer__disclaimer {
-    text-transform: uppercase;
-    color:bisque;
+    color: bisque;
     font-weight: bold;
+    text-transform: uppercase;
 }

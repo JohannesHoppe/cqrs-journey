@@ -11,32 +11,38 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+
 namespace Infrastructure.MessageLog
 {
-    using System;
-    using System.Collections.Generic;
-
     /// <summary>
-    /// The query criteria for filtering events from the message log when reading.
+    ///     The query criteria for filtering events from the message log when reading.
     /// </summary>
     public class QueryCriteria
     {
+        public ICollection<string> SourceTypes { get; }
+
+        public ICollection<string> SourceIds { get; }
+
+        public ICollection<string> AssemblyNames { get; }
+
+        public ICollection<string> Namespaces { get; }
+
+        public ICollection<string> FullNames { get; }
+
+        public ICollection<string> TypeNames { get; }
+
+        public DateTime? EndDate { get; set; }
+
         public QueryCriteria()
         {
-            this.SourceTypes = new List<string>();
-            this.SourceIds = new List<string>();
-            this.AssemblyNames = new List<string>();
-            this.Namespaces = new List<string>();
-            this.FullNames = new List<string>();
-            this.TypeNames = new List<string>();
+            SourceTypes = new List<string>();
+            SourceIds = new List<string>();
+            AssemblyNames = new List<string>();
+            Namespaces = new List<string>();
+            FullNames = new List<string>();
+            TypeNames = new List<string>();
         }
-
-        public ICollection<string> SourceTypes { get; private set; }
-        public ICollection<string> SourceIds { get; private set; }
-        public ICollection<string> AssemblyNames { get; private set; }
-        public ICollection<string> Namespaces { get; private set; }
-        public ICollection<string> FullNames { get; private set; }
-        public ICollection<string> TypeNames { get; private set; }
-        public DateTime? EndDate { get; set; }
     }
 }

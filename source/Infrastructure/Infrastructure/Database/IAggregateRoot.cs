@@ -11,12 +11,12 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+
 namespace Infrastructure.Database
 {
-    using System;
-
     /// <summary>
-    /// Represents an identifiable entity in the system.
+    ///     Represents an identifiable entity in the system.
     /// </summary>
     public interface IAggregateRoot
     {

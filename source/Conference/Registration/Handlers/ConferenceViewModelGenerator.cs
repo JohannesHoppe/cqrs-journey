@@ -11,24 +11,24 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.Linq;
+using Conference;
+using Infrastructure.EventSourcing;
+using Infrastructure.Messaging;
+using Infrastructure.Messaging.Handling;
+using Registration.Commands;
+using Registration.Events;
+using Registration.ReadModel;
+using Registration.ReadModel.Implementation;
+
 namespace Registration.Handlers
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Globalization;
-    using System.Linq;
-    using Conference;
-    using Infrastructure.EventSourcing;
-    using Infrastructure.Messaging;
-    using Infrastructure.Messaging.Handling;
-    using Registration.Commands;
-    using Registration.Events;
-    using Registration.ReadModel;
-    using Registration.ReadModel.Implementation;
-
     /// <summary>
-    /// Generates a read model that is queried by <see cref="ConferenceDao"/>.
+    ///     Generates a read model that is queried by <see cref="ConferenceDao" />.
     /// </summary>
     public class ConferenceViewModelGenerator :
         IEventHandler<ConferenceCreated>,
@@ -41,52 +41,118 @@ namespace Registration.Handlers
         IEventHandler<SeatsReserved>,
         IEventHandler<SeatsReservationCancelled>
     {
-        private readonly Func<ConferenceRegistrationDbContext> contextFactory;
         private readonly ICommandBus bus;
+
+        private readonly Func<ConferenceRegistrationDbContext> contextFactory;
 
         public ConferenceViewModelGenerator(Func<ConferenceRegistrationDbContext> contextFactory, ICommandBus bus)
         {
-            this.contextFactory = contextFactory;
+            this.contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
             this.bus = bus;
+        }
+
+        private void UpdateAvailableQuantity(IVersionedEvent @event, IEnumerable<SeatQuantity> seats)
+        {
+            using (var repository = contextFactory()) {
+                var seatDtos = repository.Set<SeatType>().Where(x => x.ConferenceId == @event.SourceId).ToList();
+                if (seatDtos.Count > 0) {
+                    // This check assumes events might be received more than once, but not out of order
+                    var maxSeatsAvailabilityVersion = seatDtos.Max(x => x.SeatsAvailabilityVersion);
+                    if (maxSeatsAvailabilityVersion >= @event.Version) {
+                        Trace.TraceWarning(
+                            "Ignoring availability update message with version {1} for seat types with conference id {0}, last known version {2}.",
+                            @event.SourceId,
+                            @event.Version,
+                            maxSeatsAvailabilityVersion);
+                        return;
+                    }
+
+                    foreach (var seat in seats) {
+                        var seatDto = seatDtos.FirstOrDefault(x => x.Id == seat.SeatType);
+                        if (seatDto != null) {
+                            seatDto.AvailableQuantity += seat.Quantity;
+                            seatDto.SeatsAvailabilityVersion = @event.Version;
+                        } else {
+                            // TODO should reject the entire update?
+                            Trace.TraceError(
+                                "Failed to locate Seat Type read model being updated with id {0}.", seat.SeatType);
+                        }
+                    }
+
+                    repository.SaveChanges();
+                } else {
+                    Trace.TraceError(
+                        "Failed to locate Seat Types read model for updated seat availability, with conference id {0}.",
+                        @event.SourceId);
+                }
+            }
+        }
+
+        public void Handle(AvailableSeatsChanged @event)
+        {
+            UpdateAvailableQuantity(@event, @event.Seats);
         }
 
         public void Handle(ConferenceCreated @event)
         {
-            using (var repository = this.contextFactory.Invoke())
-            {
-                var dto = repository.Find<Conference>(@event.SourceId);
-                if (dto != null)
-                {
+            using (var repository = contextFactory.Invoke()) {
+                var dto = repository.Find<ReadModel.Conference>(@event.SourceId);
+                if (dto != null) {
                     Trace.TraceWarning(
                         "Ignoring ConferenceCreated event for conference with ID {0} as it was already created.",
                         @event.SourceId);
-                }
-                else
-                {
-                    repository.Set<Conference>().Add(
-                        new Conference(
-                            @event.SourceId,
-                            @event.Slug,
-                            @event.Name,
-                            @event.Description,
-                            @event.Location,
-                            @event.Tagline,
-                            @event.TwitterSearch,
-                            @event.StartDate,
-                            Enumerable.Empty<SeatType>()));
+                } else {
+                    repository.Set<ReadModel.Conference>()
+                        .Add(
+                            new ReadModel.Conference(
+                                @event.SourceId,
+                                @event.Slug,
+                                @event.Name,
+                                @event.Description,
+                                @event.Location,
+                                @event.Tagline,
+                                @event.TwitterSearch,
+                                @event.StartDate,
+                                Enumerable.Empty<SeatType>()));
 
                     repository.SaveChanges();
                 }
             }
         }
 
+        public void Handle(ConferencePublished @event)
+        {
+            using (var repository = contextFactory.Invoke()) {
+                var dto = repository.Find<ReadModel.Conference>(@event.SourceId);
+                if (dto != null) {
+                    dto.IsPublished = true;
+
+                    repository.Save(dto);
+                } else {
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Failed to locate Conference read model for published conference with id {0}.", @event.SourceId));
+                }
+            }
+        }
+
+        public void Handle(ConferenceUnpublished @event)
+        {
+            using (var repository = contextFactory.Invoke()) {
+                var dto = repository.Find<ReadModel.Conference>(@event.SourceId);
+                if (dto != null) {
+                    dto.IsPublished = false;
+
+                    repository.Save(dto);
+                } else {
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Failed to locate Conference read model for unpublished conference with id {0}.", @event.SourceId));
+                }
+            }
+        }
+
         public void Handle(ConferenceUpdated @event)
         {
-            using (var repository = this.contextFactory.Invoke())
-            {
-                var confDto = repository.Find<Conference>(@event.SourceId);
-                if (confDto != null)
-                {
+            using (var repository = contextFactory.Invoke()) {
+                var confDto = repository.Find<ReadModel.Conference>(@event.SourceId);
+                if (confDto != null) {
                     confDto.Code = @event.Slug;
                     confDto.Description = @event.Description;
                     confDto.Location = @event.Location;
@@ -96,63 +162,21 @@ namespace Registration.Handlers
                     confDto.TwitterSearch = @event.TwitterSearch;
 
                     repository.SaveChanges();
-                }
-                else
-                {
+                } else {
                     throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Failed to locate Conference read model for updated conference with id {0}.", @event.SourceId));
-                }
-            }
-        }
-
-        public void Handle(ConferencePublished @event)
-        {
-            using (var repository = this.contextFactory.Invoke())
-            {
-                var dto = repository.Find<Conference>(@event.SourceId);
-                if (dto != null)
-                {
-                    dto.IsPublished = true;
-
-                    repository.Save(dto);
-                }
-                else
-                {
-                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Failed to locate Conference read model for published conference with id {0}.", @event.SourceId));
-                }
-            }
-        }
-
-        public void Handle(ConferenceUnpublished @event)
-        {
-            using (var repository = this.contextFactory.Invoke())
-            {
-                var dto = repository.Find<Conference>(@event.SourceId);
-                if (dto != null)
-                {
-                    dto.IsPublished = false;
-
-                    repository.Save(dto);
-                }
-                else
-                {
-                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Failed to locate Conference read model for unpublished conference with id {0}.", @event.SourceId));
                 }
             }
         }
 
         public void Handle(SeatCreated @event)
         {
-            using (var repository = this.contextFactory.Invoke())
-            {
+            using (var repository = contextFactory.Invoke()) {
                 var dto = repository.Find<SeatType>(@event.SourceId);
-                if (dto != null)
-                {
+                if (dto != null) {
                     Trace.TraceWarning(
                         "Ignoring SeatCreated event for seat type with ID {0} as it was already created.",
                         @event.SourceId);
-                }
-                else
-                {
+                } else {
                     dto = new SeatType(
                         @event.SourceId,
                         @event.ConferenceId,
@@ -161,26 +185,33 @@ namespace Registration.Handlers
                         @event.Price,
                         @event.Quantity);
 
-                    this.bus.Send(
-                        new AddSeats
-                            {
-                                ConferenceId = @event.ConferenceId,
-                                SeatType = @event.SourceId,
-                                Quantity = @event.Quantity
-                            });
+                    bus.Send(
+                        new AddSeats {
+                            ConferenceId = @event.ConferenceId,
+                            SeatType = @event.SourceId,
+                            Quantity = @event.Quantity
+                        });
 
                     repository.Save(dto);
                 }
             }
         }
 
+        public void Handle(SeatsReservationCancelled @event)
+        {
+            UpdateAvailableQuantity(@event, @event.AvailableSeatsChanged);
+        }
+
+        public void Handle(SeatsReserved @event)
+        {
+            UpdateAvailableQuantity(@event, @event.AvailableSeatsChanged);
+        }
+
         public void Handle(SeatUpdated @event)
         {
-            using (var repository = this.contextFactory.Invoke())
-            {
+            using (var repository = contextFactory.Invoke()) {
                 var dto = repository.Find<SeatType>(@event.SourceId);
-                if (dto != null)
-                {
+                if (dto != null) {
                     dto.Description = @event.Description;
                     dto.Name = @event.Name;
                     dto.Price = @event.Price;
@@ -193,92 +224,24 @@ namespace Registration.Handlers
 
                     repository.Save(dto);
 
-                    if (diff > 0)
-                    {
-                        this.bus.Send(
-                            new AddSeats
-                                {
-                                    ConferenceId = @event.ConferenceId, 
-                                    SeatType = @event.SourceId, 
-                                    Quantity = diff,
-                                });
+                    if (diff > 0) {
+                        bus.Send(
+                            new AddSeats {
+                                ConferenceId = @event.ConferenceId,
+                                SeatType = @event.SourceId,
+                                Quantity = diff
+                            });
+                    } else {
+                        bus.Send(
+                            new RemoveSeats {
+                                ConferenceId = @event.ConferenceId,
+                                SeatType = @event.SourceId,
+                                Quantity = Math.Abs(diff)
+                            });
                     }
-                    else
-                    {
-                        this.bus.Send(
-                            new RemoveSeats
-                                {
-                                    ConferenceId = @event.ConferenceId,
-                                    SeatType = @event.SourceId,
-                                    Quantity = Math.Abs(diff),
-                                });
-                    }
-                }
-                else
-                {
+                } else {
                     throw new InvalidOperationException(
                         string.Format("Failed to locate Seat Type read model being updated with id {0}.", @event.SourceId));
-                }
-            }
-        }
-
-        public void Handle(AvailableSeatsChanged @event)
-        {
-            this.UpdateAvailableQuantity(@event, @event.Seats);
-        }
-
-        public void Handle(SeatsReserved @event)
-        {
-            this.UpdateAvailableQuantity(@event, @event.AvailableSeatsChanged);
-        }
-
-        public void Handle(SeatsReservationCancelled @event)
-        {
-            this.UpdateAvailableQuantity(@event, @event.AvailableSeatsChanged);
-        }
-
-        private void UpdateAvailableQuantity(IVersionedEvent @event, IEnumerable<SeatQuantity> seats)
-        {
-            using (var repository = this.contextFactory.Invoke())
-            {
-                var seatDtos = repository.Set<SeatType>().Where(x => x.ConferenceId == @event.SourceId).ToList();
-                if (seatDtos.Count > 0)
-                {
-                    // This check assumes events might be received more than once, but not out of order
-                    var maxSeatsAvailabilityVersion = seatDtos.Max(x => x.SeatsAvailabilityVersion);
-                    if (maxSeatsAvailabilityVersion >= @event.Version)
-                    {
-                        Trace.TraceWarning(
-                            "Ignoring availability update message with version {1} for seat types with conference id {0}, last known version {2}.",
-                            @event.SourceId,
-                            @event.Version,
-                            maxSeatsAvailabilityVersion);
-                        return;
-                    }
-
-                    foreach (var seat in seats)
-                    {
-                        var seatDto = seatDtos.FirstOrDefault(x => x.Id == seat.SeatType);
-                        if (seatDto != null)
-                        {
-                            seatDto.AvailableQuantity += seat.Quantity;
-                            seatDto.SeatsAvailabilityVersion = @event.Version;
-                        }
-                        else
-                        {
-                            // TODO should reject the entire update?
-                            Trace.TraceError(
-                                "Failed to locate Seat Type read model being updated with id {0}.", seat.SeatType);
-                        }
-                    }
-
-                    repository.SaveChanges();
-                }
-                else
-                {
-                    Trace.TraceError(
-                        "Failed to locate Seat Types read model for updated seat availability, with conference id {0}.",
-                        @event.SourceId);
                 }
             }
         }

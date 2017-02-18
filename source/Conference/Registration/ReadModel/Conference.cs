@@ -11,41 +11,45 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+
 namespace Registration.ReadModel
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Collections.ObjectModel;
-    using System.ComponentModel.DataAnnotations;
-
     public class Conference
     {
-        public Conference(Guid id, string code, string name, string description, string location, string tagline, string twitterSearch, DateTimeOffset startDate, IEnumerable<SeatType> seats)
-        {
-            this.Id = id;
-            this.Code = code;
-            this.Name = name;
-            this.Description = description;
-            this.Location = location;
-            this.Tagline = tagline;
-            this.TwitterSearch = twitterSearch;
-            this.StartDate = startDate;
-        }
-
-        protected Conference()
-        {
-        }
-
         [Key]
         public Guid Id { get; set; }
+
         public string Code { get; set; }
+
         public string Name { get; set; }
+
         public string Description { get; set; }
+
         public string Location { get; set; }
+
         public string Tagline { get; set; }
+
         public string TwitterSearch { get; set; }
+
         public DateTimeOffset StartDate { get; set; }
 
         public bool IsPublished { get; set; }
+
+        public Conference(Guid id, string code, string name, string description, string location, string tagline, string twitterSearch, DateTimeOffset startDate, IEnumerable<SeatType> seats)
+        {
+            Id = id;
+            Code = code;
+            Name = name;
+            Description = description;
+            Location = location;
+            Tagline = tagline;
+            TwitterSearch = twitterSearch;
+            StartDate = startDate;
+        }
+
+        protected Conference() { }
     }
 }

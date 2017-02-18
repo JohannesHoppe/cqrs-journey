@@ -11,28 +11,31 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Diagnostics;
+using System.IO;
+using Infrastructure.Serialization;
+
 namespace Infrastructure.Sql.Messaging.Handling
 {
-    using System;
-    using System.Diagnostics;
-    using System.IO;
-    using Infrastructure.Serialization;
-    using Infrastructure.Sql.Messaging;
-
     /// <summary>
-    /// Provides basic common processing code for components that handle 
-    /// incoming messages from a receiver.
+    ///     Provides basic common processing code for components that handle
+    ///     incoming messages from a receiver.
     /// </summary>
     public abstract class MessageProcessor : IProcessor, IDisposable
     {
-        private readonly IMessageReceiver receiver;
-        private readonly ITextSerializer serializer;
         private readonly object lockObject = new object();
+
+        private readonly IMessageReceiver receiver;
+
+        private readonly ITextSerializer serializer;
+
         private bool disposed;
-        private bool started = false;
+
+        private bool started;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MessageProcessor"/> class.
+        ///     Initializes a new instance of the <see cref="MessageProcessor" /> class.
         /// </summary>
         protected MessageProcessor(IMessageReceiver receiver, ITextSerializer serializer)
         {
@@ -40,64 +43,19 @@ namespace Infrastructure.Sql.Messaging.Handling
             this.serializer = serializer;
         }
 
-        /// <summary>
-        /// Starts the listener.
-        /// </summary>
-        public virtual void Start()
-        {
-            ThrowIfDisposed();
-            lock (this.lockObject)
-            {
-                if (!this.started)
-                {
-                    this.receiver.MessageReceived += OnMessageReceived;
-                    this.receiver.Start();
-                    this.started = true;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Stops the listener.
-        /// </summary>
-        public virtual void Stop()
-        {
-            lock (this.lockObject)
-            {
-                if (this.started)
-                {
-                    this.receiver.Stop();
-                    this.receiver.MessageReceived -= OnMessageReceived;
-                    this.started = false;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Disposes the resources used by the processor.
-        /// </summary>
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
         protected abstract void ProcessMessage(object payload, string correlationId);
 
         /// <summary>
-        /// Disposes the resources used by the processor.
+        ///     Disposes the resources used by the processor.
         /// </summary>
         protected virtual void Dispose(bool disposing)
         {
-            if (!this.disposed)
-            {
-                if (disposing)
-                {
-                    this.Stop();
-                    this.disposed = true;
+            if (!disposed) {
+                if (disposing) {
+                    Stop();
+                    disposed = true;
 
-                    using (this.receiver as IDisposable)
-                    {
+                    using (receiver as IDisposable) {
                         // Dispose receiver if it's disposable.
                     }
                 }
@@ -113,8 +71,7 @@ namespace Infrastructure.Sql.Messaging.Handling
         {
             Trace.WriteLine(new string('-', 100));
 
-            try
-            {
+            try {
                 var body = Deserialize(args.Message.Body);
 
                 TracePayload(body);
@@ -123,9 +80,7 @@ namespace Infrastructure.Sql.Messaging.Handling
                 ProcessMessage(body, args.Message.CorrelationId);
 
                 Trace.WriteLine(new string('-', 100));
-            }
-            catch (Exception e)
-            {
+            } catch (Exception e) {
                 // NOTE: we catch ANY exceptions as this is for local 
                 // development/debugging. The Windows Azure implementation 
                 // supports retries and dead-lettering, which would 
@@ -137,32 +92,68 @@ namespace Infrastructure.Sql.Messaging.Handling
 
         protected object Deserialize(string serializedPayload)
         {
-            using (var reader = new StringReader(serializedPayload))
-            {
-                return this.serializer.Deserialize(reader);
+            using (var reader = new StringReader(serializedPayload)) {
+                return serializer.Deserialize(reader);
             }
         }
 
         protected string Serialize(object payload)
         {
-            using (var writer = new StringWriter())
-            {
-                this.serializer.Serialize(writer, payload);
+            using (var writer = new StringWriter()) {
+                serializer.Serialize(writer, payload);
                 return writer.ToString();
             }
         }
 
         private void ThrowIfDisposed()
         {
-            if (this.disposed)
+            if (disposed) {
                 throw new ObjectDisposedException("MessageProcessor");
+            }
         }
-
 
         [Conditional("TRACE")]
         private void TracePayload(object payload)
         {
-            Trace.WriteLine(this.Serialize(payload));
+            Trace.WriteLine(Serialize(payload));
+        }
+
+        /// <summary>
+        ///     Disposes the resources used by the processor.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        ///     Starts the listener.
+        /// </summary>
+        public virtual void Start()
+        {
+            ThrowIfDisposed();
+            lock (lockObject) {
+                if (!started) {
+                    receiver.MessageReceived += OnMessageReceived;
+                    receiver.Start();
+                    started = true;
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Stops the listener.
+        /// </summary>
+        public virtual void Stop()
+        {
+            lock (lockObject) {
+                if (started) {
+                    receiver.Stop();
+                    receiver.MessageReceived -= OnMessageReceived;
+                    started = false;
+                }
+            }
         }
     }
 }

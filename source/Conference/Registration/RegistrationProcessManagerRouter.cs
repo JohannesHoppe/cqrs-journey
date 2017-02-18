@@ -11,19 +11,19 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Diagnostics;
+using Infrastructure.Messaging;
+using Infrastructure.Messaging.Handling;
+using Infrastructure.Processes;
+using Payments.Contracts.Events;
+using Registration.Commands;
+using Registration.Events;
+
 namespace Registration
 {
-    using System;
-    using System.Diagnostics;
-    using Infrastructure.Messaging;
-    using Infrastructure.Messaging.Handling;
-    using Infrastructure.Processes;
-    using Payments.Contracts.Events;
-    using Registration.Commands;
-    using Registration.Events;
-
     /// <summary>
-    /// Routes messages (commands and events) to the <see cref="RegistrationProcessManager"/>.
+    ///     Routes messages (commands and events) to the <see cref="RegistrationProcessManager" />.
     /// </summary>
     public class RegistrationProcessManagerRouter :
         IEventHandler<OrderPlaced>,
@@ -40,13 +40,52 @@ namespace Registration
             this.contextFactory = contextFactory;
         }
 
+        public void Handle(ExpireRegistrationProcess command)
+        {
+            using (var context = contextFactory.Invoke()) {
+                var pm = context.Find(x => x.Id == command.ProcessId);
+                if (pm != null) {
+                    pm.Handle(command);
+
+                    context.Save(pm);
+                }
+            }
+        }
+
+        public void Handle(Envelope<SeatsReserved> envelope)
+        {
+            using (var context = contextFactory.Invoke()) {
+                var pm = context.Find(x => x.ReservationId == envelope.Body.ReservationId);
+                if (pm != null) {
+                    pm.Handle(envelope);
+
+                    context.Save(pm);
+                } else {
+                    // TODO: should Cancel seat reservation!
+                    Trace.TraceError("Failed to locate the registration process manager handling the seat reservation with id {0}. TODO: should Cancel seat reservation!", envelope.Body.ReservationId);
+                }
+            }
+        }
+
+        public void Handle(OrderConfirmed @event)
+        {
+            using (var context = contextFactory.Invoke()) {
+                var pm = context.Find(x => x.OrderId == @event.SourceId);
+                if (pm != null) {
+                    pm.Handle(@event);
+
+                    context.Save(pm);
+                } else {
+                    Trace.TraceInformation("Failed to locate the registration process manager to complete with id {0}.", @event.SourceId);
+                }
+            }
+        }
+
         public void Handle(OrderPlaced @event)
         {
-            using (var context = this.contextFactory.Invoke())
-            {
+            using (var context = contextFactory.Invoke()) {
                 var pm = context.Find(x => x.OrderId == @event.SourceId);
-                if (pm == null)
-                {
+                if (pm == null) {
                     pm = new RegistrationProcessManager();
                 }
 
@@ -57,90 +96,31 @@ namespace Registration
 
         public void Handle(OrderUpdated @event)
         {
-            using (var context = this.contextFactory.Invoke())
-            {
+            using (var context = contextFactory.Invoke()) {
                 var pm = context.Find(x => x.OrderId == @event.SourceId);
-                if (pm != null)
-                {
+                if (pm != null) {
                     pm.Handle(@event);
 
                     context.Save(pm);
-                }
-                else
-                {
+                } else {
                     Trace.TraceError("Failed to locate the registration process manager handling the order with id {0}.", @event.SourceId);
-                }
-            }
-        }
-
-        public void Handle(Envelope<SeatsReserved> envelope)
-        {
-            using (var context = this.contextFactory.Invoke())
-            {
-                var pm = context.Find(x => x.ReservationId == envelope.Body.ReservationId);
-                if (pm != null)
-                {
-                    pm.Handle(envelope);
-
-                    context.Save(pm);
-                }
-                else
-                {
-                    // TODO: should Cancel seat reservation!
-                    Trace.TraceError("Failed to locate the registration process manager handling the seat reservation with id {0}. TODO: should Cancel seat reservation!", envelope.Body.ReservationId);
-                }
-            }
-        }
-
-        public void Handle(OrderConfirmed @event)
-        {
-            using (var context = this.contextFactory.Invoke())
-            {
-                var pm = context.Find(x => x.OrderId == @event.SourceId);
-                if (pm != null)
-                {
-                    pm.Handle(@event);
-
-                    context.Save(pm);
-                }
-                else
-                {
-                    Trace.TraceInformation("Failed to locate the registration process manager to complete with id {0}.", @event.SourceId);
                 }
             }
         }
 
         public void Handle(PaymentCompleted @event)
         {
-            using (var context = this.contextFactory.Invoke())
-            {
+            using (var context = contextFactory.Invoke()) {
                 // TODO: should not skip the completed processes and try to re-acquire the reservation,
                 // and if not possible due to not enough seats, move them to a "manual intervention" state.
                 // This was not implemented but would be very important.
                 var pm = context.Find(x => x.OrderId == @event.PaymentSourceId);
-                if (pm != null)
-                {
+                if (pm != null) {
                     pm.Handle(@event);
 
                     context.Save(pm);
-                }
-                else
-                {
+                } else {
                     Trace.TraceError("Failed to locate the registration process manager handling the paid order with id {0}.", @event.PaymentSourceId);
-                }
-            }
-        }
-
-        public void Handle(ExpireRegistrationProcess command)
-        {
-            using (var context = this.contextFactory.Invoke())
-            {
-                var pm = context.Find(x => x.Id == command.ProcessId);
-                if (pm != null)
-                {
-                    pm.Handle(command);
-
-                    context.Save(pm);
                 }
             }
         }

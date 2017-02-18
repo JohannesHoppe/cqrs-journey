@@ -11,18 +11,21 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+
 namespace Registration.ReadModel
 {
-    using System;
-    using System.Collections.Generic;
-
     public interface IConferenceDao
     {
         ConferenceDetails GetConferenceDetails(string conferenceCode);
+
         ConferenceAlias GetConferenceAlias(string conferenceCode);
 
         IList<ConferenceAlias> GetPublishedConferences();
+
         IList<SeatType> GetPublishedSeatTypes(Guid conferenceId);
+
         IList<SeatTypeName> GetSeatTypeNames(IEnumerable<Guid> seatTypes);
     }
 }

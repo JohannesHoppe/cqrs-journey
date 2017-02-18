@@ -11,40 +11,47 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Data.Entity;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Conference.Common;
+using Conference.Common.Entity;
+using Microsoft.WindowsAzure;
+using Microsoft.WindowsAzure.Diagnostics;
+using Microsoft.WindowsAzure.ServiceRuntime;
+
 namespace WorkerRoleCommandProcessor
 {
-    using System;
-    using System.Data.Entity;
-    using System.Diagnostics;
-    using System.Linq;
-    using System.Threading;
-    using System.Threading.Tasks;
-    using Conference.Common;
-    using Conference.Common.Entity;
-    using Microsoft.WindowsAzure;
-    using Microsoft.WindowsAzure.Diagnostics;
-    using Microsoft.WindowsAzure.ServiceRuntime;
-
     public class WorkerRole : RoleEntryPoint
     {
         private bool running;
 
+        private bool InstrumentationEnabled {
+            get {
+                bool instrumentationEnabled;
+                if (!bool.TryParse(RoleEnvironment.GetConfigurationSettingValue("InstrumentationEnabled"), out instrumentationEnabled)) {
+                    instrumentationEnabled = false;
+                }
+
+                return instrumentationEnabled;
+            }
+        }
+
         public override void Run()
         {
-            TaskScheduler.UnobservedTaskException += this.OnUnobservedTaskException;
-            this.running = true;
+            TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+            running = true;
 
-            while (this.running)
-            {
-                if (!MaintenanceMode.IsInMaintainanceMode)
-                {
+            while (running) {
+                if (!MaintenanceMode.IsInMaintainanceMode) {
                     Trace.WriteLine("Starting the command processor", "Information");
-                    using (var processor = new ConferenceProcessor(this.InstrumentationEnabled))
-                    {
+                    using (var processor = new ConferenceProcessor(InstrumentationEnabled)) {
                         processor.Start();
 
-                        while (this.running && !MaintenanceMode.IsInMaintainanceMode)
-                        {
+                        while (running && !MaintenanceMode.IsInMaintainanceMode) {
                             Thread.Sleep(10000);
                         }
 
@@ -54,17 +61,13 @@ namespace WorkerRoleCommandProcessor
                         return;
                     }
                 }
-                else
-                {
-                    Trace.TraceWarning("Starting the command processor in mantainance mode.");
-                    while (this.running && MaintenanceMode.IsInMaintainanceMode)
-                    {
-                        Thread.Sleep(10000);
-                    }
+                Trace.TraceWarning("Starting the command processor in mantainance mode.");
+                while (running && MaintenanceMode.IsInMaintainanceMode) {
+                    Thread.Sleep(10000);
                 }
             }
 
-            TaskScheduler.UnobservedTaskException -= this.OnUnobservedTaskException;
+            TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;
         }
 
         private void OnUnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
@@ -74,26 +77,22 @@ namespace WorkerRoleCommandProcessor
 
         public override bool OnStart()
         {
-            RoleEnvironment.Changing += (sender, e) =>
-                {
-                    if (e.Changes
-                            .OfType<RoleEnvironmentConfigurationSettingChange>()
-                            .Any(x => x.ConfigurationSettingName != MaintenanceMode.MaintenanceModeSettingName))
-                    {
-                        Trace.TraceInformation("Recycling worker role because of configuration change");
-                        e.Cancel = true;
-                    }
-                };
-            RoleEnvironment.Changed += (sender, e) =>
-                {
-                    if (e.Changes
-                            .OfType<RoleEnvironmentConfigurationSettingChange>()
-                            .Any(x => x.ConfigurationSettingName == MaintenanceMode.MaintenanceModeSettingName))
-                    {
-                        Trace.TraceInformation("Refreshing maintenance mode because of configuration change");
-                        MaintenanceMode.RefreshIsInMaintainanceMode();
-                    }
-                };
+            RoleEnvironment.Changing += (sender, e) => {
+                if (e.Changes
+                    .OfType<RoleEnvironmentConfigurationSettingChange>()
+                    .Any(x => x.ConfigurationSettingName != MaintenanceMode.MaintenanceModeSettingName)) {
+                    Trace.TraceInformation("Recycling worker role because of configuration change");
+                    e.Cancel = true;
+                }
+            };
+            RoleEnvironment.Changed += (sender, e) => {
+                if (e.Changes
+                    .OfType<RoleEnvironmentConfigurationSettingChange>()
+                    .Any(x => x.ConfigurationSettingName == MaintenanceMode.MaintenanceModeSettingName)) {
+                    Trace.TraceInformation("Refreshing maintenance mode because of configuration change");
+                    MaintenanceMode.RefreshIsInMaintainanceMode();
+                }
+            };
             MaintenanceMode.RefreshIsInMaintainanceMode();
 
             var config = DiagnosticMonitor.GetDefaultInitialConfiguration();
@@ -101,27 +100,23 @@ namespace WorkerRoleCommandProcessor
             var cloudStorageAccount = CloudStorageAccount.Parse(RoleEnvironment.GetConfigurationSettingValue("Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString"));
 
             TimeSpan transferPeriod;
-            if (!TimeSpan.TryParse(RoleEnvironment.GetConfigurationSettingValue("Diagnostics.ScheduledTransferPeriod"), out transferPeriod))
-            {
+            if (!TimeSpan.TryParse(RoleEnvironment.GetConfigurationSettingValue("Diagnostics.ScheduledTransferPeriod"), out transferPeriod)) {
                 transferPeriod = TimeSpan.FromMinutes(1);
             }
 
             TimeSpan sampleRate;
-            if (!TimeSpan.TryParse(RoleEnvironment.GetConfigurationSettingValue("Diagnostics.PerformanceCounterSampleRate"), out sampleRate))
-            {
+            if (!TimeSpan.TryParse(RoleEnvironment.GetConfigurationSettingValue("Diagnostics.PerformanceCounterSampleRate"), out sampleRate)) {
                 sampleRate = TimeSpan.FromSeconds(30);
             }
 
             LogLevel logLevel;
-            if (!Enum.TryParse<LogLevel>(RoleEnvironment.GetConfigurationSettingValue("Diagnostics.LogLevelFilter"), out logLevel))
-            {
+            if (!Enum.TryParse(RoleEnvironment.GetConfigurationSettingValue("Diagnostics.LogLevelFilter"), out logLevel)) {
                 logLevel = LogLevel.Verbose;
             }
 
             // Setup performance counters
             config.PerformanceCounters.DataSources.Add(
-                new PerformanceCounterConfiguration
-                {
+                new PerformanceCounterConfiguration {
                     CounterSpecifier = @"\Processor(_Total)\% Processor Time",
                     SampleRate = sampleRate
                 });
@@ -176,7 +171,7 @@ namespace WorkerRoleCommandProcessor
             config.Logs.ScheduledTransferLogLevelFilter = logLevel;
 
             //            DiagnosticMonitor.Start(cloudStorageAccount, config);
-                        DiagnosticMonitor.Start("Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString", config);
+            DiagnosticMonitor.Start("Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString", config);
 
             Trace.Listeners.Add(new DiagnosticMonitorTraceListener());
             Trace.AutoFlush = true;
@@ -188,22 +183,8 @@ namespace WorkerRoleCommandProcessor
 
         public override void OnStop()
         {
-            this.running = false;
+            running = false;
             base.OnStop();
-        }
-
-        private bool InstrumentationEnabled
-        {
-            get
-            {
-                bool instrumentationEnabled;
-                if (!bool.TryParse(RoleEnvironment.GetConfigurationSettingValue("InstrumentationEnabled"), out instrumentationEnabled))
-                {
-                    instrumentationEnabled = false;
-                }
-
-                return instrumentationEnabled;
-            }
         }
     }
 }

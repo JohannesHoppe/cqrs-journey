@@ -11,20 +11,23 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Linq;
+using Payments.Contracts.Events;
+using Xunit;
+
 namespace Payments.Tests.ThirdPartyProcessorPaymentFixture
 {
-    using System;
-    using System.Linq;
-    using Payments.Contracts.Events;
-    using Xunit;
-
     public class given_no_payment
     {
         private static readonly Guid PaymentId = Guid.NewGuid();
+
         private static readonly Guid SourceId = Guid.NewGuid();
+
         private static readonly Guid ConferenceId = Guid.NewGuid();
 
         private ThirdPartyProcessorPayment sut;
+
         private IPersistenceProvider sutProvider;
 
         protected given_no_payment(IPersistenceProvider sutProvider)
@@ -33,14 +36,12 @@ namespace Payments.Tests.ThirdPartyProcessorPaymentFixture
         }
 
         public given_no_payment()
-            : this(new NoPersistenceProvider())
-        {
-        }
+            : this(new NoPersistenceProvider()) { }
 
         [Fact]
         public void when_initiating_payment_then_status_is_initiated()
         {
-            this.InitiatePayment();
+            InitiatePayment();
 
             Assert.Equal(PaymentId, sut.Id);
             Assert.Equal(ThirdPartyProcessorPayment.States.Initiated, sut.State);
@@ -49,56 +50,57 @@ namespace Payments.Tests.ThirdPartyProcessorPaymentFixture
         [Fact]
         public void when_initiating_payment_then_raises_integration_event()
         {
-            this.InitiatePayment();
+            InitiatePayment();
 
             Assert.Single(sut.Events);
-            Assert.Equal(PaymentId, ((PaymentInitiated)sut.Events.Single()).SourceId);
-            Assert.Equal(SourceId, ((PaymentInitiated)sut.Events.Single()).PaymentSourceId);
+            Assert.Equal(PaymentId, ((PaymentInitiated) sut.Events.Single()).SourceId);
+            Assert.Equal(SourceId, ((PaymentInitiated) sut.Events.Single()).PaymentSourceId);
         }
 
         private void InitiatePayment()
         {
-            this.sut = new ThirdPartyProcessorPayment(PaymentId, SourceId, "payment", 300, new[] { new ThidPartyProcessorPaymentItem("item1", 100), new ThidPartyProcessorPaymentItem("item2", 200) });
+            sut = new ThirdPartyProcessorPayment(PaymentId, SourceId, "payment", 300, new[] {new ThidPartyProcessorPaymentItem("item1", 100), new ThidPartyProcessorPaymentItem("item2", 200)});
         }
     }
 
     public class given_initated_payment
     {
         private static readonly Guid PaymentId = Guid.NewGuid();
+
         private static readonly Guid SourceId = Guid.NewGuid();
+
         private static readonly Guid ConferenceId = Guid.NewGuid();
 
-        private ThirdPartyProcessorPayment sut;
-        private IPersistenceProvider sutProvider;
+        private readonly ThirdPartyProcessorPayment sut;
+
+        private readonly IPersistenceProvider sutProvider;
 
         protected given_initated_payment(IPersistenceProvider sutProvider)
         {
             this.sutProvider = sutProvider;
 
-            this.sut = new ThirdPartyProcessorPayment(PaymentId, SourceId, "payment", 300, new[] { new ThidPartyProcessorPaymentItem("item1", 100), new ThidPartyProcessorPaymentItem("item2", 200) });
+            sut = new ThirdPartyProcessorPayment(PaymentId, SourceId, "payment", 300, new[] {new ThidPartyProcessorPaymentItem("item1", 100), new ThidPartyProcessorPaymentItem("item2", 200)});
 
-            this.sut = this.sutProvider.PersistReload(this.sut);
+            sut = this.sutProvider.PersistReload(sut);
         }
 
         public given_initated_payment()
-            : this(new NoPersistenceProvider())
-        {
-        }
+            : this(new NoPersistenceProvider()) { }
 
         [Fact]
         public void when_completing_payment_then_changes_status()
         {
-            this.sut.Complete();
+            sut.Complete();
 
-            Assert.Equal(ThirdPartyProcessorPayment.States.Completed, this.sut.State);
+            Assert.Equal(ThirdPartyProcessorPayment.States.Completed, sut.State);
         }
 
         [Fact]
         public void when_completing_payment_then_notifies_event()
         {
-            this.sut.Complete();
+            sut.Complete();
 
-            var @event = (PaymentCompleted)sut.Events.Last();
+            var @event = (PaymentCompleted) sut.Events.Last();
             Assert.Equal(PaymentId, @event.SourceId);
             Assert.Equal(SourceId, @event.PaymentSourceId);
         }
@@ -106,17 +108,17 @@ namespace Payments.Tests.ThirdPartyProcessorPaymentFixture
         [Fact]
         public void when_rejecting_payment_then_changes_status()
         {
-            this.sut.Complete();
+            sut.Complete();
 
-            Assert.Equal(ThirdPartyProcessorPayment.States.Completed, this.sut.State);
+            Assert.Equal(ThirdPartyProcessorPayment.States.Completed, sut.State);
         }
 
         [Fact]
         public void when_rejecting_payment_then_notifies_event()
         {
-            this.sut.Cancel();
+            sut.Cancel();
 
-            var @event = (PaymentRejected)sut.Events.Last();
+            var @event = (PaymentRejected) sut.Events.Last();
             Assert.Equal(PaymentId, @event.SourceId);
             Assert.Equal(SourceId, @event.PaymentSourceId);
         }

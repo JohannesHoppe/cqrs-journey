@@ -11,15 +11,15 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Linq;
+using System.Xml;
+using System.Xml.Linq;
+using System.Xml.Schema;
+using Xunit;
+
 namespace Infrastructure.Azure.Tests
 {
-    using System;
-    using System.Linq;
-    using System.Xml;
-    using System.Xml.Linq;
-    using System.Xml.Schema;
-    using Xunit;
-
     public class given_a_messaging_settings_file
     {
         [Fact]
@@ -37,18 +37,17 @@ namespace Infrastructure.Azure.Tests
         {
             // Setup XSD validation so that we can load an XDocument with PSVI information
             var schema = XmlSchema.Read(typeof(InfrastructureSettings).Assembly.GetManifestResourceStream("Infrastructure.Azure.Settings.xsd"), null);
-            var readerSettings = new XmlReaderSettings { ValidationType = ValidationType.Schema };
+            var readerSettings = new XmlReaderSettings {ValidationType = ValidationType.Schema};
             readerSettings.Schemas.Add(schema);
             readerSettings.Schemas.Compile();
 
-            using (var reader = XmlReader.Create("Settings.Template.xml", readerSettings))
-            {
+            using (var reader = XmlReader.Create("Settings.Template.xml", readerSettings)) {
                 var doc = XDocument.Load(reader);
                 // Even if the attribute is not in the XML file, we can access the 
                 // attribute because the XSD validation is adding the default value 
                 // post validation.
                 var defaultValue = doc.Root.Descendants(
-                    XNamespace.Get(InfrastructureSettings.XmlNamespace) + "Topic")
+                        XNamespace.Get(InfrastructureSettings.XmlNamespace) + "Topic")
                     .Skip(1)
                     .First()
                     .Attribute("DuplicateDetectionHistoryTimeWindow")

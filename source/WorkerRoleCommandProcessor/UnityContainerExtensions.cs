@@ -11,14 +11,14 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using Infrastructure;
+using Infrastructure.Azure.Messaging;
+using Infrastructure.Messaging.Handling;
+using Infrastructure.Serialization;
+using Microsoft.Practices.Unity;
+
 namespace WorkerRoleCommandProcessor
 {
-    using Infrastructure;
-    using Infrastructure.Azure.Messaging;
-    using Infrastructure.Messaging.Handling;
-    using Infrastructure.Serialization;
-    using Microsoft.Practices.Unity;
-
     public static class UnityContainerExtensions
     {
         public static void RegisterEventProcessor<T>(this IUnityContainer container, ServiceBusConfig busConfig, string subscriptionName, bool instrumentationEnabled = false)

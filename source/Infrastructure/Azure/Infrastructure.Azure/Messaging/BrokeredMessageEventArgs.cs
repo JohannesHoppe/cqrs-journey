@@ -11,32 +11,32 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using Microsoft.ServiceBus.Messaging;
+
 namespace Infrastructure.Azure.Messaging
 {
-    using System;
-    using Microsoft.ServiceBus.Messaging;
-
     /// <summary>
-    /// Provides the brokered message payload of an event.
+    ///     Provides the brokered message payload of an event.
     /// </summary>
     public class BrokeredMessageEventArgs : EventArgs
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="BrokeredMessageEventArgs"/> class.
+        ///     Gets the message associated with the event.
+        /// </summary>
+        public BrokeredMessage Message { get; }
+
+        /// <summary>
+        ///     Gets or sets an indication that the message should not be disposed by the originating receiver.
+        /// </summary>
+        public bool DoNotDisposeMessage { get; set; }
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="BrokeredMessageEventArgs" /> class.
         /// </summary>
         public BrokeredMessageEventArgs(BrokeredMessage message)
         {
-            this.Message = message;
+            Message = message;
         }
-
-        /// <summary>
-        /// Gets the message associated with the event.
-        /// </summary>
-        public BrokeredMessage Message { get; private set; }
-
-        /// <summary>
-        /// Gets or sets an indication that the message should not be disposed by the originating receiver.
-        /// </summary>
-        public bool DoNotDisposeMessage { get; set; }
     }
 }

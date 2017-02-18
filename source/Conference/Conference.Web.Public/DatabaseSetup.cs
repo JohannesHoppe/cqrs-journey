@@ -11,16 +11,16 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Data.Entity;
+using Conference.Common.Entity;
+using Infrastructure.Sql.BlobStorage;
+using Payments.ReadModel.Implementation;
+using Registration.ReadModel.Implementation;
+
 namespace Conference.Web.Public
 {
-    using System.Data.Entity;
-    using Conference.Common.Entity;
-    using Infrastructure.Sql.BlobStorage;
-    using Payments.ReadModel.Implementation;
-    using Registration.ReadModel.Implementation;
-
     /// <summary>
-    /// Initializes the EF infrastructure.
+    ///     Initializes the EF infrastructure.
     /// </summary>
     internal static class DatabaseSetup
     {

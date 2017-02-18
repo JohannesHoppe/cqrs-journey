@@ -11,35 +11,35 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using Infrastructure.Azure.Messaging;
+using Microsoft.Practices.TransientFaultHandling;
+using Microsoft.ServiceBus;
+using Microsoft.ServiceBus.Messaging;
+using Xunit;
+
 namespace Infrastructure.Azure.IntegrationTests.TopicSenderIntegration
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Threading;
-    using Infrastructure.Azure.Messaging;
-    using Microsoft.Practices.TransientFaultHandling;
-    using Microsoft.ServiceBus;
-    using Microsoft.ServiceBus.Messaging;
-    using Xunit;
-
     public class given_a_topic_sender : given_a_topic_and_subscription
     {
-        private SubscriptionClient subscriptionClient;
-        private TestableTopicSender sut;
+        private readonly SubscriptionClient subscriptionClient;
+
+        private readonly TestableTopicSender sut;
 
         public given_a_topic_sender()
         {
-            this.sut = new TestableTopicSender(this.Settings, this.Topic, new Incremental(1, TimeSpan.Zero, TimeSpan.Zero));
+            sut = new TestableTopicSender(Settings, Topic, new Incremental(1, TimeSpan.Zero, TimeSpan.Zero));
 
-            var tokenProvider = TokenProvider.CreateSharedSecretTokenProvider(this.Settings.TokenIssuer, this.Settings.TokenAccessKey);
-            var serviceUri = ServiceBusEnvironment.CreateServiceUri(this.Settings.ServiceUriScheme, this.Settings.ServiceNamespace, this.Settings.ServicePath);
+            var tokenProvider = TokenProvider.CreateSharedSecretTokenProvider(Settings.TokenIssuer, Settings.TokenAccessKey);
+            var serviceUri = ServiceBusEnvironment.CreateServiceUri(Settings.ServiceUriScheme, Settings.ServiceNamespace, Settings.ServicePath);
 
             var manager = new NamespaceManager(serviceUri, tokenProvider);
-            manager.CreateSubscription(this.Topic, "Test");
+            manager.CreateSubscription(Topic, "Test");
 
             var messagingFactory = MessagingFactory.Create(serviceUri, tokenProvider);
-            this.subscriptionClient = messagingFactory.CreateSubscriptionClient(this.Topic, "Test");
-
+            subscriptionClient = messagingFactory.CreateSubscriptionClient(Topic, "Test");
         }
 
         [Fact]
@@ -59,13 +59,12 @@ namespace Infrastructure.Azure.IntegrationTests.TopicSenderIntegration
             var payload1 = Guid.NewGuid().ToString();
             var payload2 = Guid.NewGuid().ToString();
 
-            sut.SendAsync(new Func<BrokeredMessage>[] { () => new BrokeredMessage(payload1), () => new BrokeredMessage(payload2) });
+            sut.SendAsync(new Func<BrokeredMessage>[] {() => new BrokeredMessage(payload1), () => new BrokeredMessage(payload2)});
 
-            var messages = new List<string>
-                               {
-                                   this.subscriptionClient.Receive(TimeSpan.FromSeconds(5)).GetBody<string>(),
-                                   this.subscriptionClient.Receive(TimeSpan.FromSeconds(2)).GetBody<string>()
-                               };
+            var messages = new List<string> {
+                subscriptionClient.Receive(TimeSpan.FromSeconds(5)).GetBody<string>(),
+                subscriptionClient.Receive(TimeSpan.FromSeconds(2)).GetBody<string>()
+            };
             Assert.Contains(payload1, messages);
             Assert.Contains(payload2, messages);
         }
@@ -89,9 +88,10 @@ namespace Infrastructure.Azure.IntegrationTests.TopicSenderIntegration
             var signal = new AutoResetEvent(false);
             var currentDelegate = sut.DoBeginSendMessageDelegate;
             sut.DoBeginSendMessageDelegate =
-                (mf, ac) =>
-                {
-                    if (attempt++ == 0) throw new TimeoutException();
+                (mf, ac) => {
+                    if (attempt++ == 0) {
+                        throw new TimeoutException();
+                    }
                     currentDelegate(mf, ac);
                     signal.Set();
                 };
@@ -111,10 +111,7 @@ namespace Infrastructure.Azure.IntegrationTests.TopicSenderIntegration
 
             var currentDelegate = sut.DoBeginSendMessageDelegate;
             sut.DoBeginSendMessageDelegate =
-                (mf, ac) =>
-                {
-                    throw new TimeoutException();
-                };
+                (mf, ac) => { throw new TimeoutException(); };
 
             sut.SendAsync(() => new BrokeredMessage(payload));
 
@@ -125,24 +122,25 @@ namespace Infrastructure.Azure.IntegrationTests.TopicSenderIntegration
 
     public class TestableTopicSender : TopicSender
     {
+        public Action<BrokeredMessage, AsyncCallback> DoBeginSendMessageDelegate;
+
+        public Action<IAsyncResult> DoEndSendMessageDelegate;
+
         public TestableTopicSender(ServiceBusSettings settings, string topic, RetryStrategy retryStrategy)
             : base(settings, topic, retryStrategy)
         {
-            this.DoBeginSendMessageDelegate = base.DoBeginSendMessage;
-            this.DoEndSendMessageDelegate = base.DoEndSendMessage;
+            DoBeginSendMessageDelegate = base.DoBeginSendMessage;
+            DoEndSendMessageDelegate = base.DoEndSendMessage;
         }
-
-        public Action<BrokeredMessage, AsyncCallback> DoBeginSendMessageDelegate;
-        public Action<IAsyncResult> DoEndSendMessageDelegate;
 
         protected override void DoBeginSendMessage(BrokeredMessage messageFactory, AsyncCallback ac)
         {
-            this.DoBeginSendMessageDelegate(messageFactory, ac);
+            DoBeginSendMessageDelegate(messageFactory, ac);
         }
 
         protected override void DoEndSendMessage(IAsyncResult ar)
         {
-            this.DoEndSendMessageDelegate(ar);
+            DoEndSendMessageDelegate(ar);
         }
     }
 }

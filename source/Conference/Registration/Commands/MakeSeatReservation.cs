@@ -11,20 +11,20 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+
 namespace Registration.Commands
 {
-    using System;
-    using System.Collections.Generic;
-    using Infrastructure.Messaging;
-
     public class MakeSeatReservation : SeatsAvailabilityCommand
     {
+        public Guid ReservationId { get; set; }
+
+        public List<SeatQuantity> Seats { get; set; }
+
         public MakeSeatReservation()
         {
-            this.Seats = new List<SeatQuantity>();
+            Seats = new List<SeatQuantity>();
         }
-
-        public Guid ReservationId { get; set; }
-        public List<SeatQuantity> Seats { get; set; }
     }
 }

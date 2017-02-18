@@ -7,8 +7,7 @@
         <th scope="col">Quantity</th>
         <th scope="col">Total</th>
     </tr>
-    @for (var i = 0; i < this.Model.Lines.Count; i++)
-    {
+    @for (var i = 0; i < Model.Lines.Count; i++) {
         <tr>
             <td>@Html.DisplayFor(model => model.Lines[i].Description)</td>
             <td style="text-align: right">$@Html.DisplayFor(model => model.Lines[i].UnitPrice)</td>

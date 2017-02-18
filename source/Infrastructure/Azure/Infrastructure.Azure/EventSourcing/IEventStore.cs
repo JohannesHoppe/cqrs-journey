@@ -11,10 +11,10 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Collections.Generic;
+
 namespace Infrastructure.Azure.EventSourcing
 {
-    using System.Collections.Generic;
-
     public interface IEventStore
     {
         IEnumerable<EventData> Load(string partitionKey, int version);

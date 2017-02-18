@@ -7,17 +7,18 @@
     <div class="page__wrapper content-main content-main_assignseats">
         <div class="content-main__wrapper">
             <div class="content-main__main">
-                @using (Html.BeginForm())
-                {
+                @using (Html.BeginForm()) {
                     <div class="content-main__header">Seat assignment</div>
                     <div class="content">
                         @*TODO: fix styling for validation*@
                         @Html.ValidationSummary()
                         @Html.HiddenFor(model => model.OrderId)
                         <p>
-                            Please assign your purchased seats to the attendees.</p>
+                            Please assign your purchased seats to the attendees.
+                        </p>
                         <h3>
-                            Seat Assignment</h3>
+                            Seat Assignment
+                        </h3>
                         <table class="content__table_first-cell-wide">
                             <tr>
                                 <th scope="col">Seat type</th>
@@ -25,8 +26,7 @@
                                 <th scope="col">Last name</th>
                                 <th scope="col">Email</th>
                             </tr>
-                            @for (var i = 0; i < this.Model.Seats.Count; i++)
-                            {
+                            @for (var i = 0; i < Model.Seats.Count; i++) {
                                 <tr>
                                     <td>
                                         @Html.HiddenFor(model => model.Seats[i].Position)
@@ -46,11 +46,12 @@
                             }
                         </table>
                     </div>
-                     <div class="nav content-main__nav">
-                         <button id="Next" class="nav__right" type="submit">Save
+                    <div class="nav content-main__nav">
+                        <button id="Next" class="nav__right" type="submit">
+                            Save
                             <span class="nav__right-small">Attendees will be notified by e-mail</span>
-                         </button>
-                     </div>                      
+                        </button>
+                    </div>
                 }
             </div>
         </div>

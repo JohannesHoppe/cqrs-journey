@@ -11,19 +11,20 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using Infrastructure.Messaging;
+
 namespace Registration.Commands
 {
-    using System;
-    using Infrastructure.Messaging;
-
     public class ExpireRegistrationProcess : ICommand
     {
+        public Guid ProcessId { get; set; }
+
         public ExpireRegistrationProcess()
         {
-            this.Id = Guid.NewGuid();
+            Id = Guid.NewGuid();
         }
 
         public Guid Id { get; set; }
-        public Guid ProcessId { get; set; }
     }
 }

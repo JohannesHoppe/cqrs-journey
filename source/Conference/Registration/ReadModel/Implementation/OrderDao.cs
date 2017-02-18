@@ -11,22 +11,25 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Data.Entity;
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Linq;
+using System.Text;
+using Infrastructure.BlobStorage;
+using Infrastructure.Serialization;
+using Registration.Handlers;
+
 namespace Registration.ReadModel.Implementation
 {
-    using System;
-    using System.Data.Entity;
-    using System.IO;
-    using System.Linq;
-    using System.Text;
-    using Infrastructure.BlobStorage;
-    using Infrastructure.Serialization;
-    using Registration.Handlers;
-
     public class OrderDao : IOrderDao
     {
+        private readonly IBlobStorage blobStorage;
+
         private readonly Func<ConferenceRegistrationDbContext> contextFactory;
-        private IBlobStorage blobStorage;
-        private ITextSerializer serializer;
+
+        private readonly ITextSerializer serializer;
 
         public OrderDao(Func<ConferenceRegistrationDbContext> contextFactory, IBlobStorage blobStorage, ITextSerializer serializer)
         {
@@ -35,18 +38,32 @@ namespace Registration.ReadModel.Implementation
             this.serializer = serializer;
         }
 
+        [SuppressMessage("Microsoft.Usage", "CA2202:Do not dispose objects multiple times", Justification = "By design")]
+        private T FindBlob<T>(string id)
+            where T : class
+        {
+            var dto = blobStorage.Find(id);
+            if (dto == null) {
+                return null;
+            }
+
+            using (var stream = new MemoryStream(dto)) {
+                using (var reader = new StreamReader(stream, Encoding.UTF8)) {
+                    return (T) serializer.Deserialize(reader);
+                }
+            }
+        }
+
         public Guid? LocateOrder(string email, string accessCode)
         {
-            using (var context = this.contextFactory.Invoke())
-            {
+            using (var context = contextFactory.Invoke()) {
                 var orderProjection = context
                     .Query<DraftOrder>()
                     .Where(o => o.RegistrantEmail == email && o.AccessCode == accessCode)
-                    .Select(o => new { o.OrderId })
+                    .Select(o => new {o.OrderId})
                     .FirstOrDefault();
 
-                if (orderProjection != null)
-                {
+                if (orderProjection != null) {
                     return orderProjection.OrderId;
                 }
 
@@ -56,16 +73,14 @@ namespace Registration.ReadModel.Implementation
 
         public DraftOrder FindDraftOrder(Guid orderId)
         {
-            using (var context = this.contextFactory.Invoke())
-            {
+            using (var context = contextFactory.Invoke()) {
                 return context.Query<DraftOrder>().Include(x => x.Lines).FirstOrDefault(dto => dto.OrderId == orderId);
             }
         }
 
         public PricedOrder FindPricedOrder(Guid orderId)
         {
-            using (var context = this.contextFactory.Invoke())
-            {
+            using (var context = contextFactory.Invoke()) {
                 return context.Query<PricedOrder>().Include(x => x.Lines).FirstOrDefault(dto => dto.OrderId == orderId);
             }
         }
@@ -73,23 +88,6 @@ namespace Registration.ReadModel.Implementation
         public OrderSeats FindOrderSeats(Guid assignmentsId)
         {
             return FindBlob<OrderSeats>(SeatAssignmentsViewModelGenerator.GetSeatAssignmentsBlobId(assignmentsId));
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2202:Do not dispose objects multiple times", Justification = "By design")]
-        private T FindBlob<T>(string id)
-            where T : class
-        {
-            var dto = this.blobStorage.Find(id);
-            if (dto == null)
-            {
-                return null;
-            }
-
-            using (var stream = new MemoryStream(dto))
-            using (var reader = new StreamReader(stream, Encoding.UTF8))
-            {
-                return (T)this.serializer.Deserialize(reader);
-            }
         }
     }
 }

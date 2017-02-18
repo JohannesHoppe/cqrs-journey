@@ -11,19 +11,21 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Collections.Generic;
+using System.Configuration;
+using System.Data.Common;
+using System.Data.Entity.Infrastructure;
+using System.Linq;
+using Microsoft.WindowsAzure;
+
 namespace Conference.Common.Entity
 {
-    using System.Collections.Generic;
-    using System.Configuration;
-    using System.Data.Common;
-    using System.Data.Entity.Infrastructure;
-    using System.Linq;
-    using Microsoft.WindowsAzure;
-
     public class ServiceConfigurationSettingConnectionFactory : IDbConnectionFactory
     {
         private readonly object lockObject = new object();
+
         private readonly IDbConnectionFactory parent;
+
         private Dictionary<string, string> cachedConnectionStringsMap = new Dictionary<string, string>();
 
         public ServiceConfigurationSettingConnectionFactory(IDbConnectionFactory parent)
@@ -31,60 +33,48 @@ namespace Conference.Common.Entity
             this.parent = parent;
         }
 
+        private static bool IsConnectionString(string connectionStringCandidate)
+        {
+            return connectionStringCandidate.IndexOf('=') >= 0;
+        }
+
         public DbConnection CreateConnection(string nameOrConnectionString)
         {
             string connectionString = null;
-            if (!IsConnectionString(nameOrConnectionString))
-            {
-                if (!this.cachedConnectionStringsMap.TryGetValue(nameOrConnectionString, out connectionString))
-                {
-                    lock (this.lockObject)
-                    {
-                        if (!this.cachedConnectionStringsMap.TryGetValue(nameOrConnectionString, out connectionString))
-                        {
+            if (!IsConnectionString(nameOrConnectionString)) {
+                if (!cachedConnectionStringsMap.TryGetValue(nameOrConnectionString, out connectionString)) {
+                    lock (lockObject) {
+                        if (!cachedConnectionStringsMap.TryGetValue(nameOrConnectionString, out connectionString)) {
                             var connectionStringName = "DbContext." + nameOrConnectionString;
                             var settingValue = CloudConfigurationManager.GetSetting(connectionStringName);
-                            if (!string.IsNullOrEmpty(settingValue))
-                            {
+                            if (!string.IsNullOrEmpty(settingValue)) {
                                 connectionString = settingValue;
                             }
 
-                            if (connectionString == null)
-                            {
-                                try
-                                {
+                            if (connectionString == null) {
+                                try {
                                     var connectionStringSettings = ConfigurationManager.ConnectionStrings[connectionStringName];
-                                    if (connectionStringSettings != null)
-                                    {
+                                    if (connectionStringSettings != null) {
                                         connectionString = connectionStringSettings.ConnectionString;
                                     }
-                                }
-                                catch (ConfigurationErrorsException)
-                                {
-                                }
+                                } catch (ConfigurationErrorsException) { }
                             }
 
-                            var immutableDictionary = this.cachedConnectionStringsMap
-                                .Concat(new[] { new KeyValuePair<string, string>(nameOrConnectionString, connectionString) })
+                            var immutableDictionary = cachedConnectionStringsMap
+                                .Concat(new[] {new KeyValuePair<string, string>(nameOrConnectionString, connectionString)})
                                 .ToDictionary(x => x.Key, x => x.Value);
 
-                            this.cachedConnectionStringsMap = immutableDictionary;
+                            cachedConnectionStringsMap = immutableDictionary;
                         }
                     }
                 }
             }
 
-            if (connectionString == null)
-            {
+            if (connectionString == null) {
                 connectionString = nameOrConnectionString;
             }
 
-            return this.parent.CreateConnection(connectionString);
-        }
-
-        private static bool IsConnectionString(string connectionStringCandidate)
-        {
-            return (connectionStringCandidate.IndexOf('=') >= 0);
+            return parent.CreateConnection(connectionString);
         }
     }
 }

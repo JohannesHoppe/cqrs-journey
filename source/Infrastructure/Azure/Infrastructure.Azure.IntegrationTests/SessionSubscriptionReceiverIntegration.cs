@@ -11,52 +11,47 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Threading;
+using Infrastructure.Azure.Messaging;
+using Microsoft.ServiceBus.Messaging;
+using Xunit;
+
 namespace Infrastructure.Azure.IntegrationTests.SessionSubscriptionReceiverIntegration
 {
-    using System;
-    using System.Collections.Concurrent;
-    using System.Diagnostics;
-    using System.Threading;
-    using Infrastructure.Azure.Messaging;
-    using Microsoft.ServiceBus.Messaging;
-    using Xunit;
-
     public class given_a_receiver : given_messaging_settings, IDisposable
     {
-        private string Topic;
-        private string Subscription;
+        private readonly string Subscription;
+
+        private readonly string Topic;
 
         public given_a_receiver()
         {
-            this.Topic = "cqrsjourney-test-" + Guid.NewGuid().ToString();
-            this.Subscription = "test-" + Guid.NewGuid().ToString();
+            Topic = "cqrsjourney-test-" + Guid.NewGuid();
+            Subscription = "test-" + Guid.NewGuid();
 
             // This creates the topic too.
-            this.Settings.CreateSubscription(new SubscriptionDescription(this.Topic, this.Subscription) { RequiresSession = true });
-        }
-
-        public void Dispose()
-        {
-            this.Settings.TryDeleteTopic(this.Topic);
+            Settings.CreateSubscription(new SubscriptionDescription(Topic, Subscription) {RequiresSession = true});
         }
 
         [Fact]
         public void when_sending_message_with_session_then_session_receiver_gets_it()
         {
-            var sender = this.Settings.CreateTopicClient(this.Topic);
+            var sender = Settings.CreateTopicClient(Topic);
             var signal = new ManualResetEventSlim();
             var body = Guid.NewGuid().ToString();
 
-            var receiver = new SessionSubscriptionReceiver(this.Settings, this.Topic, this.Subscription);
+            var receiver = new SessionSubscriptionReceiver(Settings, Topic, Subscription);
 
             sender.Send(new BrokeredMessage(Guid.NewGuid().ToString()));
-            sender.Send(new BrokeredMessage(body) { SessionId = "foo" });
+            sender.Send(new BrokeredMessage(body) {SessionId = "foo"});
 
             var received = "";
 
             receiver.Start(
-                m =>
-                {
+                m => {
                     received = m.GetBody<string>();
                     signal.Set();
                     return MessageReleaseAction.CompleteMessage;
@@ -72,22 +67,21 @@ namespace Infrastructure.Azure.IntegrationTests.SessionSubscriptionReceiverInteg
         [Fact]
         public void when_sending_message_with_session_then_session_receiver_gets_both_messages_fast()
         {
-            var sender = this.Settings.CreateTopicClient(this.Topic);
+            var sender = Settings.CreateTopicClient(Topic);
             var signal = new AutoResetEvent(false);
             var body1 = Guid.NewGuid().ToString();
             var body2 = Guid.NewGuid().ToString();
             var stopWatch = new Stopwatch();
 
-            var receiver = new SessionSubscriptionReceiver(this.Settings, this.Topic, this.Subscription);
+            var receiver = new SessionSubscriptionReceiver(Settings, Topic, Subscription);
 
-            sender.Send(new BrokeredMessage(body1) { SessionId = "foo" });
-            sender.Send(new BrokeredMessage(body2) { SessionId = "bar" });
+            sender.Send(new BrokeredMessage(body1) {SessionId = "foo"});
+            sender.Send(new BrokeredMessage(body2) {SessionId = "bar"});
 
             var received = new ConcurrentBag<string>();
 
             receiver.Start(
-                m =>
-                {
+                m => {
                     received.Add(m.GetBody<string>());
                     signal.Set();
                     return MessageReleaseAction.CompleteMessage;
@@ -108,32 +102,31 @@ namespace Infrastructure.Azure.IntegrationTests.SessionSubscriptionReceiverInteg
         [Fact]
         public void when_sending_message_with_same_session_at_different_times_then_session_receiver_gets_all()
         {
-            var sender = this.Settings.CreateTopicClient(this.Topic);
+            var sender = Settings.CreateTopicClient(Topic);
             var signal = new AutoResetEvent(false);
             var body1 = Guid.NewGuid().ToString();
             var body2 = Guid.NewGuid().ToString();
             var body3 = Guid.NewGuid().ToString();
 
-            var receiver = new SessionSubscriptionReceiver(this.Settings, this.Topic, this.Subscription);
+            var receiver = new SessionSubscriptionReceiver(Settings, Topic, Subscription);
             var stopWatch = new Stopwatch();
             var received = new ConcurrentBag<string>();
 
             receiver.Start(
-                m =>
-                {
+                m => {
                     received.Add(m.GetBody<string>());
                     signal.Set();
                     return MessageReleaseAction.CompleteMessage;
                 });
 
-            sender.Send(new BrokeredMessage(body1) { SessionId = "foo" });
+            sender.Send(new BrokeredMessage(body1) {SessionId = "foo"});
             stopWatch.Start();
             signal.WaitOne();
 
-            sender.Send(new BrokeredMessage(body2) { SessionId = "bar" });
+            sender.Send(new BrokeredMessage(body2) {SessionId = "bar"});
             signal.WaitOne();
 
-            sender.Send(new BrokeredMessage(body3) { SessionId = "foo" });
+            sender.Send(new BrokeredMessage(body3) {SessionId = "foo"});
             signal.WaitOne();
             stopWatch.Stop();
 
@@ -148,7 +141,7 @@ namespace Infrastructure.Azure.IntegrationTests.SessionSubscriptionReceiverInteg
         [Fact]
         public void when_starting_twice_then_ignores_second_request()
         {
-            var receiver = new SessionSubscriptionReceiver(this.Settings, this.Topic, this.Subscription);
+            var receiver = new SessionSubscriptionReceiver(Settings, Topic, Subscription);
 
             receiver.Start(m => MessageReleaseAction.CompleteMessage);
             receiver.Start(m => MessageReleaseAction.CompleteMessage);
@@ -159,7 +152,7 @@ namespace Infrastructure.Azure.IntegrationTests.SessionSubscriptionReceiverInteg
         [Fact]
         public void when_stopping_without_starting_then_ignores_request()
         {
-            var receiver = new SessionSubscriptionReceiver(this.Settings, this.Topic, this.Subscription);
+            var receiver = new SessionSubscriptionReceiver(Settings, Topic, Subscription);
 
             receiver.Stop();
         }
@@ -167,7 +160,7 @@ namespace Infrastructure.Azure.IntegrationTests.SessionSubscriptionReceiverInteg
         [Fact]
         public void when_disposing_not_started_then_no_op()
         {
-            var receiver = new SessionSubscriptionReceiver(this.Settings, this.Topic, this.Subscription);
+            var receiver = new SessionSubscriptionReceiver(Settings, Topic, Subscription);
 
             receiver.Dispose();
         }
@@ -175,44 +168,45 @@ namespace Infrastructure.Azure.IntegrationTests.SessionSubscriptionReceiverInteg
         [Fact]
         public void when_sending_message_to_different_sessions_then_processes_concurrently()
         {
-            var sender = this.Settings.CreateTopicClient(this.Topic);
+            var sender = Settings.CreateTopicClient(Topic);
             var message1received = new ManualResetEvent(false);
             var message2received = new ManualResetEvent(false);
             var body1 = Guid.NewGuid().ToString();
             var body2 = Guid.NewGuid().ToString();
 
-            var receiver = new SessionSubscriptionReceiver(this.Settings, this.Topic, this.Subscription);
+            var receiver = new SessionSubscriptionReceiver(Settings, Topic, Subscription);
             var stopWatch = new Stopwatch();
 
             receiver.Start(
-                m =>
-                {
+                m => {
                     var msg = m.GetBody<string>();
-                    if (msg == body1)
-                    {
+                    if (msg == body1) {
                         message1received.Set();
                         // do not continue until we verify that the 2nd message is received, hence implying parallelism
                         message2received.WaitOne();
-                    }
-                    else
-                    {
+                    } else {
                         message2received.Set();
                     }
 
                     return MessageReleaseAction.CompleteMessage;
                 });
 
-            sender.Send(new BrokeredMessage(body1) { SessionId = "foo" });
+            sender.Send(new BrokeredMessage(body1) {SessionId = "foo"});
             stopWatch.Start();
             Assert.True(message1received.WaitOne(10000));
 
-            sender.Send(new BrokeredMessage(body2) { SessionId = "bar" });
+            sender.Send(new BrokeredMessage(body2) {SessionId = "bar"});
             Assert.True(message2received.WaitOne(10000));
             stopWatch.Stop();
 
             receiver.Stop();
 
             Assert.InRange(stopWatch.Elapsed, TimeSpan.Zero, TimeSpan.FromSeconds(10));
+        }
+
+        public void Dispose()
+        {
+            Settings.TryDeleteTopic(Topic);
         }
     }
 }

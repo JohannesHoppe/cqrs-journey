@@ -11,12 +11,11 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Web.Mvc;
+using Registration.ReadModel;
+
 namespace Conference.Web.Public.Controllers
 {
-    using System;
-    using System.Web.Mvc;
-    using Registration.ReadModel;
-
     public class ConferenceController : Controller
     {
         private readonly IConferenceDao dao;
@@ -28,7 +27,7 @@ namespace Conference.Web.Public.Controllers
 
         public ActionResult Display(string conferenceCode)
         {
-            var conference = this.dao.GetConferenceDetails(conferenceCode);
+            var conference = dao.GetConferenceDetails(conferenceCode);
 
             // Reply with 404 if not found?
             //if (conference == null)

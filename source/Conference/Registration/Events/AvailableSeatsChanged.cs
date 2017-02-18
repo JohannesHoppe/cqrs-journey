@@ -11,11 +11,11 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Collections.Generic;
+using Infrastructure.EventSourcing;
+
 namespace Registration.Events
 {
-    using System.Collections.Generic;
-    using Infrastructure.EventSourcing;
-
     public class AvailableSeatsChanged : VersionedEvent
     {
         public IEnumerable<SeatQuantity> Seats { get; set; }

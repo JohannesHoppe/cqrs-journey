@@ -11,39 +11,42 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.ComponentModel.DataAnnotations;
+
 namespace Conference
 {
-    using System;
-    using System.ComponentModel.DataAnnotations;
-
     public class OrderSeat
     {
+        public int Position { get; set; }
+
+        public Guid OrderId { get; set; }
+
+        public Attendee Attendee { get; set; }
+
+        /// <summary>
+        ///     Typical pattern for foreign key relationship
+        ///     in EF. The identifier is all that's needed
+        ///     to persist the referring entity.
+        /// </summary>
+        [ForeignKey("SeatInfo")]
+        public Guid SeatInfoId { get; set; }
+
+        public SeatType SeatInfo { get; set; }
+
         public OrderSeat(Guid orderId, int position, Guid seatInfoId)
             : this()
         {
-            this.OrderId = orderId;
-            this.Position = position;
-            this.SeatInfoId = seatInfoId;
+            OrderId = orderId;
+            Position = position;
+            SeatInfoId = seatInfoId;
         }
 
         protected OrderSeat()
         {
             // Complex type properties can never be 
             // null.
-            this.Attendee = new Attendee();
+            Attendee = new Attendee();
         }
-
-        public int Position { get; set; }
-        public Guid OrderId { get; set; }
-        public Attendee Attendee { get; set; }
-
-        /// <summary>
-        /// Typical pattern for foreign key relationship 
-        /// in EF. The identifier is all that's needed 
-        /// to persist the referring entity.
-        /// </summary>
-        [ForeignKey("SeatInfo")]
-        public Guid SeatInfoId { get; set; }
-        public SeatType SeatInfo { get; set; }
     }
 }

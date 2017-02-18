@@ -11,23 +11,28 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Infrastructure.Azure.Messaging;
+using Infrastructure.Messaging;
+using Infrastructure.Messaging.Handling;
+using Moq;
+using Xunit;
+
 namespace Infrastructure.Azure.Tests.Messaging.SynchronousCommandBusDecoratorFixture.given_empty_command_bus
 {
-    using Infrastructure.Azure.Messaging;
-    using Infrastructure.Messaging;
-    using Moq;
-    using Xunit;
-
     public class Context
     {
-        protected readonly Mock<ICommandBus> wrappedBusMock;
         protected readonly SynchronousCommandBusDecorator sut;
+
+        protected readonly Mock<ICommandBus> wrappedBusMock;
 
         public Context()
         {
-            this.wrappedBusMock = new Mock<ICommandBus>();
+            wrappedBusMock = new Mock<ICommandBus>();
 
-            this.sut = new SynchronousCommandBusDecorator(this.wrappedBusMock.Object);
+            sut = new SynchronousCommandBusDecorator(wrappedBusMock.Object);
         }
     }
 
@@ -37,50 +42,44 @@ namespace Infrastructure.Azure.Tests.Messaging.SynchronousCommandBusDecoratorFix
 
         public when_sending_command()
         {
-            this.command = new Envelope<ICommand>(new CommandA());
+            command = new Envelope<ICommand>(new CommandA());
 
-            this.sut.Send(this.command);
+            sut.Send(command);
         }
 
         [Fact]
         public void then_forwards_to_wrapped_bus()
         {
-            this.wrappedBusMock.Verify(b => b.Send(this.command), Times.Once());
+            wrappedBusMock.Verify(b => b.Send(command), Times.Once());
         }
     }
 }
 
 namespace Infrastructure.Azure.Tests.Messaging.SynchronousCommandBusDecoratorFixture.given_command_bus_with_registered_handlers
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using Infrastructure.Messaging;
-    using Infrastructure.Messaging.Handling;
-    using Moq;
-    using Xunit;
-
     public class Context : given_empty_command_bus.Context
     {
+        protected readonly List<ICommand> forwarded;
+
         protected readonly Mock<ICommandHandler<CommandA>> handlerAMock;
+
         protected readonly Mock<ICommandHandler<CommandB>> handlerBMock;
 
         protected readonly List<ICommand> synchronous;
-        protected readonly List<ICommand> forwarded;
 
         public Context()
         {
-            this.handlerAMock = new Mock<ICommandHandler<CommandA>>();
-            this.handlerBMock = new Mock<ICommandHandler<CommandB>>();
+            handlerAMock = new Mock<ICommandHandler<CommandA>>();
+            handlerBMock = new Mock<ICommandHandler<CommandB>>();
 
-            this.sut.Register(this.handlerAMock.Object);
-            this.sut.Register(this.handlerBMock.Object);
+            sut.Register(handlerAMock.Object);
+            sut.Register(handlerBMock.Object);
 
-            this.synchronous = new List<ICommand>();
-            this.forwarded = new List<ICommand>();
-            this.handlerAMock.Setup(h => h.Handle(It.IsAny<CommandA>())).Callback<CommandA>(c => this.synchronous.Add(c));
-            this.handlerBMock.Setup(h => h.Handle(It.IsAny<CommandB>())).Callback<CommandB>(c => this.synchronous.Add(c));
-            this.wrappedBusMock
+            synchronous = new List<ICommand>();
+            forwarded = new List<ICommand>();
+            handlerAMock.Setup(h => h.Handle(It.IsAny<CommandA>())).Callback<CommandA>(c => synchronous.Add(c));
+            handlerBMock.Setup(h => h.Handle(It.IsAny<CommandB>())).Callback<CommandB>(c => synchronous.Add(c));
+            wrappedBusMock
                 .Setup(b => b.Send(It.IsAny<IEnumerable<Envelope<ICommand>>>()))
                 .Callback<IEnumerable<Envelope<ICommand>>>(es => forwarded.AddRange(es.Select(e => e.Body)));
         }
@@ -92,21 +91,21 @@ namespace Infrastructure.Azure.Tests.Messaging.SynchronousCommandBusDecoratorFix
 
         public when_sending_command_for_registered_handler()
         {
-            this.command = new Envelope<ICommand>(new CommandA());
+            command = new Envelope<ICommand>(new CommandA());
 
-            this.sut.Send(this.command);
+            sut.Send(command);
         }
 
         [Fact]
         public void then_registerd_handler_handles_the_command()
         {
-            this.handlerAMock.Verify(b => b.Handle((CommandA)this.command.Body), Times.Once());
+            handlerAMock.Verify(b => b.Handle((CommandA) command.Body), Times.Once());
         }
 
         [Fact]
         public void then_does_not_forward_to_wrapped_bus()
         {
-            this.wrappedBusMock.Verify(b => b.Send(this.command), Times.Never());
+            wrappedBusMock.Verify(b => b.Send(command), Times.Never());
         }
     }
 
@@ -116,15 +115,15 @@ namespace Infrastructure.Azure.Tests.Messaging.SynchronousCommandBusDecoratorFix
 
         public when_sending_command_for_no_registered_handler()
         {
-            this.command = new Envelope<ICommand>(new CommandC());
+            command = new Envelope<ICommand>(new CommandC());
 
-            this.sut.Send(this.command);
+            sut.Send(command);
         }
 
         [Fact]
         public void then_forwards_to_wrapped_bus()
         {
-            this.wrappedBusMock.Verify(b => b.Send(this.command), Times.Once());
+            wrappedBusMock.Verify(b => b.Send(command), Times.Once());
         }
     }
 
@@ -134,22 +133,22 @@ namespace Infrastructure.Azure.Tests.Messaging.SynchronousCommandBusDecoratorFix
 
         public when_sending_command_for_registered_handler_throws()
         {
-            this.handlerAMock.Setup(h => h.Handle(It.IsAny<CommandA>())).Throws<Exception>();
-            this.command = new Envelope<ICommand>(new CommandA());
+            handlerAMock.Setup(h => h.Handle(It.IsAny<CommandA>())).Throws<Exception>();
+            command = new Envelope<ICommand>(new CommandA());
 
-            this.sut.Send(this.command);
+            sut.Send(command);
         }
 
         [Fact]
         public void then_registerd_handler_handles_the_command()
         {
-            this.handlerAMock.Verify(b => b.Handle((CommandA)this.command.Body), Times.Once());
+            handlerAMock.Verify(b => b.Handle((CommandA) command.Body), Times.Once());
         }
 
         [Fact]
         public void then_forwards_to_wrapped_bus()
         {
-            this.wrappedBusMock.Verify(b => b.Send(this.command), Times.Once());
+            wrappedBusMock.Verify(b => b.Send(command), Times.Once());
         }
     }
 
@@ -159,29 +158,29 @@ namespace Infrastructure.Azure.Tests.Messaging.SynchronousCommandBusDecoratorFix
 
         public when_sending_multiple_commands_for_registered_handlers()
         {
-            this.allCommands =
+            allCommands =
                 new List<ICommand> {
                     new CommandA(),
                     new CommandA(),
                     new CommandB(),
                     new CommandA(),
                     new CommandB(),
-                    new CommandA(),
-                 };
+                    new CommandA()
+                };
 
-            this.sut.Send(this.allCommands);
+            sut.Send(allCommands);
         }
 
         [Fact]
         public void then_all_commands_are_executed_synchronously()
         {
-            Assert.Equal(this.allCommands, this.synchronous);
+            Assert.Equal(allCommands, synchronous);
         }
 
         [Fact]
         public void then_no_commands_are_forwarded_to_bus()
         {
-            Assert.Empty(this.forwarded);
+            Assert.Empty(forwarded);
         }
     }
 
@@ -191,29 +190,29 @@ namespace Infrastructure.Azure.Tests.Messaging.SynchronousCommandBusDecoratorFix
 
         public when_sending_multiple_commands_for_registered_and_non_registered_handlers()
         {
-            this.allCommands =
+            allCommands =
                 new List<ICommand> {
                     new CommandA(),
                     new CommandA(),
                     new CommandC(),
                     new CommandA(),
                     new CommandB(),
-                    new CommandA(),
-                 };
+                    new CommandA()
+                };
 
-            this.sut.Send(this.allCommands);
+            sut.Send(allCommands);
         }
 
         [Fact]
         public void then_all_commands_up_to_the_first_command_with_no_handler_are_executed_synchronously()
         {
-            Assert.Equal(this.allCommands.Take(2), this.synchronous);
+            Assert.Equal(allCommands.Take(2), synchronous);
         }
 
         [Fact]
         public void then_all_commands_starting_with_the_first_command_with_no_handler_are_forwarded_to_the_bus()
         {
-            Assert.Equal(this.allCommands.Skip(2), this.forwarded);
+            Assert.Equal(allCommands.Skip(2), forwarded);
         }
     }
 
@@ -223,52 +222,55 @@ namespace Infrastructure.Azure.Tests.Messaging.SynchronousCommandBusDecoratorFix
 
         public when_sending_multiple_commands_with_a_handling_failure()
         {
-            this.allCommands =
+            allCommands =
                 new List<ICommand> {
                     new CommandA(),
                     new CommandA(),
                     new CommandB(),
                     new CommandA(),
                     new CommandB(),
-                    new CommandA(),
-                 };
+                    new CommandA()
+                };
 
-            this.handlerBMock.Setup(h => h.Handle(It.IsAny<CommandB>())).Throws<Exception>();
+            handlerBMock.Setup(h => h.Handle(It.IsAny<CommandB>())).Throws<Exception>();
 
-            this.sut.Send(this.allCommands);
+            sut.Send(allCommands);
         }
 
         [Fact]
         public void then_all_commands_up_to_the_first_command_with_no_handler_are_executed_synchronously()
         {
-            Assert.Equal(this.allCommands.Take(2), this.synchronous);
+            Assert.Equal(allCommands.Take(2), synchronous);
         }
 
         [Fact]
         public void then_all_commands_starting_with_the_first_command_with_no_handler_are_forwarded_to_the_bus()
         {
-            Assert.Equal(this.allCommands.Skip(2), this.forwarded);
+            Assert.Equal(allCommands.Skip(2), forwarded);
         }
     }
 }
 
 namespace Infrastructure.Azure.Tests.Messaging.SynchronousCommandBusDecoratorFixture
 {
-    using System;
-    using Infrastructure.Messaging;
-
     public class CommandA : ICommand
     {
-        public Guid Id { get { return Guid.Empty; } }
+        public Guid Id {
+            get { return Guid.Empty; }
+        }
     }
 
     public class CommandB : ICommand
     {
-        public Guid Id { get { return Guid.Empty; } }
+        public Guid Id {
+            get { return Guid.Empty; }
+        }
     }
 
     public class CommandC : ICommand
     {
-        public Guid Id { get { return Guid.Empty; } }
+        public Guid Id {
+            get { return Guid.Empty; }
+        }
     }
 }

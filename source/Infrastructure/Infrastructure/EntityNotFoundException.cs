@@ -11,68 +11,58 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Runtime.Serialization;
+using System.Security.Permissions;
+
 namespace Infrastructure
 {
-    using System;
-    using System.Runtime.Serialization;
-    using System.Security.Permissions;
-
     [Serializable]
     public class EntityNotFoundException : Exception
     {
-        private readonly Guid entityId;
-        private readonly string entityType;
+        public Guid EntityId { get; }
 
-        public EntityNotFoundException()
-        {
-        }
+        public string EntityType { get; }
+
+        public EntityNotFoundException() { }
 
         public EntityNotFoundException(Guid entityId) : base(entityId.ToString())
         {
-            this.entityId = entityId;
+            EntityId = entityId;
         }
 
         public EntityNotFoundException(Guid entityId, string entityType)
-            : base(entityType + ": " + entityId.ToString())
+            : base(entityType + ": " + entityId)
         {
-            this.entityId = entityId;
-            this.entityType = entityType;
+            EntityId = entityId;
+            EntityType = entityType;
         }
 
-        public EntityNotFoundException(Guid entityId, string entityType, string message, Exception inner) 
+        public EntityNotFoundException(Guid entityId, string entityType, string message, Exception inner)
             : base(message, inner)
         {
-            this.entityId = entityId;
-            this.entityType = entityType;
+            EntityId = entityId;
+            EntityType = entityType;
         }
 
         protected EntityNotFoundException(
             SerializationInfo info,
             StreamingContext context) : base(info, context)
         {
-            if (info == null)
+            if (info == null) {
                 throw new ArgumentNullException("info");
+            }
 
-            this.entityId = Guid.Parse(info.GetString("entityId"));
-            this.entityType = info.GetString("entityType");
-        }
-
-        public Guid EntityId
-        {
-            get { return this.entityId; }
-        }
-
-        public string EntityType
-        {
-            get { return this.entityType; }
+            EntityId = Guid.Parse(info.GetString("entityId"));
+            EntityType = info.GetString("entityType");
         }
 
         [SecurityPermission(SecurityAction.Demand, SerializationFormatter = true)]
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             base.GetObjectData(info, context);
-            info.AddValue("entityId", this.entityId.ToString());
-            info.AddValue("entityType", this.entityType);
+            info.AddValue("entityId", EntityId.ToString());
+            info.AddValue("entityType", EntityType);
         }
     }
 }

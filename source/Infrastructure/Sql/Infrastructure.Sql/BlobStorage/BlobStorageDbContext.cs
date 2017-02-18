@@ -11,74 +11,67 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Data.Entity;
+using System.IO;
+
 namespace Infrastructure.Sql.BlobStorage
 {
-    using System.Data.Entity;
-    using System.IO;
-
     public class BlobStorageDbContext : DbContext
     {
         public const string SchemaName = "BlobStorage";
 
         public BlobStorageDbContext(string nameOrConnectionString)
-            : base(nameOrConnectionString)
-        {
-        }
+            : base(nameOrConnectionString) { }
 
         public byte[] Find(string id)
         {
-            var blob = this.Set<BlobEntity>().Find(id);
-            if (blob == null)
+            var blob = Set<BlobEntity>().Find(id);
+            if (blob == null) {
                 return null;
+            }
 
             return blob.Blob;
         }
 
         public void Save(string id, string contentType, byte[] blob)
         {
-            var existing = this.Set<BlobEntity>().Find(id);
-            string blobString = "";
-            if (contentType == "text/plain")
-            {
+            var existing = Set<BlobEntity>().Find(id);
+            var blobString = "";
+            if (contentType == "text/plain") {
                 Stream stream = null;
-                try
-                {
+                try {
                     stream = new MemoryStream(blob);
-                    using (var reader = new StreamReader(stream))
-                    {
+                    using (var reader = new StreamReader(stream)) {
                         stream = null;
                         blobString = reader.ReadToEnd();
                     }
-                }
-                finally
-                {
-                    if (stream != null)
+                } finally {
+                    if (stream != null) {
                         stream.Dispose();
+                    }
                 }
             }
 
-            if (existing != null)
-            {
+            if (existing != null) {
                 existing.Blob = blob;
                 existing.BlobString = blobString;
-            }
-            else
-            {
-                this.Set<BlobEntity>().Add(new BlobEntity(id, contentType, blob, blobString));
+            } else {
+                Set<BlobEntity>().Add(new BlobEntity(id, contentType, blob, blobString));
             }
 
-            this.SaveChanges();
+            SaveChanges();
         }
 
         public void Delete(string id)
         {
-            var blob = this.Set<BlobEntity>().Find(id);
-            if (blob == null)
+            var blob = Set<BlobEntity>().Find(id);
+            if (blob == null) {
                 return;
+            }
 
-            this.Set<BlobEntity>().Remove(blob);
+            Set<BlobEntity>().Remove(blob);
 
-            this.SaveChanges();
+            SaveChanges();
         }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)

@@ -11,22 +11,22 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Collections.Generic;
+
 namespace Infrastructure.Sql.Messaging
 {
-    using System.Collections.Generic;
-
     /// <summary>
-    /// Abstracts the behavior of sending a message.
+    ///     Abstracts the behavior of sending a message.
     /// </summary>
     public interface IMessageSender
     {
         /// <summary>
-        /// Sends the specified message.
+        ///     Sends the specified message.
         /// </summary>
         void Send(Message message);
 
         /// <summary>
-        /// Sends a batch of messages.
+        ///     Sends a batch of messages.
         /// </summary>
         void Send(IEnumerable<Message> messages);
     }

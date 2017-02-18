@@ -11,29 +11,28 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+
 namespace Conference.Common.Utils
 {
-    using System;
-
     /// <summary>
-    /// Generates random alphnumerical strings.
+    ///     Generates random alphnumerical strings.
     /// </summary>
     public static class HandleGenerator
     {
-        private static readonly Random rnd = new Random(DateTime.UtcNow.Millisecond);
-        private static readonly char[] allowableChars = "ABCDEFGHJKMNPQRSTUVWXYZ123456789".ToCharArray();
+        private static readonly object RandomLock = new object();
+        private static readonly Random Random = new Random(DateTime.UtcNow.Millisecond);
+
+        private static readonly char[] AllowableChars = "ABCDEFGHJKMNPQRSTUVWXYZ123456789".ToCharArray();
 
         public static string Generate(int length)
         {
             var result = new char[length];
-            lock (rnd)
-            {
-                for (int i = 0; i < length; i++)
-                {
-                    result[i] = allowableChars[rnd.Next(0, allowableChars.Length)];
+            lock (RandomLock) {
+                for (var i = 0; i < length; i++) {
+                    result[i] = AllowableChars[Random.Next(0, AllowableChars.Length)];
                 }
             }
-
             return new string(result);
         }
     }

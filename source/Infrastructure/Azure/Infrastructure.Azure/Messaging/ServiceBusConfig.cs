@@ -11,26 +11,29 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Linq;
+using Infrastructure.Azure.Instrumentation;
+using Infrastructure.Azure.Messaging.Handling;
+using Infrastructure.Messaging.Handling;
+using Infrastructure.Serialization;
+using Microsoft.Practices.EnterpriseLibrary.WindowsAzure.TransientFaultHandling.ServiceBus;
+using Microsoft.Practices.TransientFaultHandling;
+using Microsoft.ServiceBus;
+using Microsoft.ServiceBus.Messaging;
+
 namespace Infrastructure.Azure.Messaging
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Globalization;
-    using System.Linq;
-    using Infrastructure.Azure.Instrumentation;
-    using Infrastructure.Azure.Messaging.Handling;
-    using Infrastructure.Messaging.Handling;
-    using Infrastructure.Serialization;
-    using Microsoft.Practices.EnterpriseLibrary.WindowsAzure.TransientFaultHandling.ServiceBus;
-    using Microsoft.Practices.TransientFaultHandling;
-    using Microsoft.ServiceBus;
-    using Microsoft.ServiceBus.Messaging;
-
     public class ServiceBusConfig
     {
         private const string RuleName = "Custom";
+
         private bool initialized;
-        private ServiceBusSettings settings;
+
+        private readonly ServiceBusSettings settings;
 
         public ServiceBusConfig(ServiceBusSettings settings)
         {
@@ -45,51 +48,47 @@ namespace Infrastructure.Azure.Messaging
             var serviceUri = ServiceBusEnvironment.CreateServiceUri(settings.ServiceUriScheme, settings.ServiceNamespace, settings.ServicePath);
             var namespaceManager = new NamespaceManager(serviceUri, tokenProvider);
 
-            this.settings.Topics.AsParallel().ForAll(topic =>
-            {
-                retryPolicy.ExecuteAction(() => CreateTopicIfNotExists(namespaceManager, topic));
-                topic.Subscriptions.AsParallel().ForAll(subscription =>
-                {
-                    retryPolicy.ExecuteAction(() => CreateSubscriptionIfNotExists(namespaceManager, topic, subscription));
-                    retryPolicy.ExecuteAction(() => UpdateRules(namespaceManager, topic, subscription));
+            settings.Topics.AsParallel()
+                .ForAll(topic => {
+                    retryPolicy.ExecuteAction(() => CreateTopicIfNotExists(namespaceManager, topic));
+                    topic.Subscriptions.AsParallel()
+                        .ForAll(subscription => {
+                            retryPolicy.ExecuteAction(() => CreateSubscriptionIfNotExists(namespaceManager, topic, subscription));
+                            retryPolicy.ExecuteAction(() => UpdateRules(namespaceManager, topic, subscription));
+                        });
                 });
-            });
 
             // Execute migration support actions only after all the previous ones have been completed.
-            foreach (var topic in this.settings.Topics)
-            {
-                foreach (var action in topic.MigrationSupport)
-                {
+            foreach (var topic in settings.Topics) {
+                foreach (var action in topic.MigrationSupport) {
                     retryPolicy.ExecuteAction(() => UpdateSubscriptionIfExists(namespaceManager, topic, action));
                 }
             }
 
-            this.initialized = true;
+            initialized = true;
         }
 
         // Can't really infer the topic from the subscription, since subscriptions of the same 
         // name can exist across different topics (i.e. "all" currently)
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope", Justification = "Instrumentation disposed by receiver")]
+        [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope", Justification = "Instrumentation disposed by receiver")]
         public EventProcessor CreateEventProcessor(string subscription, IEventHandler handler, ITextSerializer serializer, bool instrumentationEnabled = false)
         {
-            if (!this.initialized)
+            if (!initialized) {
                 throw new InvalidOperationException("Service bus configuration has not been initialized.");
+            }
 
             TopicSettings topicSettings = null;
             SubscriptionSettings subscriptionSettings = null;
 
-            foreach (var settings in this.settings.Topics.Where(t => t.IsEventBus))
-            {
+            foreach (var settings in this.settings.Topics.Where(t => t.IsEventBus)) {
                 subscriptionSettings = settings.Subscriptions.Find(s => s.Name == subscription);
-                if (subscriptionSettings != null)
-                {
+                if (subscriptionSettings != null) {
                     topicSettings = settings;
                     break;
                 }
             }
 
-            if (subscriptionSettings == null)
-            {
+            if (subscriptionSettings == null) {
                 throw new ArgumentOutOfRangeException(
                     string.Format(
                         CultureInfo.CurrentCulture,
@@ -99,52 +98,37 @@ namespace Infrastructure.Azure.Messaging
 
             IMessageReceiver receiver;
 
-            if (subscriptionSettings.RequiresSession)
-            {
+            if (subscriptionSettings.RequiresSession) {
                 var instrumentation = new SessionSubscriptionReceiverInstrumentation(subscription, instrumentationEnabled);
-                try
-                {
-                    receiver = (IMessageReceiver)new SessionSubscriptionReceiver(this.settings, topicSettings.Path, subscription, true, instrumentation);
-                }
-                catch
-                {
+                try {
+                    receiver = new SessionSubscriptionReceiver(settings, topicSettings.Path, subscription, true, instrumentation);
+                } catch {
                     instrumentation.Dispose();
                     throw;
                 }
-            }
-            else
-            {
+            } else {
                 var instrumentation = new SubscriptionReceiverInstrumentation(subscription, instrumentationEnabled);
-                try
-                {
-                    receiver = (IMessageReceiver)new SubscriptionReceiver(this.settings, topicSettings.Path, subscription, true, instrumentation);
-                }
-                catch
-                {
+                try {
+                    receiver = new SubscriptionReceiver(settings, topicSettings.Path, subscription, true, instrumentation);
+                } catch {
                     instrumentation.Dispose();
                     throw;
                 }
             }
 
             EventProcessor processor;
-            try
-            {
+            try {
                 processor = new EventProcessor(receiver, serializer);
-            }
-            catch
-            {
+            } catch {
                 using (receiver as IDisposable) { }
                 throw;
             }
 
-            try
-            {
+            try {
                 processor.Register(handler);
 
                 return processor;
-            }
-            catch
-            {
+            } catch {
                 processor.Dispose();
                 throw;
             }
@@ -153,39 +137,37 @@ namespace Infrastructure.Azure.Messaging
         private void CreateTopicIfNotExists(NamespaceManager namespaceManager, TopicSettings topic)
         {
             var topicDescription =
-                new TopicDescription(topic.Path)
-                {
+                new TopicDescription(topic.Path) {
                     RequiresDuplicateDetection = true,
-                    DuplicateDetectionHistoryTimeWindow = topic.DuplicateDetectionHistoryTimeWindow,
+                    DuplicateDetectionHistoryTimeWindow = topic.DuplicateDetectionHistoryTimeWindow
                 };
 
-            try
-            {
+            try {
                 namespaceManager.CreateTopic(topicDescription);
-            }
-            catch (MessagingEntityAlreadyExistsException) { }
+            } catch (MessagingEntityAlreadyExistsException) { }
         }
 
         private void CreateSubscriptionIfNotExists(NamespaceManager namespaceManager, TopicSettings topic, SubscriptionSettings subscription)
         {
             var subscriptionDescription =
-                new SubscriptionDescription(topic.Path, subscription.Name)
-                {
+                new SubscriptionDescription(topic.Path, subscription.Name) {
                     RequiresSession = subscription.RequiresSession,
-                    LockDuration = TimeSpan.FromSeconds(150),
+                    LockDuration = TimeSpan.FromSeconds(150)
                 };
 
-            try
-            {
+            try {
                 namespaceManager.CreateSubscription(subscriptionDescription);
-            }
-            catch (MessagingEntityAlreadyExistsException) { }
+            } catch (MessagingEntityAlreadyExistsException) { }
         }
 
         private static void UpdateSubscriptionIfExists(NamespaceManager namespaceManager, TopicSettings topic, UpdateSubscriptionIfExists action)
         {
-            if (string.IsNullOrWhiteSpace(action.Name)) throw new ArgumentException("action");
-            if (string.IsNullOrWhiteSpace(action.SqlFilter)) throw new ArgumentException("action");
+            if (string.IsNullOrWhiteSpace(action.Name)) {
+                throw new ArgumentException("action");
+            }
+            if (string.IsNullOrWhiteSpace(action.SqlFilter)) {
+                throw new ArgumentException("action");
+            }
 
             UpdateSqlFilter(namespaceManager, action.SqlFilter, action.Name, topic.Path);
         }
@@ -193,8 +175,7 @@ namespace Infrastructure.Azure.Messaging
         private static void UpdateRules(NamespaceManager namespaceManager, TopicSettings topic, SubscriptionSettings subscription)
         {
             string sqlExpression = null;
-            if (!string.IsNullOrWhiteSpace(subscription.SqlFilter))
-            {
+            if (!string.IsNullOrWhiteSpace(subscription.SqlFilter)) {
                 sqlExpression = subscription.SqlFilter;
             }
 
@@ -203,83 +184,64 @@ namespace Infrastructure.Azure.Messaging
 
         private static void UpdateSqlFilter(NamespaceManager namespaceManager, string sqlExpression, string subscriptionName, string topicPath)
         {
-            bool needsReset = false;
+            var needsReset = false;
             List<RuleDescription> existingRules;
-            try
-            {
+            try {
                 existingRules = namespaceManager.GetRules(topicPath, subscriptionName).ToList();
-            }
-            catch (MessagingEntityNotFoundException)
-            {
+            } catch (MessagingEntityNotFoundException) {
                 // the subscription does not exist, no need to update rules.
                 return;
             }
-            if (existingRules.Count != 1)
-            {
+            if (existingRules.Count != 1) {
                 needsReset = true;
-            }
-            else
-            {
+            } else {
                 var existingRule = existingRules.First();
-                if (sqlExpression != null && existingRule.Name == RuleDescription.DefaultRuleName)
-                {
+                if (sqlExpression != null && existingRule.Name == RuleDescription.DefaultRuleName) {
                     needsReset = true;
-                }
-                else if (sqlExpression == null && existingRule.Name != RuleDescription.DefaultRuleName)
-                {
+                } else if (sqlExpression == null && existingRule.Name != RuleDescription.DefaultRuleName) {
                     needsReset = true;
-                }
-                else if (sqlExpression != null && existingRule.Name != RuleName)
-                {
+                } else if (sqlExpression != null && existingRule.Name != RuleName) {
                     needsReset = true;
-                }
-                else if (sqlExpression != null && existingRule.Name == RuleName)
-                {
+                } else if (sqlExpression != null && existingRule.Name == RuleName) {
                     var filter = existingRule.Filter as SqlFilter;
-                    if (filter == null || filter.SqlExpression != sqlExpression)
-                    {
+                    if (filter == null || filter.SqlExpression != sqlExpression) {
                         needsReset = true;
                     }
                 }
             }
 
-            if (needsReset)
-            {
+            if (needsReset) {
                 MessagingFactory factory = null;
-                try
-                {
+                try {
                     factory = MessagingFactory.Create(namespaceManager.Address, namespaceManager.Settings.TokenProvider);
                     SubscriptionClient client = null;
-                    try
-                    {
+                    try {
                         client = factory.CreateSubscriptionClient(topicPath, subscriptionName);
 
                         // first add the default rule, so no new messages are lost while we are updating the subscription
                         TryAddRule(client, new RuleDescription(RuleDescription.DefaultRuleName, new TrueFilter()));
 
                         // then delete every rule but the Default one
-                        foreach (var existing in existingRules.Where(x => x.Name != RuleDescription.DefaultRuleName))
-                        {
+                        foreach (var existing in existingRules.Where(x => x.Name != RuleDescription.DefaultRuleName)) {
                             TryRemoveRule(client, existing.Name);
                         }
 
-                        if (sqlExpression != null)
-                        {
+                        if (sqlExpression != null) {
                             // Add the desired rule.
                             TryAddRule(client, new RuleDescription(RuleName, new SqlFilter(sqlExpression)));
 
                             // once the desired rule was added, delete the default rule.
                             TryRemoveRule(client, RuleDescription.DefaultRuleName);
                         }
+                    } finally {
+                        if (client != null) {
+                            client.Close();
+                        }
                     }
-                    finally
-                    {
-                        if (client != null) client.Close();
+                } finally {
+                    if (factory != null) {
+                        factory.Close();
                     }
-                }
-                finally
-                {
-                    if (factory != null) factory.Close();
                 }
             }
         }
@@ -287,21 +249,17 @@ namespace Infrastructure.Azure.Messaging
         private static void TryAddRule(SubscriptionClient client, RuleDescription rule)
         {
             // try / catch is because there could be other processes initializing at the same time.
-            try
-            {
+            try {
                 client.AddRule(rule);
-            }
-            catch (MessagingEntityAlreadyExistsException) { }
+            } catch (MessagingEntityAlreadyExistsException) { }
         }
 
         private static void TryRemoveRule(SubscriptionClient client, string ruleName)
         {
             // try / catch is because there could be other processes initializing at the same time.
-            try
-            {
+            try {
                 client.RemoveRule(ruleName);
-            }
-            catch (MessagingEntityNotFoundException) { }
+            } catch (MessagingEntityNotFoundException) { }
         }
     }
 }

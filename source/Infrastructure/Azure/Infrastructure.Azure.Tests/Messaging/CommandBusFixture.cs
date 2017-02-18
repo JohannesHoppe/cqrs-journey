@@ -11,17 +11,17 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Linq;
+using Infrastructure.Azure.Messaging;
+using Infrastructure.Azure.Tests.Mocks;
+using Infrastructure.Messaging;
+using Infrastructure.Serialization;
+using Moq;
+using Xunit;
+
 namespace Infrastructure.Azure.Tests.Messaging
 {
-    using System;
-    using System.Linq;
-    using Infrastructure.Azure.Messaging;
-    using Infrastructure.Azure.Tests.Mocks;
-    using Infrastructure.Messaging;
-    using Infrastructure.Serialization;
-    using Moq;
-    using Xunit;
-
     public class CommandBusFixture
     {
         [Fact]
@@ -30,7 +30,7 @@ namespace Infrastructure.Azure.Tests.Messaging
             var sender = new MessageSenderMock();
             var sut = new CommandBus(sender, Mock.Of<IMetadataProvider>(), new JsonTextSerializer());
 
-            var command = new FooCommand { Id = Guid.NewGuid() };
+            var command = new FooCommand {Id = Guid.NewGuid()};
             sut.Send(command);
 
             Assert.Equal(command.Id.ToString(), sender.Sent.Single().MessageId);
@@ -42,8 +42,7 @@ namespace Infrastructure.Azure.Tests.Messaging
             var sender = new MessageSenderMock();
             var sut = new CommandBus(sender, Mock.Of<IMetadataProvider>(), new JsonTextSerializer());
 
-            var command = new Envelope<ICommand>(new FooCommand { Id = Guid.NewGuid() })
-            {
+            var command = new Envelope<ICommand>(new FooCommand {Id = Guid.NewGuid()}) {
                 TimeToLive = TimeSpan.FromMinutes(15)
             };
             sut.Send(command);
@@ -57,8 +56,7 @@ namespace Infrastructure.Azure.Tests.Messaging
             var sender = new MessageSenderMock();
             var sut = new CommandBus(sender, Mock.Of<IMetadataProvider>(), new JsonTextSerializer());
 
-            var command = new Envelope<ICommand>(new FooCommand { Id = Guid.NewGuid() })
-            {
+            var command = new Envelope<ICommand>(new FooCommand {Id = Guid.NewGuid()}) {
                 Delay = TimeSpan.FromMinutes(15)
             };
             sut.Send(command);
@@ -66,7 +64,7 @@ namespace Infrastructure.Azure.Tests.Messaging
             Assert.InRange(sender.Sent.Single().ScheduledEnqueueTimeUtc, DateTime.UtcNow.AddMinutes(14.9), DateTime.UtcNow.AddMinutes(15.1));
         }
 
-        class FooCommand : ICommand
+        private class FooCommand : ICommand
         {
             public Guid Id { get; set; }
         }

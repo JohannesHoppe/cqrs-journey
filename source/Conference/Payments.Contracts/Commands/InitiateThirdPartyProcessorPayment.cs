@@ -11,29 +11,14 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using Infrastructure.Messaging;
+
 namespace Payments.Contracts.Commands
 {
-    using System;
-    using System.Collections.Generic;
-    using Infrastructure.Messaging;
-
     public class InitiateThirdPartyProcessorPayment : ICommand
     {
-        public class PaymentItem
-        {
-            public string Description { get; set; }
-
-            public decimal Amount { get; set; }
-        }
-
-        public InitiateThirdPartyProcessorPayment()
-        {
-            this.Id = Guid.NewGuid();
-            this.Items = new List<InitiateThirdPartyProcessorPayment.PaymentItem>();
-        }
-
-        public Guid Id { get; private set; }
-
         public Guid PaymentId { get; set; }
 
         public Guid PaymentSourceId { get; set; }
@@ -44,6 +29,21 @@ namespace Payments.Contracts.Commands
 
         public decimal TotalAmount { get; set; }
 
-        public IList<InitiateThirdPartyProcessorPayment.PaymentItem> Items { get; private set; }
+        public IList<PaymentItem> Items { get; }
+
+        public InitiateThirdPartyProcessorPayment()
+        {
+            Id = Guid.NewGuid();
+            Items = new List<PaymentItem>();
+        }
+
+        public Guid Id { get; }
+
+        public class PaymentItem
+        {
+            public string Description { get; set; }
+
+            public decimal Amount { get; set; }
+        }
     }
 }

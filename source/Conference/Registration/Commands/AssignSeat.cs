@@ -11,22 +11,24 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using Infrastructure.Messaging;
+
 namespace Registration.Commands
 {
-    using System;
-    using Infrastructure.Messaging;
-
     public class AssignSeat : ICommand
     {
+        public Guid SeatAssignmentsId { get; set; }
+
+        public int Position { get; set; }
+
+        public PersonalInfo Attendee { get; set; }
+
         public AssignSeat()
         {
-            this.Id = Guid.NewGuid();
+            Id = Guid.NewGuid();
         }
 
         public Guid Id { get; set; }
-
-        public Guid SeatAssignmentsId { get; set; }
-        public int Position { get; set; }
-        public PersonalInfo Attendee { get; set; }
     }
 }

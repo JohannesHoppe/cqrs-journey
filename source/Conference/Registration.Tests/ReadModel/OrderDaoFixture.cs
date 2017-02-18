@@ -11,17 +11,17 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.IO;
+using Infrastructure.BlobStorage;
+using Infrastructure.Serialization;
+using Moq;
+using Registration.ReadModel;
+using Registration.ReadModel.Implementation;
+using Xunit;
+
 namespace Registration.Tests.ReadModel
 {
-    using System;
-    using System.IO;
-    using Infrastructure.BlobStorage;
-    using Infrastructure.Serialization;
-    using Moq;
-    using Registration.ReadModel;
-    using Registration.ReadModel.Implementation;
-    using Xunit;
-
     public class OrderDaoFixture
     {
         [Fact]

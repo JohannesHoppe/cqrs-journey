@@ -11,36 +11,36 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Web.Mvc;
+using Conference.Web.Public.Areas.ThirdPartyProcessor.Controllers;
+using Xunit;
+
 namespace Conference.Web.Public.Tests.Controllers.ThirdPartyProcessorPaymentControllerFixture
 {
-    using System.Web.Mvc;
-    using Conference.Web.Public.Areas.ThirdPartyProcessor.Controllers;
-    using Xunit;
-
     public class given_controller
     {
         protected readonly ThirdPartyProcessorPaymentController sut;
 
         public given_controller()
         {
-            this.sut = new ThirdPartyProcessorPaymentController();
+            sut = new ThirdPartyProcessorPaymentController();
         }
 
         [Fact]
         public void when_intiating_payment_then_returns_payment_view()
         {
-            var result = (ViewResult)this.sut.Pay("item", 100, "return", "cancelreturn");
+            var result = (ViewResult) sut.Pay("item", 100, "return", "cancelreturn");
 
-            Assert.Equal(this.sut.ViewBag.ReturnUrl, "return");
-            Assert.Equal(this.sut.ViewBag.CancelReturnUrl, "cancelreturn");
-            Assert.Equal(this.sut.ViewBag.ItemName, "item");
-            Assert.Equal(this.sut.ViewBag.ItemAmount, 100m);
-
+            Assert.Equal(sut.ViewBag.ReturnUrl, "return");
+            Assert.Equal(sut.ViewBag.CancelReturnUrl, "cancelreturn");
+            Assert.Equal(sut.ViewBag.ItemName, "item");
+            Assert.Equal(sut.ViewBag.ItemAmount, 100m);
         }
+
         [Fact]
         public void when_accepting_payment_then_redirects_to_return_url()
         {
-            var result = (RedirectResult)this.sut.Pay("accepted", "return", "cancelReturn");
+            var result = (RedirectResult) sut.Pay("accepted", "return", "cancelReturn");
 
             Assert.Equal("return", result.Url);
             Assert.False(result.Permanent);
@@ -49,7 +49,7 @@ namespace Conference.Web.Public.Tests.Controllers.ThirdPartyProcessorPaymentCont
         [Fact]
         public void when_rejecting_payment_then_redirects_to_cancel_return_url()
         {
-            var result = (RedirectResult)this.sut.Pay("rejected", "return", "cancelReturn");
+            var result = (RedirectResult) sut.Pay("rejected", "return", "cancelReturn");
 
             Assert.Equal("cancelReturn", result.Url);
             Assert.False(result.Permanent);

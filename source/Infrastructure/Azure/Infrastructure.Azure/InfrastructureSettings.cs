@@ -11,18 +11,18 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Xml;
+using System.Xml.Schema;
+using System.Xml.Serialization;
+using Infrastructure.Azure.BlobStorage;
+using Infrastructure.Azure.EventSourcing;
+using Infrastructure.Azure.MessageLog;
+using Infrastructure.Azure.Messaging;
+
 namespace Infrastructure.Azure
 {
-    using System.Xml;
-    using System.Xml.Schema;
-    using System.Xml.Serialization;
-    using Infrastructure.Azure.BlobStorage;
-    using Infrastructure.Azure.EventSourcing;
-    using Infrastructure.Azure.MessageLog;
-    using Infrastructure.Azure.Messaging;
-
     /// <summary>
-    /// Simple settings class to configure the connection to Windows Azure services.
+    ///     Simple settings class to configure the connection to Windows Azure services.
     /// </summary>
     [XmlRoot("InfrastructureSettings", Namespace = XmlNamespace)]
     public class InfrastructureSettings
@@ -30,29 +30,32 @@ namespace Infrastructure.Azure
         public const string XmlNamespace = @"urn:microsoft-patterns-and-practices-cqrsjourney";
 
         private static readonly XmlSerializer serializer = new XmlSerializer(typeof(InfrastructureSettings));
+
         private static readonly XmlReaderSettings readerSettings;
+
+        public ServiceBusSettings ServiceBus { get; set; }
+
+        public EventSourcingSettings EventSourcing { get; set; }
+
+        public MessageLogSettings MessageLog { get; set; }
+
+        public BlobStorageSettings BlobStorage { get; set; }
 
         static InfrastructureSettings()
         {
             var schema = XmlSchema.Read(typeof(InfrastructureSettings).Assembly.GetManifestResourceStream("Infrastructure.Azure.Settings.xsd"), null);
-            readerSettings = new XmlReaderSettings { ValidationType = ValidationType.Schema };
+            readerSettings = new XmlReaderSettings {ValidationType = ValidationType.Schema};
             readerSettings.Schemas.Add(schema);
         }
 
         /// <summary>
-        /// Reads the settings from the specified file.
+        ///     Reads the settings from the specified file.
         /// </summary>
         public static InfrastructureSettings Read(string file)
         {
-            using (var reader = XmlReader.Create(file, readerSettings))
-            {
-                return (InfrastructureSettings)serializer.Deserialize(reader);
+            using (var reader = XmlReader.Create(file, readerSettings)) {
+                return (InfrastructureSettings) serializer.Deserialize(reader);
             }
         }
-
-        public ServiceBusSettings ServiceBus { get; set; }
-        public EventSourcingSettings EventSourcing { get; set; }
-        public MessageLogSettings MessageLog { get; set; }
-        public BlobStorageSettings BlobStorage { get; set; }
     }
 }

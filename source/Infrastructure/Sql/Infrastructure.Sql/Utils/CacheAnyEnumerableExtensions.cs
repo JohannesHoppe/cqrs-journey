@@ -11,20 +11,21 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+
 namespace Infrastructure.Util
 {
-    using System.Collections;
-    using System.Collections.Generic;
-
     /// <summary>
-    /// Prevents double enumeration (and potential roundtrip to the data source) when checking 
-    /// for the presence of items in an enumeration.
+    ///     Prevents double enumeration (and potential roundtrip to the data source) when checking
+    ///     for the presence of items in an enumeration.
     /// </summary>
     internal static class CacheAnyEnumerableExtensions
     {
         /// <summary>
-        /// Makes sure that calls to <see cref="IAnyEnumerable{T}.Any()"/> are 
-        /// cached, and reuses the resulting enumerator.
+        ///     Makes sure that calls to <see cref="IAnyEnumerable{T}.Any()" /> are
+        ///     cached, and reuses the resulting enumerator.
         /// </summary>
         public static IAnyEnumerable<T> AsCachedAnyEnumerable<T>(this IEnumerable<T> source)
         {
@@ -32,7 +33,7 @@ namespace Infrastructure.Util
         }
 
         /// <summary>
-        /// Exposes a cached <see cref="Any"/> operator.
+        ///     Exposes a cached <see cref="Any" /> operator.
         /// </summary>
         public interface IAnyEnumerable<out T> : IEnumerable<T>
         {
@@ -40,15 +41,17 @@ namespace Infrastructure.Util
         }
 
         /// <summary>
-        /// Lazily computes whether the inner enumerable has 
-        /// any values, and caches the result.
+        ///     Lazily computes whether the inner enumerable has
+        ///     any values, and caches the result.
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable")]
+        [SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable")]
         private class AnyEnumerable<T> : IAnyEnumerable<T>
         {
             private readonly IEnumerable<T> enumerable;
+
             private IEnumerator<T> enumerator;
+
             private bool hasAny;
 
             public AnyEnumerable(IEnumerable<T> enumerable)
@@ -56,39 +59,40 @@ namespace Infrastructure.Util
                 this.enumerable = enumerable;
             }
 
+            private void InitializeEnumerator()
+            {
+                if (enumerator == null) {
+                    var inner = enumerable.GetEnumerator();
+                    hasAny = inner.MoveNext();
+                    enumerator = new SkipFirstEnumerator(inner, hasAny);
+                }
+            }
+
             public bool Any()
             {
-                this.InitializeEnumerator();
+                InitializeEnumerator();
 
-                return this.hasAny;
+                return hasAny;
             }
 
             public IEnumerator<T> GetEnumerator()
             {
-                this.InitializeEnumerator();
+                InitializeEnumerator();
 
-                return this.enumerator;
-            }
-
-            private void InitializeEnumerator()
-            {
-                if (this.enumerator == null)
-                {
-                    var inner = this.enumerable.GetEnumerator();
-                    this.hasAny = inner.MoveNext();
-                    this.enumerator = new SkipFirstEnumerator(inner, this.hasAny);
-                }
+                return enumerator;
             }
 
             IEnumerator IEnumerable.GetEnumerator()
             {
-                return this.GetEnumerator();
+                return GetEnumerator();
             }
 
             private class SkipFirstEnumerator : IEnumerator<T>
             {
-                private readonly IEnumerator<T> inner;
                 private readonly bool hasNext;
+
+                private readonly IEnumerator<T> inner;
+
                 private bool isFirst = true;
 
                 public SkipFirstEnumerator(IEnumerator<T> inner, bool hasNext)
@@ -97,29 +101,32 @@ namespace Infrastructure.Util
                     this.hasNext = hasNext;
                 }
 
-                public T Current { get { return this.inner.Current; } }
+                public T Current {
+                    get { return inner.Current; }
+                }
 
                 public void Dispose()
                 {
-                    this.inner.Dispose();
+                    inner.Dispose();
                 }
 
-                object IEnumerator.Current { get { return this.Current; } }
+                object IEnumerator.Current {
+                    get { return Current; }
+                }
 
                 public bool MoveNext()
                 {
-                    if (this.isFirst)
-                    {
-                        this.isFirst = false;
-                        return this.hasNext;
+                    if (isFirst) {
+                        isFirst = false;
+                        return hasNext;
                     }
 
-                    return this.inner.MoveNext();
+                    return inner.MoveNext();
                 }
 
                 public void Reset()
                 {
-                    this.inner.Reset();
+                    inner.Reset();
                 }
             }
         }

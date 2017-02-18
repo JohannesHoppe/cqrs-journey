@@ -11,16 +11,16 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+
 namespace Infrastructure.Utils
 {
-    using System;
-
     public static class GuidUtil
     {
         private static readonly long EpochMilliseconds = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).Ticks / 10000L;
 
         /// <summary>
-        /// Creates a sequential GUID according to SQL Server's ordering rules.
+        ///     Creates a sequential GUID according to SQL Server's ordering rules.
         /// </summary>
         public static Guid NewSequentialId()
         {
@@ -29,21 +29,18 @@ namespace Infrastructure.Utils
             var guidBytes = Guid.NewGuid().ToByteArray();
 
             // get the milliseconds since Jan 1 1970
-            byte[] sequential = BitConverter.GetBytes((DateTime.Now.Ticks / 10000L) - EpochMilliseconds);
+            var sequential = BitConverter.GetBytes(DateTime.Now.Ticks / 10000L - EpochMilliseconds);
 
             // discard the 2 most significant bytes, as we only care about the milliseconds increasing, but the highest ones 
             // should be 0 for several thousand years to come (non-issue).
-            if (BitConverter.IsLittleEndian)
-            {
+            if (BitConverter.IsLittleEndian) {
                 guidBytes[10] = sequential[5];
                 guidBytes[11] = sequential[4];
                 guidBytes[12] = sequential[3];
                 guidBytes[13] = sequential[2];
                 guidBytes[14] = sequential[1];
                 guidBytes[15] = sequential[0];
-            }
-            else
-            {
+            } else {
                 Buffer.BlockCopy(sequential, 2, guidBytes, 10, 6);
             }
 

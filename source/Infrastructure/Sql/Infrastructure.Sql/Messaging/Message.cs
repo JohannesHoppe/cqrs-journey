@@ -11,23 +11,23 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+
 namespace Infrastructure.Sql.Messaging
 {
-    using System;
-
     public class Message
     {
+        public string Body { get; }
+
+        public string CorrelationId { get; }
+
+        public DateTime? DeliveryDate { get; }
+
         public Message(string body, DateTime? deliveryDate = null, string correlationId = null)
         {
-            this.Body = body;
-            this.DeliveryDate = deliveryDate;
-            this.CorrelationId = correlationId;
+            Body = body;
+            DeliveryDate = deliveryDate;
+            CorrelationId = correlationId;
         }
-
-        public string Body { get; private set; }
-
-        public string CorrelationId { get; private set; }
-
-        public DateTime? DeliveryDate { get; private set; }
     }
 }

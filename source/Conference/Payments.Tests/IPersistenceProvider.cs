@@ -11,26 +11,27 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using Infrastructure.Database;
+
 namespace Payments.Tests
 {
-    using System;
-    using Infrastructure.Database;
-
     /// <summary>
-    /// Provides a way to abstract the work a persistence layer would perform 
-    /// so that test code can be reused against in-memory and DB tests.
+    ///     Provides a way to abstract the work a persistence layer would perform
+    ///     so that test code can be reused against in-memory and DB tests.
     /// </summary>
     public interface IPersistenceProvider : IDisposable
     {
         /// <summary>
-        /// Persists and reloads the aggregate, so that associated 
-        /// persistence behavior is exercised as needed.
+        ///     Persists and reloads the aggregate, so that associated
+        ///     persistence behavior is exercised as needed.
         /// </summary>
-        T PersistReload<T>(T sut) where T : class, IAggregateRoot;
+        T PersistReload<T>(T sut)
+            where T : class, IAggregateRoot;
     }
 
     /// <summary>
-    /// Provides a fast no-op provider for unit tests to use.
+    ///     Provides a fast no-op provider for unit tests to use.
     /// </summary>
     public class NoPersistenceProvider : IPersistenceProvider
     {
@@ -40,8 +41,6 @@ namespace Payments.Tests
             return sut;
         }
 
-        public void Dispose()
-        {
-        }
+        public void Dispose() { }
     }
 }

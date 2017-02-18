@@ -11,17 +11,17 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using Infrastructure.Azure.Messaging;
+using Xunit;
+
 namespace Infrastructure.Azure.IntegrationTests.SubscriptionReceiverIntegration
 {
-    using Infrastructure.Azure.Messaging;
-    using Xunit;
-
     public class given_a_receiver : given_a_topic_and_subscription
     {
         [Fact]
         public void when_starting_twice_then_ignores_second_request()
         {
-            var receiver = new SubscriptionReceiver(this.Settings, this.Topic, this.Subscription);
+            var receiver = new SubscriptionReceiver(Settings, Topic, Subscription);
 
             receiver.Start(m => MessageReleaseAction.CompleteMessage);
 
@@ -31,7 +31,7 @@ namespace Infrastructure.Azure.IntegrationTests.SubscriptionReceiverIntegration
         [Fact]
         public void when_stopping_without_starting_then_ignores_request()
         {
-            var receiver = new SubscriptionReceiver(this.Settings, this.Topic, this.Subscription);
+            var receiver = new SubscriptionReceiver(Settings, Topic, Subscription);
 
             receiver.Stop();
         }
@@ -39,7 +39,7 @@ namespace Infrastructure.Azure.IntegrationTests.SubscriptionReceiverIntegration
         [Fact]
         public void when_disposing_not_started_then_no_op()
         {
-            var receiver = new SubscriptionReceiver(this.Settings, this.Topic, this.Subscription);
+            var receiver = new SubscriptionReceiver(Settings, Topic, Subscription);
 
             receiver.Dispose();
         }

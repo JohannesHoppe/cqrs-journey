@@ -11,10 +11,10 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using Registration.ReadModel;
+
 namespace Conference.Web.Public.Models
 {
-    using Registration.ReadModel;
-
     public class OrderItemViewModel
     {
         public SeatType SeatType { get; set; }

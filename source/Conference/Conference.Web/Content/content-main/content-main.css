@@ -2,60 +2,70 @@
     min-height: 355px;
     position: relative;
 }
+
 .content-main__wrapper {
     float: left;
     width: 1130px;
-    }
-    .content-main__main {
-        margin: 0 425px 0 250px;
-    }
-    *:first-child+html .content-main__main {
-        zoom:1;
-        padding-bottom: 10px;
-    }
+}
+
+.content-main__main { margin: 0 425px 0 250px; }
+
+*:first-child + html .content-main__main {
+    padding-bottom: 10px;
+    zoom: 1;
+}
 
 .content-main__aside {
     float: left;
-    width: 250px;
     margin-left: -1130px;
     padding-bottom: 170px;
-}
-.content-main__extra {
-    float: left;
-    width: 425px;
-    margin-left: -425px;
+    width: 250px;
 }
 
-.content-main_register, .content-main_create-conf {width: 1020px;padding: 0;}
+.content-main__extra {
+    float: left;
+    margin-left: -425px;
+    width: 425px;
+}
+
+.content-main_register, .content-main_create-conf {
+    padding: 0;
+    width: 1020px;
+}
+
 .page_conference-seats .content-main__wrapper,
 .page_conference .content-main__wrapper,
 .page_create-conf .content-main__wrapper,
 .content-main_register .content-main__wrapper {
-    width: auto;
     float: none;
-    }
-    *:first-child+html .page_conference .content-main__main,
-    *:first-child+html .page_create-conf .content-main__main,
-    *:first-child+html .content-main_register .content-main__main {padding: 0; }
-    .page_create-conf .content-main__main,
-    .content-main_register .content-main__main {
-        float: left;
-        margin: 0;
-        width: 700px;
-        }
-	.page_conference-seats .content-main__main,
-	.page_conference .content-main__main {
-        float: none;
-        margin: 0;
-        width: auto;
-        }
+    width: auto;
+}
+
+*:first-child + html .page_conference .content-main__main,
+*:first-child + html .page_create-conf .content-main__main,
+*:first-child + html .content-main_register .content-main__main { padding: 0; }
+
+.page_create-conf .content-main__main,
+.content-main_register .content-main__main {
+    float: left;
+    margin: 0;
+    width: 700px;
+}
+
+.page_conference-seats .content-main__main,
+.page_conference .content-main__main {
+    float: none;
+    margin: 0;
+    width: auto;
+}
+
 .page_conference .content-main__aside,
 .page_create-conf .content-main__aside,
 .content-main_register .content-main__aside {
     float: right;
-    width: 300px;
     margin: 0;
     padding: 0;
+    width: 300px;
 }
 
 
@@ -66,21 +76,20 @@
 }
 
 .content-main__header {
-    font-size: 28px;
-    line-height: 27px;
-    height: 40px;
-    padding-bottom: 5px;
     font-family: "Segoe UI light", Arial, sans-serif;
+    font-size: 28px;
+    height: 40px;
+    line-height: 27px;
     overflow: hidden;
-	padding-top: 34px;
+    padding-bottom: 5px;
+    padding-top: 34px;
 }
-.content-main__extra-right {
-    float: right;
-}
+
+.content-main__extra-right { float: right; }
+
 .content-main__extra-left {
     float: left;
     width: 260px;
 }
-.content-main__nav {
-    padding: 21px 19px 10px;
-}
+
+.content-main__nav { padding: 21px 19px 10px; }

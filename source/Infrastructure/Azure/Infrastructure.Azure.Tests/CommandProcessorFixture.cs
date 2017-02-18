@@ -11,22 +11,23 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Diagnostics;
+using Infrastructure.Azure.Messaging;
+using Infrastructure.Azure.Messaging.Handling;
+using Infrastructure.Messaging;
+using Infrastructure.Messaging.Handling;
+using Infrastructure.Serialization;
+using Moq;
+using Xunit;
+
 namespace Infrastructure.Azure.Tests
 {
-    using System;
-    using Infrastructure.Azure.Messaging;
-    using Infrastructure.Azure.Messaging.Handling;
-    using Infrastructure.Messaging;
-    using Infrastructure.Messaging.Handling;
-    using Infrastructure.Serialization;
-    using Moq;
-    using Xunit;
-
     public class CommandProcessorFixture
     {
         public CommandProcessorFixture()
         {
-            System.Diagnostics.Trace.Listeners.Clear();
+            Trace.Listeners.Clear();
         }
 
         [Fact]
@@ -66,6 +67,5 @@ namespace Infrastructure.Azure.Tests
         {
             public Guid Id { get; set; }
         }
-
     }
 }

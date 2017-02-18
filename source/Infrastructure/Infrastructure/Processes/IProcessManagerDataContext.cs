@@ -11,11 +11,11 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Linq.Expressions;
+
 namespace Infrastructure.Processes
 {
-    using System;
-    using System.Linq.Expressions;
-
     // TODO: Does this even belong to a reusable infrastructure?
     // This for reading and writing process managers (also known as Sagas in the CQRS community)
     public interface IProcessManagerDataContext<T> : IDisposable

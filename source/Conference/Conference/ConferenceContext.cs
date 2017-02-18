@@ -11,25 +11,25 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Data.Entity;
+
 namespace Conference
 {
-    using System.Data.Entity;
-
     /// <summary>
-    /// Data context for this ORM-based domain.
+    ///     Data context for this ORM-based domain.
     /// </summary>
     public class ConferenceContext : DbContext
     {
         public const string SchemaName = "ConferenceManagement";
 
-        public ConferenceContext(string nameOrConnectionString)
-            : base(nameOrConnectionString)
-        {
-        }
-
         public virtual DbSet<ConferenceInfo> Conferences { get; set; }
+
         public virtual DbSet<SeatType> Seats { get; set; }
+
         public virtual DbSet<Order> Orders { get; set; }
+
+        public ConferenceContext(string nameOrConnectionString)
+            : base(nameOrConnectionString) { }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
@@ -47,7 +47,7 @@ namespace Conference
             modelBuilder.Entity<SeatType>().ToTable("SeatTypes", SchemaName);
             modelBuilder.Entity<Order>().ToTable("Orders", SchemaName);
             modelBuilder.Entity<OrderSeat>().ToTable("OrderSeats", SchemaName);
-            modelBuilder.Entity<OrderSeat>().HasKey(seat => new { seat.OrderId, seat.Position });
+            modelBuilder.Entity<OrderSeat>().HasKey(seat => new {seat.OrderId, seat.Position});
         }
     }
 }

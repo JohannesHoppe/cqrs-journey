@@ -11,17 +11,15 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using Infrastructure.Azure.Messaging;
+using Infrastructure.Azure.Messaging.Handling;
+using Infrastructure.Serialization;
+using Moq;
+using Xunit;
+
 namespace Infrastructure.Azure.Tests
 {
-    using System;
-    using Infrastructure.Azure.Messaging;
-    using Infrastructure.Azure.Messaging.Handling;
-    using Infrastructure.Serialization;
-    using Microsoft.ServiceBus.Messaging;
-    using Moq;
-    using Moq.Protected;
-    using Xunit;
-
     public class MessageProcessorFixture
     {
         [Fact]
@@ -29,7 +27,7 @@ namespace Infrastructure.Azure.Tests
         {
             var receiver = new Mock<IMessageReceiver>();
             var serializer = new Mock<ITextSerializer>();
-            var processor = new Mock<MessageProcessor>(receiver.Object, serializer.Object) { CallBase = true }.Object;
+            var processor = new Mock<MessageProcessor>(receiver.Object, serializer.Object) {CallBase = true}.Object;
 
             processor.Start();
 
@@ -41,7 +39,7 @@ namespace Infrastructure.Azure.Tests
         {
             var receiver = new Mock<IMessageReceiver>();
             var serializer = new Mock<ITextSerializer>();
-            var processor = new Mock<MessageProcessor>(receiver.Object, serializer.Object) { CallBase = true }.Object;
+            var processor = new Mock<MessageProcessor>(receiver.Object, serializer.Object) {CallBase = true}.Object;
 
             processor.Start();
             processor.Dispose();
@@ -55,7 +53,7 @@ namespace Infrastructure.Azure.Tests
             var receiver = new Mock<IMessageReceiver>();
             var disposable = receiver.As<IDisposable>();
             var serializer = new Mock<ITextSerializer>();
-            var processor = new Mock<MessageProcessor>(receiver.Object, serializer.Object) { CallBase = true }.Object;
+            var processor = new Mock<MessageProcessor>(receiver.Object, serializer.Object) {CallBase = true}.Object;
 
             processor.Dispose();
 
@@ -67,7 +65,7 @@ namespace Infrastructure.Azure.Tests
         {
             var receiver = new Mock<IMessageReceiver>();
             var serializer = new Mock<ITextSerializer>();
-            var processor = new Mock<MessageProcessor>(receiver.Object, serializer.Object) { CallBase = true }.Object;
+            var processor = new Mock<MessageProcessor>(receiver.Object, serializer.Object) {CallBase = true}.Object;
 
             processor.Dispose();
 
@@ -79,7 +77,7 @@ namespace Infrastructure.Azure.Tests
         {
             var receiver = new Mock<IMessageReceiver>();
             var serializer = new Mock<ITextSerializer>();
-            var processor = new Mock<MessageProcessor>(receiver.Object, serializer.Object) { CallBase = true }.Object;
+            var processor = new Mock<MessageProcessor>(receiver.Object, serializer.Object) {CallBase = true}.Object;
 
             processor.Stop();
         }

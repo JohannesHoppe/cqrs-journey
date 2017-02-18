@@ -11,34 +11,32 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Data.SqlClient;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+
 namespace Infrastructure.Sql.Messaging.Implementation
 {
-    using System.Data.SqlClient;
-    using System.Globalization;
-
     /// <summary>
-    /// This database initializer is to support <see cref="CommandBus"/> and <see cref="EventBus"/>, which should be only
-    /// used for running the sample application without the dependency to the Windows Azure Service Bus when using the
-    /// DebugLocal solution configuration. It should not be used in production systems.
+    ///     This database initializer is to support <see cref="CommandBus" /> and <see cref="EventBus" />, which should be only
+    ///     used for running the sample application without the dependency to the Windows Azure Service Bus when using the
+    ///     DebugLocal solution configuration. It should not be used in production systems.
     /// </summary>
     public class MessagingDbInitializer
     {
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2100:Review SQL queries for security vulnerabilities", Justification="Does not contain user input.")]
+        [SuppressMessage("Microsoft.Security", "CA2100:Review SQL queries for security vulnerabilities", Justification = "Does not contain user input.")]
         public static void CreateDatabaseObjects(string connectionString, string schema, bool createDatabase = false)
         {
-            if (createDatabase)
-            {
+            if (createDatabase) {
                 var builder = new SqlConnectionStringBuilder(connectionString);
                 var databaseName = builder.InitialCatalog;
                 builder.InitialCatalog = "master";
                 builder.AttachDBFilename = string.Empty;
 
-                using (var connection = new SqlConnection(builder.ConnectionString))
-                {
+                using (var connection = new SqlConnection(builder.ConnectionString)) {
                     connection.Open();
 
-                    using (var command = connection.CreateCommand())
-                    {
+                    using (var command = connection.CreateCommand()) {
                         command.CommandText =
                             string.Format(
                                 CultureInfo.InvariantCulture,
@@ -50,12 +48,10 @@ namespace Infrastructure.Sql.Messaging.Implementation
                 }
             }
 
-            using (var connection = new SqlConnection(connectionString))
-            {
+            using (var connection = new SqlConnection(connectionString)) {
                 connection.Open();
 
-                using (var command = connection.CreateCommand())
-                {
+                using (var command = connection.CreateCommand()) {
                     command.CommandText =
                         string.Format(
                             CultureInfo.InvariantCulture,

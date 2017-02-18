@@ -11,99 +11,86 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Infrastructure.MessageLog;
+using Infrastructure.Messaging;
+using Infrastructure.Serialization;
+using Infrastructure.Sql.MessageLog;
+using Moq;
+using Xunit;
+
 namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Threading;
-
-    using Infrastructure.MessageLog;
-    using Infrastructure.Messaging;
-    using Infrastructure.Serialization;
-    using Infrastructure.Sql.MessageLog;
-    using Moq;
-    using Xunit;
-
     public class given_a_sql_log_with_three_events : IDisposable
     {
-        private string dbName = "SqlEventLogFixture_" + Guid.NewGuid().ToString();
-        private SqlMessageLog sut;
+        private readonly string dbName = "SqlEventLogFixture_" + Guid.NewGuid();
+
+        private readonly EventA eventA;
+
+        private readonly EventB eventB;
+
+        private readonly EventC eventC;
+
         private Mock<IMetadataProvider> metadata;
-        private EventA eventA;
-        private EventB eventB;
-        private EventC eventC;
+
+        private readonly SqlMessageLog sut;
 
         public given_a_sql_log_with_three_events()
         {
-            using (var context = new MessageLogDbContext(dbName))
-            {
-                if (context.Database.Exists())
-                {
+            using (var context = new MessageLogDbContext(dbName)) {
+                if (context.Database.Exists()) {
                     context.Database.Delete();
                 }
 
                 context.Database.Create();
             }
 
-            this.eventA = new EventA();
-            this.eventB = new EventB();
-            this.eventC = new EventC();
+            eventA = new EventA();
+            eventB = new EventB();
+            eventC = new EventC();
 
             var metadata = Mock.Of<IMetadataProvider>(x =>
-                x.GetMetadata(eventA) == new Dictionary<string, string>
-                {
-                    { StandardMetadata.SourceId, eventA.SourceId.ToString() },
-                    { StandardMetadata.SourceType, "SourceA" }, 
-                    { StandardMetadata.Kind, StandardMetadata.EventKind },
-                    { StandardMetadata.AssemblyName, "A" }, 
-                    { StandardMetadata.Namespace, "Namespace" }, 
-                    { StandardMetadata.FullName, "Namespace.EventA" }, 
-                    { StandardMetadata.TypeName, "EventA" }, 
+                x.GetMetadata(eventA) == new Dictionary<string, string> {
+                    {StandardMetadata.SourceId, eventA.SourceId.ToString()},
+                    {StandardMetadata.SourceType, "SourceA"},
+                    {StandardMetadata.Kind, StandardMetadata.EventKind},
+                    {StandardMetadata.AssemblyName, "A"},
+                    {StandardMetadata.Namespace, "Namespace"},
+                    {StandardMetadata.FullName, "Namespace.EventA"},
+                    {StandardMetadata.TypeName, "EventA"}
                 } &&
-                x.GetMetadata(eventB) == new Dictionary<string, string>
-                {
-                    { StandardMetadata.SourceId, eventB.SourceId.ToString() },
-                    { StandardMetadata.SourceType, "SourceB" }, 
-                    { StandardMetadata.Kind, StandardMetadata.EventKind },
-                    { StandardMetadata.AssemblyName, "B" }, 
-                    { StandardMetadata.Namespace, "Namespace" }, 
-                    { StandardMetadata.FullName, "Namespace.EventB" }, 
-                    { StandardMetadata.TypeName, "EventB" }, 
+                x.GetMetadata(eventB) == new Dictionary<string, string> {
+                    {StandardMetadata.SourceId, eventB.SourceId.ToString()},
+                    {StandardMetadata.SourceType, "SourceB"},
+                    {StandardMetadata.Kind, StandardMetadata.EventKind},
+                    {StandardMetadata.AssemblyName, "B"},
+                    {StandardMetadata.Namespace, "Namespace"},
+                    {StandardMetadata.FullName, "Namespace.EventB"},
+                    {StandardMetadata.TypeName, "EventB"}
                 } &&
-                x.GetMetadata(eventC) == new Dictionary<string, string>
-                {
-                    { StandardMetadata.SourceId, eventC.SourceId.ToString() },
-                    { StandardMetadata.SourceType, "SourceC" }, 
-                    { StandardMetadata.Kind, StandardMetadata.EventKind },
-                    { StandardMetadata.AssemblyName, "B" }, 
-                    { StandardMetadata.Namespace, "AnotherNamespace" }, 
-                    { StandardMetadata.FullName, "AnotherNamespace.EventC" }, 
-                    { StandardMetadata.TypeName, "EventC" }, 
+                x.GetMetadata(eventC) == new Dictionary<string, string> {
+                    {StandardMetadata.SourceId, eventC.SourceId.ToString()},
+                    {StandardMetadata.SourceType, "SourceC"},
+                    {StandardMetadata.Kind, StandardMetadata.EventKind},
+                    {StandardMetadata.AssemblyName, "B"},
+                    {StandardMetadata.Namespace, "AnotherNamespace"},
+                    {StandardMetadata.FullName, "AnotherNamespace.EventC"},
+                    {StandardMetadata.TypeName, "EventC"}
                 });
 
             this.metadata = Mock.Get(metadata);
-            this.sut = new SqlMessageLog(dbName, new JsonTextSerializer(), metadata);
-            this.sut.Save(eventA);
-            this.sut.Save(eventB);
-            this.sut.Save(eventC);
-        }
-
-        public void Dispose()
-        {
-            using (var context = new MessageLogDbContext(dbName))
-            {
-                if (context.Database.Exists())
-                {
-                    context.Database.Delete();
-                }
-            }
+            sut = new SqlMessageLog(dbName, new JsonTextSerializer(), metadata);
+            sut.Save(eventA);
+            sut.Save(eventB);
+            sut.Save(eventC);
         }
 
         [Fact]
         public void then_can_read_all()
         {
-            var events = this.sut.ReadAll().ToList();
+            var events = sut.ReadAll().ToList();
 
             Assert.Equal(3, events.Count);
         }
@@ -111,7 +98,7 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
         [Fact]
         public void then_can_filter_by_assembly()
         {
-            var events = this.sut.Query(new QueryCriteria { AssemblyNames = { "A" } }).ToList();
+            var events = sut.Query(new QueryCriteria {AssemblyNames = {"A"}}).ToList();
 
             Assert.Equal(1, events.Count);
         }
@@ -119,7 +106,7 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
         [Fact]
         public void then_can_filter_by_multiple_assemblies()
         {
-            var events = this.sut.Query(new QueryCriteria { AssemblyNames = { "A", "B" } }).ToList();
+            var events = sut.Query(new QueryCriteria {AssemblyNames = {"A", "B"}}).ToList();
 
             Assert.Equal(3, events.Count);
         }
@@ -127,7 +114,7 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
         [Fact]
         public void then_can_filter_by_namespace()
         {
-            var events = this.sut.Query(new QueryCriteria { Namespaces = { "Namespace" } }).ToList();
+            var events = sut.Query(new QueryCriteria {Namespaces = {"Namespace"}}).ToList();
 
             Assert.Equal(2, events.Count);
             Assert.True(events.Any(x => x.SourceId == eventA.SourceId));
@@ -137,7 +124,7 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
         [Fact]
         public void then_can_filter_by_namespaces()
         {
-            var events = this.sut.Query(new QueryCriteria { Namespaces = { "Namespace", "AnotherNamespace" } }).ToList();
+            var events = sut.Query(new QueryCriteria {Namespaces = {"Namespace", "AnotherNamespace"}}).ToList();
 
             Assert.Equal(3, events.Count);
         }
@@ -145,7 +132,7 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
         [Fact]
         public void then_can_filter_by_namespace_and_assembly()
         {
-            var events = this.sut.Query(new QueryCriteria { AssemblyNames = { "B" }, Namespaces = { "AnotherNamespace" } }).ToList();
+            var events = sut.Query(new QueryCriteria {AssemblyNames = {"B"}, Namespaces = {"AnotherNamespace"}}).ToList();
 
             Assert.Equal(1, events.Count);
             Assert.True(events.Any(x => x.SourceId == eventC.SourceId));
@@ -154,7 +141,7 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
         [Fact]
         public void then_can_filter_by_namespace_and_assembly2()
         {
-            var events = this.sut.Query(new QueryCriteria { AssemblyNames = { "A" }, Namespaces = { "AnotherNamespace" } }).ToList();
+            var events = sut.Query(new QueryCriteria {AssemblyNames = {"A"}, Namespaces = {"AnotherNamespace"}}).ToList();
 
             Assert.Equal(0, events.Count);
         }
@@ -162,7 +149,7 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
         [Fact]
         public void then_can_filter_by_full_name()
         {
-            var events = this.sut.Query(new QueryCriteria { FullNames = { "Namespace.EventA" } }).ToList();
+            var events = sut.Query(new QueryCriteria {FullNames = {"Namespace.EventA"}}).ToList();
 
             Assert.Equal(1, events.Count);
             Assert.Equal(eventA.SourceId, events[0].SourceId);
@@ -171,7 +158,7 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
         [Fact]
         public void then_can_filter_by_full_names()
         {
-            var events = this.sut.Query(new QueryCriteria { FullNames = { "Namespace.EventA", "AnotherNamespace.EventC" } }).ToList();
+            var events = sut.Query(new QueryCriteria {FullNames = {"Namespace.EventA", "AnotherNamespace.EventC"}}).ToList();
 
             Assert.Equal(2, events.Count);
             Assert.True(events.Any(x => x.SourceId == eventA.SourceId));
@@ -181,7 +168,7 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
         [Fact]
         public void then_can_filter_by_type_name()
         {
-            var events = this.sut.Query(new QueryCriteria { TypeNames = { "EventA" } }).ToList();
+            var events = sut.Query(new QueryCriteria {TypeNames = {"EventA"}}).ToList();
 
             Assert.Equal(1, events.Count);
             Assert.Equal(eventA.SourceId, events[0].SourceId);
@@ -190,7 +177,7 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
         [Fact]
         public void then_can_filter_by_type_names()
         {
-            var events = this.sut.Query(new QueryCriteria { TypeNames = { "EventA", "EventC" } }).ToList();
+            var events = sut.Query(new QueryCriteria {TypeNames = {"EventA", "EventC"}}).ToList();
 
             Assert.Equal(2, events.Count);
             Assert.True(events.Any(x => x.SourceId == eventA.SourceId));
@@ -200,7 +187,7 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
         [Fact]
         public void then_can_filter_by_type_names_and_assembly()
         {
-            var events = this.sut.Query(new QueryCriteria { AssemblyNames = { "B" }, TypeNames = { "EventB", "EventC" } }).ToList();
+            var events = sut.Query(new QueryCriteria {AssemblyNames = {"B"}, TypeNames = {"EventB", "EventC"}}).ToList();
 
             Assert.Equal(2, events.Count);
             Assert.True(events.Any(x => x.SourceId == eventB.SourceId));
@@ -210,7 +197,7 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
         [Fact]
         public void then_can_filter_by_source_id()
         {
-            var events = this.sut.Query(new QueryCriteria { SourceIds = { eventA.SourceId.ToString() } }).ToList();
+            var events = sut.Query(new QueryCriteria {SourceIds = {eventA.SourceId.ToString()}}).ToList();
 
             Assert.Equal(1, events.Count);
             Assert.Equal(eventA.SourceId, events[0].SourceId);
@@ -219,7 +206,7 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
         [Fact]
         public void then_can_filter_by_source_ids()
         {
-            var events = this.sut.Query(new QueryCriteria { SourceIds = { eventA.SourceId.ToString(), eventC.SourceId.ToString() } }).ToList();
+            var events = sut.Query(new QueryCriteria {SourceIds = {eventA.SourceId.ToString(), eventC.SourceId.ToString()}}).ToList();
 
             Assert.Equal(2, events.Count);
             Assert.True(events.Any(x => x.SourceId == eventA.SourceId));
@@ -229,7 +216,7 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
         [Fact]
         public void then_can_filter_by_source_type()
         {
-            var events = this.sut.Query(new QueryCriteria { SourceTypes = { "SourceA" } }).ToList();
+            var events = sut.Query(new QueryCriteria {SourceTypes = {"SourceA"}}).ToList();
 
             Assert.Equal(1, events.Count);
         }
@@ -237,7 +224,7 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
         [Fact]
         public void then_can_filter_by_source_types()
         {
-            var events = this.sut.Query(new QueryCriteria { SourceTypes = { "SourceA", "SourceB" } }).ToList();
+            var events = sut.Query(new QueryCriteria {SourceTypes = {"SourceA", "SourceB"}}).ToList();
 
             Assert.Equal(2, events.Count);
         }
@@ -245,7 +232,7 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
         [Fact]
         public void then_can_filter_in_by_end_date()
         {
-            var events = this.sut.Query(new QueryCriteria { EndDate = DateTime.UtcNow }).ToList();
+            var events = sut.Query(new QueryCriteria {EndDate = DateTime.UtcNow}).ToList();
 
             Assert.Equal(3, events.Count);
         }
@@ -253,7 +240,7 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
         [Fact]
         public void then_can_filter_out_by_end_date()
         {
-            var events = this.sut.Query(new QueryCriteria { EndDate = DateTime.UtcNow.AddMinutes(-1) }).ToList();
+            var events = sut.Query(new QueryCriteria {EndDate = DateTime.UtcNow.AddMinutes(-1)}).ToList();
 
             Assert.Equal(0, events.Count);
         }
@@ -261,7 +248,7 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
         [Fact]
         public void then_can_use_fluent_criteria_builder()
         {
-            var events = this.sut.Query()
+            var events = sut.Query()
                 .FromAssembly("A")
                 .FromAssembly("B")
                 .FromNamespace("Namespace")
@@ -274,12 +261,22 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
             Assert.Equal(1, events.Count);
         }
 
+        public void Dispose()
+        {
+            using (var context = new MessageLogDbContext(dbName)) {
+                if (context.Database.Exists()) {
+                    context.Database.Delete();
+                }
+            }
+        }
+
         public class EventA : IEvent
         {
             public EventA()
             {
-                this.SourceId = Guid.NewGuid();
+                SourceId = Guid.NewGuid();
             }
+
             public Guid SourceId { get; set; }
         }
 
@@ -287,8 +284,9 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
         {
             public EventB()
             {
-                this.SourceId = Guid.NewGuid();
+                SourceId = Guid.NewGuid();
             }
+
             public Guid SourceId { get; set; }
         }
 
@@ -296,8 +294,9 @@ namespace Infrastructure.Sql.IntegrationTests.SqlEventLogFixture
         {
             public EventC()
             {
-                this.SourceId = Guid.NewGuid();
+                SourceId = Guid.NewGuid();
             }
+
             public Guid SourceId { get; set; }
         }
     }

@@ -11,59 +11,66 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Data.Services.Client;
+using System.Net;
+using Microsoft.Practices.EnterpriseLibrary.WindowsAzure.TransientFaultHandling.AzureStorage;
+using Microsoft.Practices.TransientFaultHandling;
+using Microsoft.WindowsAzure;
+using Microsoft.WindowsAzure.StorageClient;
+using RetryPolicy = Microsoft.Practices.TransientFaultHandling.RetryPolicy;
+
 namespace Infrastructure.Azure.MessageLog
 {
-    using System;
-    using System.Data.Services.Client;
-    using System.Net;
-    using Microsoft.Practices.EnterpriseLibrary.WindowsAzure.TransientFaultHandling.AzureStorage;
-    using Microsoft.Practices.TransientFaultHandling;
-    using Microsoft.WindowsAzure;
-    using Microsoft.WindowsAzure.StorageClient;
-
     public class AzureMessageLogWriter : IAzureMessageLogWriter
     {
         private readonly CloudStorageAccount account;
-        private readonly string tableName;
+
         private readonly CloudTableClient tableClient;
-        private Microsoft.Practices.TransientFaultHandling.RetryPolicy retryPolicy;
+
+        private readonly string tableName;
+
+        private readonly RetryPolicy retryPolicy;
 
         public AzureMessageLogWriter(CloudStorageAccount account, string tableName)
         {
-            if (account == null) throw new ArgumentNullException("account");
-            if (tableName == null) throw new ArgumentNullException("tableName");
-            if (string.IsNullOrWhiteSpace(tableName)) throw new ArgumentException("tableName");
+            if (account == null) {
+                throw new ArgumentNullException("account");
+            }
+            if (tableName == null) {
+                throw new ArgumentNullException("tableName");
+            }
+            if (string.IsNullOrWhiteSpace(tableName)) {
+                throw new ArgumentException("tableName");
+            }
 
             this.account = account;
             this.tableName = tableName;
-            this.tableClient = account.CreateCloudTableClient();
-            this.tableClient.RetryPolicy = RetryPolicies.NoRetry();
+            tableClient = account.CreateCloudTableClient();
+            tableClient.RetryPolicy = RetryPolicies.NoRetry();
 
             var retryStrategy = new ExponentialBackoff(10, TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(1));
-            this.retryPolicy = new RetryPolicy<StorageTransientErrorDetectionStrategy>(retryStrategy);
+            retryPolicy = new RetryPolicy<StorageTransientErrorDetectionStrategy>(retryStrategy);
 
-            this.retryPolicy.ExecuteAction(() => tableClient.CreateTableIfNotExist(tableName));
+            retryPolicy.ExecuteAction(() => tableClient.CreateTableIfNotExist(tableName));
         }
 
         public void Save(MessageLogEntity entity)
         {
-            this.retryPolicy.ExecuteAction(() =>
-            {
-                var context = this.tableClient.GetDataServiceContext();
+            retryPolicy.ExecuteAction(() => {
+                var context = tableClient.GetDataServiceContext();
 
-                context.AddObject(this.tableName, entity);
+                context.AddObject(tableName, entity);
 
-                try
-                {
+                try {
                     context.SaveChanges();
-                }
-                catch (DataServiceRequestException dsre)
-                {
+                } catch (DataServiceRequestException dsre) {
                     var clientException = dsre.InnerException as DataServiceClientException;
                     // If we get a conflict, we ignore it as we've already saved the message, 
                     // making this log idempotent.
-                    if (clientException == null || clientException.StatusCode != (int)HttpStatusCode.Conflict)
+                    if (clientException == null || clientException.StatusCode != (int) HttpStatusCode.Conflict) {
                         throw;
+                    }
                 }
             });
         }

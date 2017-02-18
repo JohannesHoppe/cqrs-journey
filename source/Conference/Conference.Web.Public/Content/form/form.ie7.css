@@ -13,9 +13,6 @@ See the License for the specific language governing permissions and limitations 
 ==============================================================================================================
 */
 
-.form__chb__item .form-select-pad {
-	display: inline;
-	}
-.form__chb__item .form-select {
-	display: inline;
-	}
+.form__chb__item .form-select-pad { display: inline; }
+
+.form__chb__item .form-select { display: inline; }

@@ -11,19 +11,23 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Data.Entity;
+using Infrastructure.Sql.Processes;
+
 namespace Registration.Database
 {
-    using System.Data.Entity;
-    using Infrastructure.Sql.Processes;
-
     public class RegistrationProcessManagerDbContext : DbContext
     {
         public const string SchemaName = "ConferenceRegistrationProcesses";
 
+        // Define the available entity sets for the database.
+        public DbSet<RegistrationProcessManager> RegistrationProcesses { get; set; }
+
+        // Table for pending undispatched messages associated with a process manager.
+        public DbSet<UndispatchedMessages> UndispatchedMessages { get; set; }
+
         public RegistrationProcessManagerDbContext(string nameOrConnectionString)
-            : base(nameOrConnectionString)
-        {
-        }
+            : base(nameOrConnectionString) { }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
@@ -31,11 +35,5 @@ namespace Registration.Database
             modelBuilder.Entity<RegistrationProcessManager>().ToTable("RegistrationProcess", SchemaName);
             modelBuilder.Entity<UndispatchedMessages>().ToTable("UndispatchedMessages", SchemaName);
         }
-
-        // Define the available entity sets for the database.
-        public DbSet<RegistrationProcessManager> RegistrationProcesses { get; set; }
-
-        // Table for pending undispatched messages associated with a process manager.
-        public DbSet<UndispatchedMessages> UndispatchedMessages { get; set; }
     }
 }

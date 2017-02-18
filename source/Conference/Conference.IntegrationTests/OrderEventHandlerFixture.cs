@@ -11,87 +11,87 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Data.Entity;
+using System.Linq;
+using Conference.IntegrationTests.ConferenceServiceFixture;
+using Registration;
+using Registration.Events;
+using Xunit;
+
 namespace Conference.IntegrationTests.OrderEventHandlerFixture
 {
-    using System;
-    using System.Data.Entity;
-    using System.Linq;
-    using Conference.IntegrationTests.ConferenceServiceFixture;
-    using Registration.Events;
-    using Xunit;
-
     public class given_no_order : IDisposable
     {
-        protected string dbName = "OrderEventHandlerFixture_" + Guid.NewGuid().ToString();
+        protected string dbName = "OrderEventHandlerFixture_" + Guid.NewGuid();
+
         protected OrderEventHandler sut;
 
         public given_no_order()
         {
-            using (var context = new ConferenceContext(dbName))
-            {
-                if (context.Database.Exists())
+            using (var context = new ConferenceContext(dbName)) {
+                if (context.Database.Exists()) {
                     context.Database.Delete();
+                }
 
                 context.Database.Create();
             }
 
-            this.sut = new OrderEventHandler(() => new ConferenceContext(dbName));
-        }
-
-        public void Dispose()
-        {
-            using (var context = new ConferenceContext(dbName))
-            {
-                if (context.Database.Exists())
-                    context.Database.Delete();
-            }
+            sut = new OrderEventHandler(() => new ConferenceContext(dbName));
         }
 
         [Fact]
         public void when_order_placed_then_creates_order_entity()
         {
-            var e = new OrderPlaced
-            {
+            var e = new OrderPlaced {
                 ConferenceId = Guid.NewGuid(),
                 SourceId = Guid.NewGuid(),
-                AccessCode = "asdf",
+                AccessCode = "asdf"
             };
 
-            this.sut.Handle(e);
+            sut.Handle(e);
 
-            using (var context = new ConferenceContext(dbName))
-            {
+            using (var context = new ConferenceContext(dbName)) {
                 var order = context.Orders.Find(e.SourceId);
 
                 Assert.NotNull(order);
+            }
+        }
+
+        public void Dispose()
+        {
+            using (var context = new ConferenceContext(dbName)) {
+                if (context.Database.Exists()) {
+                    context.Database.Delete();
+                }
             }
         }
     }
 
     public class given_an_order : given_an_existing_conference_with_a_seat
     {
-        private OrderPlaced placed;
-        private OrderEventHandler sut;
+        private readonly OrderPlaced placed;
+
+        private readonly OrderEventHandler sut;
 
         public given_an_order()
         {
-            this.placed = new OrderPlaced
-            {
+            placed = new OrderPlaced {
                 ConferenceId = Guid.NewGuid(),
                 SourceId = Guid.NewGuid(),
-                AccessCode = "asdf",
+                AccessCode = "asdf"
             };
 
-            this.sut = new OrderEventHandler(() => new ConferenceContext(dbName));
-            this.sut.Handle(placed);
+            sut = new OrderEventHandler(() => new ConferenceContext(dbName));
+            sut.Handle(placed);
         }
 
         [Fact]
         public void when_order_totals_calculated_then_updates_order_total()
         {
-            var e = new OrderExpired { SourceId = placed.SourceId };
+            var e = new OrderExpired {SourceId = placed.SourceId};
 
-            this.sut.Handle(e);
+            sut.Handle(e);
 
             var order = FindOrder(e.SourceId);
             Assert.Null(order);
@@ -100,13 +100,12 @@ namespace Conference.IntegrationTests.OrderEventHandlerFixture
         [Fact]
         public void when_order_expired_then_deletes_entity()
         {
-            var e = new OrderTotalsCalculated
-            {
+            var e = new OrderTotalsCalculated {
                 SourceId = placed.SourceId,
-                Total = 10,
+                Total = 10
             };
 
-            this.sut.Handle(e);
+            sut.Handle(e);
 
             var order = FindOrder(e.SourceId);
 
@@ -116,15 +115,14 @@ namespace Conference.IntegrationTests.OrderEventHandlerFixture
         [Fact]
         public void when_order_registrant_assigned_then_sets_registrant()
         {
-            var e = new OrderRegistrantAssigned
-            {
+            var e = new OrderRegistrantAssigned {
                 SourceId = placed.SourceId,
                 Email = "test@contoso.com",
                 FirstName = "A",
-                LastName = "Z",
+                LastName = "Z"
             };
 
-            this.sut.Handle(e);
+            sut.Handle(e);
 
             var order = FindOrder(e.SourceId);
 
@@ -133,16 +131,14 @@ namespace Conference.IntegrationTests.OrderEventHandlerFixture
             Assert.Contains("Z", order.RegistrantName);
         }
 
-
         [Fact]
         public void when_order_confirmed_then_confirms_order()
         {
-            var e = new OrderConfirmed
-            {
-                SourceId = placed.SourceId,
+            var e = new OrderConfirmed {
+                SourceId = placed.SourceId
             };
 
-            this.sut.Handle(e);
+            sut.Handle(e);
 
             var order = FindOrder(e.SourceId);
 
@@ -152,20 +148,18 @@ namespace Conference.IntegrationTests.OrderEventHandlerFixture
         [Fact]
         public void when_seat_assigned_then_adds_order_seat()
         {
-            this.sut.Handle(new SeatAssignmentsCreated { SourceId = placed.SourceId, OrderId = placed.SourceId });
+            sut.Handle(new SeatAssignmentsCreated {SourceId = placed.SourceId, OrderId = placed.SourceId});
 
-            var e = new SeatAssigned(placed.SourceId)
-            {
-                Attendee = new Registration.PersonalInfo
-                {
+            var e = new SeatAssigned(placed.SourceId) {
+                Attendee = new PersonalInfo {
                     Email = "test@contoso.com",
                     FirstName = "A",
-                    LastName = "Z",
+                    LastName = "Z"
                 },
-                SeatType = this.conference.Seats.First().Id,
+                SeatType = conference.Seats.First().Id
             };
 
-            this.sut.Handle(e);
+            sut.Handle(e);
 
             var order = FindOrder(e.SourceId);
 
@@ -175,24 +169,22 @@ namespace Conference.IntegrationTests.OrderEventHandlerFixture
         [Fact]
         public void when_seat_asignee_updated_then_updates_order_seat()
         {
-            this.sut.Handle(new SeatAssignmentsCreated { SourceId = placed.SourceId, OrderId = placed.SourceId });
+            sut.Handle(new SeatAssignmentsCreated {SourceId = placed.SourceId, OrderId = placed.SourceId});
 
-            var e = new SeatAssigned(placed.SourceId)
-            {
-                Attendee = new Registration.PersonalInfo
-                {
+            var e = new SeatAssigned(placed.SourceId) {
+                Attendee = new PersonalInfo {
                     Email = "test@contoso.com",
                     FirstName = "A",
-                    LastName = "Z",
+                    LastName = "Z"
                 },
-                SeatType = this.conference.Seats.First().Id,
+                SeatType = conference.Seats.First().Id
             };
 
-            this.sut.Handle(e);
+            sut.Handle(e);
 
             e.Attendee.LastName = "B";
 
-            this.sut.Handle(e);
+            sut.Handle(e);
 
             var order = FindOrder(e.SourceId);
 
@@ -202,11 +194,9 @@ namespace Conference.IntegrationTests.OrderEventHandlerFixture
 
         private Order FindOrder(Guid orderId)
         {
-            using (var context = new ConferenceContext(dbName))
-            {
+            using (var context = new ConferenceContext(dbName)) {
                 return context.Orders.Include(x => x.Seats).FirstOrDefault(x => x.Id == orderId);
             }
         }
-
     }
 }

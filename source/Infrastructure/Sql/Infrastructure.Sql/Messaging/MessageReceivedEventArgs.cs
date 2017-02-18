@@ -11,17 +11,17 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+
 namespace Infrastructure.Sql.Messaging
 {
-    using System;
-
     public class MessageReceivedEventArgs : EventArgs
     {
+        public Message Message { get; }
+
         public MessageReceivedEventArgs(Message message)
         {
-            this.Message = message;
+            Message = message;
         }
-
-        public Message Message { get; private set; }
     }
 }

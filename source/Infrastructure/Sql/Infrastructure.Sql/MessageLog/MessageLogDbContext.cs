@@ -11,18 +11,16 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Data.Entity;
+
 namespace Infrastructure.Sql.MessageLog
 {
-    using System.Data.Entity;
-
     public class MessageLogDbContext : DbContext
     {
         public const string SchemaName = "MessageLog";
 
         public MessageLogDbContext(string nameOrConnectionString)
-            : base(nameOrConnectionString)
-        {
-        }
+            : base(nameOrConnectionString) { }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {

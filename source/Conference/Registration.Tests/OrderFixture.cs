@@ -11,38 +11,43 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Moq;
+using Registration.Commands;
+using Registration.Events;
+using Registration.Handlers;
+using Xunit;
+
 namespace Registration.Tests.OrderFixture
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using Moq;
-    using Registration.Commands;
-    using Registration.Events;
-    using Registration.Handlers;
-    using Xunit;
-
     public class given_no_order
     {
         private static readonly Guid OrderId = Guid.NewGuid();
+
         private static readonly Guid ConferenceId = Guid.NewGuid();
+
         private static readonly Guid SeatTypeId = Guid.NewGuid();
-        private static readonly OrderTotal OrderTotal = new OrderTotal { Total = 33, Lines = new[] { new OrderLine() } };
-        private EventSourcingTestHelper<Order> sut;
+
+        private static readonly OrderTotal OrderTotal = new OrderTotal {Total = 33, Lines = new[] {new OrderLine()}};
+
         private readonly Mock<IPricingService> pricingService;
+
+        private readonly EventSourcingTestHelper<Order> sut;
 
         public given_no_order()
         {
-            this.pricingService = new Mock<IPricingService>();
-            this.pricingService.Setup(x => x.CalculateTotal(ConferenceId, It.IsAny<ICollection<SeatQuantity>>())).Returns(OrderTotal);
-            this.sut = new EventSourcingTestHelper<Order>();
-            this.sut.Setup(new OrderCommandHandler(this.sut.Repository, pricingService.Object));
+            pricingService = new Mock<IPricingService>();
+            pricingService.Setup(x => x.CalculateTotal(ConferenceId, It.IsAny<ICollection<SeatQuantity>>())).Returns(OrderTotal);
+            sut = new EventSourcingTestHelper<Order>();
+            sut.Setup(new OrderCommandHandler(sut.Repository, pricingService.Object));
         }
 
         [Fact]
         public void when_creating_order_then_is_placed_with_specified_id()
         {
-            this.sut.When(new RegisterToConference { ConferenceId = ConferenceId, OrderId = OrderId, Seats = new[] { new SeatQuantity(SeatTypeId, 5) } });
+            sut.When(new RegisterToConference {ConferenceId = ConferenceId, OrderId = OrderId, Seats = new[] {new SeatQuantity(SeatTypeId, 5)}});
 
             Assert.Equal(OrderId, sut.ThenHasOne<OrderPlaced>().SourceId);
         }
@@ -50,7 +55,7 @@ namespace Registration.Tests.OrderFixture
         [Fact]
         public void when_placing_order_then_has_full_details()
         {
-            this.sut.When(new RegisterToConference { ConferenceId = ConferenceId, OrderId = OrderId, Seats = new[] { new SeatQuantity(SeatTypeId, 5) } });
+            sut.When(new RegisterToConference {ConferenceId = ConferenceId, OrderId = OrderId, Seats = new[] {new SeatQuantity(SeatTypeId, 5)}});
 
             var @event = sut.ThenHasOne<OrderPlaced>();
             Assert.Equal(OrderId, @event.SourceId);
@@ -63,7 +68,7 @@ namespace Registration.Tests.OrderFixture
         public void when_placing_order_then_has_access_code()
         {
             //TODO: does this need to be part of the write model?
-            this.sut.When(new RegisterToConference { ConferenceId = ConferenceId, OrderId = OrderId, Seats = new[] { new SeatQuantity(SeatTypeId, 5) } });
+            sut.When(new RegisterToConference {ConferenceId = ConferenceId, OrderId = OrderId, Seats = new[] {new SeatQuantity(SeatTypeId, 5)}});
 
             var @event = sut.ThenHasOne<OrderPlaced>();
             Assert.NotEmpty(@event.AccessCode);
@@ -72,7 +77,7 @@ namespace Registration.Tests.OrderFixture
         [Fact]
         public void when_placing_order_then_defines_expected_expiration_time_in_15_minutes()
         {
-            this.sut.When(new RegisterToConference { ConferenceId = ConferenceId, OrderId = OrderId, Seats = new[] { new SeatQuantity(SeatTypeId, 5) } });
+            sut.When(new RegisterToConference {ConferenceId = ConferenceId, OrderId = OrderId, Seats = new[] {new SeatQuantity(SeatTypeId, 5)}});
 
             var @event = sut.ThenHasOne<OrderPlaced>();
             var relativeExpiration = @event.ReservationAutoExpiration.Subtract(DateTime.UtcNow);
@@ -83,7 +88,7 @@ namespace Registration.Tests.OrderFixture
         [Fact]
         public void when_creating_order_then_calculates_totals()
         {
-            this.sut.When(new RegisterToConference { ConferenceId = ConferenceId, OrderId = OrderId, Seats = new[] { new SeatQuantity(SeatTypeId, 5) } });
+            sut.When(new RegisterToConference {ConferenceId = ConferenceId, OrderId = OrderId, Seats = new[] {new SeatQuantity(SeatTypeId, 5)}});
 
             var totals = sut.ThenHasOne<OrderTotalsCalculated>();
             Assert.Equal(OrderTotal.Total, totals.Total);
@@ -95,33 +100,37 @@ namespace Registration.Tests.OrderFixture
     public class given_placed_order
     {
         private static readonly Guid OrderId = Guid.NewGuid();
+
         private static readonly Guid ConferenceId = Guid.NewGuid();
+
         private static readonly Guid SeatTypeId = Guid.NewGuid();
-        private static readonly OrderTotal OrderTotal = new OrderTotal { Total = 33, Lines = new [] { new OrderLine() } };
-        private EventSourcingTestHelper<Order> sut;
+
+        private static readonly OrderTotal OrderTotal = new OrderTotal {Total = 33, Lines = new[] {new OrderLine()}};
+
         private readonly Mock<IPricingService> pricingService;
+
+        private readonly EventSourcingTestHelper<Order> sut;
 
         public given_placed_order()
         {
-            this.pricingService = new Mock<IPricingService>();
-            this.pricingService.Setup(x => x.CalculateTotal(ConferenceId, It.IsAny<ICollection<SeatQuantity>>())).Returns(OrderTotal);
-            this.sut = new EventSourcingTestHelper<Order>();
-            this.sut.Setup(new OrderCommandHandler(sut.Repository, pricingService.Object));
+            pricingService = new Mock<IPricingService>();
+            pricingService.Setup(x => x.CalculateTotal(ConferenceId, It.IsAny<ICollection<SeatQuantity>>())).Returns(OrderTotal);
+            sut = new EventSourcingTestHelper<Order>();
+            sut.Setup(new OrderCommandHandler(sut.Repository, pricingService.Object));
 
-            this.sut.Given(
-                    new OrderPlaced 
-                    { 
-                        SourceId = OrderId,
-                        ConferenceId = ConferenceId,
-                        Seats = new[] { new SeatQuantity(SeatTypeId, 5) },
-                        ReservationAutoExpiration = DateTime.UtcNow
-                    });
+            sut.Given(
+                new OrderPlaced {
+                    SourceId = OrderId,
+                    ConferenceId = ConferenceId,
+                    Seats = new[] {new SeatQuantity(SeatTypeId, 5)},
+                    ReservationAutoExpiration = DateTime.UtcNow
+                });
         }
 
         [Fact]
         public void when_updating_seats_then_updates_order_with_new_seats()
         {
-            this.sut.When(new RegisterToConference { ConferenceId = ConferenceId, OrderId = OrderId, Seats = new[] { new SeatQuantity(SeatTypeId, 20) }});
+            sut.When(new RegisterToConference {ConferenceId = ConferenceId, OrderId = OrderId, Seats = new[] {new SeatQuantity(SeatTypeId, 20)}});
 
             var @event = sut.ThenHasOne<OrderUpdated>();
             Assert.Equal(OrderId, @event.SourceId);
@@ -133,7 +142,7 @@ namespace Registration.Tests.OrderFixture
         public void when_marking_a_subset_of_seats_as_reserved_then_order_is_partially_reserved()
         {
             var expiration = DateTime.UtcNow.AddMinutes(15);
-            this.sut.When(new MarkSeatsAsReserved { OrderId = OrderId, Expiration = expiration, Seats = new List<SeatQuantity> { new SeatQuantity(SeatTypeId, 3) } });
+            sut.When(new MarkSeatsAsReserved {OrderId = OrderId, Expiration = expiration, Seats = new List<SeatQuantity> {new SeatQuantity(SeatTypeId, 3)}});
 
             var @event = sut.ThenHasOne<OrderPartiallyReserved>();
             Assert.Equal(OrderId, @event.SourceId);
@@ -146,7 +155,7 @@ namespace Registration.Tests.OrderFixture
         public void when_marking_a_subset_of_seats_as_reserved_then_totals_are_calculated()
         {
             var expiration = DateTime.UtcNow.AddMinutes(15);
-            this.sut.When(new MarkSeatsAsReserved { OrderId = OrderId, Expiration = expiration, Seats = new List<SeatQuantity> { new SeatQuantity(SeatTypeId, 3) } });
+            sut.When(new MarkSeatsAsReserved {OrderId = OrderId, Expiration = expiration, Seats = new List<SeatQuantity> {new SeatQuantity(SeatTypeId, 3)}});
 
             var @event = sut.ThenHasOne<OrderTotalsCalculated>();
             Assert.Equal(OrderId, @event.SourceId);
@@ -161,7 +170,7 @@ namespace Registration.Tests.OrderFixture
         public void when_marking_all_seats_as_reserved_then_order_is_reserved()
         {
             var expiration = DateTime.UtcNow.AddMinutes(15);
-            this.sut.When(new MarkSeatsAsReserved { OrderId = OrderId, Expiration = expiration, Seats = new List<SeatQuantity> { new SeatQuantity(SeatTypeId, 5) } });
+            sut.When(new MarkSeatsAsReserved {OrderId = OrderId, Expiration = expiration, Seats = new List<SeatQuantity> {new SeatQuantity(SeatTypeId, 5)}});
 
             var @event = sut.ThenHasOne<OrderReservationCompleted>();
             Assert.Equal(OrderId, @event.SourceId);
@@ -174,7 +183,7 @@ namespace Registration.Tests.OrderFixture
         public void when_marking_all_as_reserved_then_totals_are_not_recalculated()
         {
             var expiration = DateTime.UtcNow.AddMinutes(15);
-            this.sut.When(new MarkSeatsAsReserved { OrderId = OrderId, Expiration = expiration, Seats = new List<SeatQuantity> { new SeatQuantity(SeatTypeId, 5) } });
+            sut.When(new MarkSeatsAsReserved {OrderId = OrderId, Expiration = expiration, Seats = new List<SeatQuantity> {new SeatQuantity(SeatTypeId, 5)}});
 
             Assert.Equal(0, sut.Events.OfType<OrderTotalsCalculated>().Count());
         }
@@ -182,7 +191,7 @@ namespace Registration.Tests.OrderFixture
         [Fact]
         public void when_expiring_order_then_notifies()
         {
-            this.sut.When(new RejectOrder { OrderId = OrderId });
+            sut.When(new RejectOrder {OrderId = OrderId});
 
             var @event = sut.ThenHasSingle<OrderExpired>();
             Assert.Equal(OrderId, @event.SourceId);
@@ -191,7 +200,7 @@ namespace Registration.Tests.OrderFixture
         [Fact]
         public void when_assigning_registrant_information_then_raises_integration_event()
         {
-            this.sut.When(new AssignRegistrantDetails { OrderId = OrderId, FirstName = "foo", LastName = "bar", Email = "foo@bar.com" });
+            sut.When(new AssignRegistrantDetails {OrderId = OrderId, FirstName = "foo", LastName = "bar", Email = "foo@bar.com"});
 
             var @event = sut.ThenHasSingle<OrderRegistrantAssigned>();
             Assert.Equal(OrderId, @event.SourceId);
@@ -210,39 +219,42 @@ namespace Registration.Tests.OrderFixture
     public class given_fully_reserved_order
     {
         private static readonly Guid OrderId = Guid.NewGuid();
+
         private static readonly Guid ConferenceId = Guid.NewGuid();
+
         private static readonly Guid SeatTypeId = Guid.NewGuid();
-        private static readonly OrderTotal OrderTotal = new OrderTotal { Total = 33, Lines = new[] { new OrderLine() } };
-        private EventSourcingTestHelper<Order> sut;
+
+        private static readonly OrderTotal OrderTotal = new OrderTotal {Total = 33, Lines = new[] {new OrderLine()}};
+
         private readonly Mock<IPricingService> pricingService;
+
+        private readonly EventSourcingTestHelper<Order> sut;
 
         public given_fully_reserved_order()
         {
-            this.pricingService = new Mock<IPricingService>();
-            this.pricingService.Setup(x => x.CalculateTotal(ConferenceId, It.IsAny<ICollection<SeatQuantity>>())).Returns(OrderTotal);
-            this.sut = new EventSourcingTestHelper<Order>();
-            this.sut.Setup(new OrderCommandHandler(this.sut.Repository, pricingService.Object));
+            pricingService = new Mock<IPricingService>();
+            pricingService.Setup(x => x.CalculateTotal(ConferenceId, It.IsAny<ICollection<SeatQuantity>>())).Returns(OrderTotal);
+            sut = new EventSourcingTestHelper<Order>();
+            sut.Setup(new OrderCommandHandler(sut.Repository, pricingService.Object));
 
-            this.sut.Given(
-                new OrderPlaced
-                    {
-                        SourceId = OrderId,
-                        ConferenceId = ConferenceId,
-                        Seats = new[] { new SeatQuantity(SeatTypeId, 5) },
-                        ReservationAutoExpiration = DateTime.UtcNow
-                    },
-                new OrderReservationCompleted
-                    {
-                        SourceId = OrderId,
-                        ReservationExpiration = DateTime.UtcNow.AddMinutes(5),
-                        Seats = new[] { new SeatQuantity(SeatTypeId, 5) }
-                    });
+            sut.Given(
+                new OrderPlaced {
+                    SourceId = OrderId,
+                    ConferenceId = ConferenceId,
+                    Seats = new[] {new SeatQuantity(SeatTypeId, 5)},
+                    ReservationAutoExpiration = DateTime.UtcNow
+                },
+                new OrderReservationCompleted {
+                    SourceId = OrderId,
+                    ReservationExpiration = DateTime.UtcNow.AddMinutes(5),
+                    Seats = new[] {new SeatQuantity(SeatTypeId, 5)}
+                });
         }
 
         [Fact]
         public void when_expiring_order_then_notifies()
         {
-            this.sut.When(new RejectOrder { OrderId = OrderId });
+            sut.When(new RejectOrder {OrderId = OrderId});
 
             var @event = sut.ThenHasSingle<OrderExpired>();
             Assert.Equal(OrderId, @event.SourceId);
@@ -251,7 +263,7 @@ namespace Registration.Tests.OrderFixture
         [Fact]
         public void when_confirming_order_then_notifies()
         {
-            this.sut.When(new ConfirmOrder { OrderId = OrderId });
+            sut.When(new ConfirmOrder {OrderId = OrderId});
 
             var @event = sut.ThenHasSingle<OrderConfirmed>();
             Assert.Equal(OrderId, @event.SourceId);
@@ -260,7 +272,7 @@ namespace Registration.Tests.OrderFixture
         [Fact]
         public void when_updating_an_order_then_updates_seats()
         {
-            this.sut.When(new RegisterToConference { OrderId = OrderId, Seats = new[] { new SeatQuantity(SeatTypeId, 4) } });
+            sut.When(new RegisterToConference {OrderId = OrderId, Seats = new[] {new SeatQuantity(SeatTypeId, 4)}});
 
             var updated = sut.ThenHasOne<OrderUpdated>();
             Assert.Equal(OrderId, updated.SourceId);
@@ -271,7 +283,7 @@ namespace Registration.Tests.OrderFixture
         [Fact]
         public void when_updating_an_order_then_recalculates()
         {
-            this.sut.When(new RegisterToConference { OrderId = OrderId, Seats = new[] { new SeatQuantity(SeatTypeId, 4) } });
+            sut.When(new RegisterToConference {OrderId = OrderId, Seats = new[] {new SeatQuantity(SeatTypeId, 4)}});
 
             var @event = sut.ThenHasOne<OrderTotalsCalculated>();
             Assert.Equal(OrderId, @event.SourceId);
@@ -283,17 +295,17 @@ namespace Registration.Tests.OrderFixture
         [Fact]
         public void when_rejecting_confirmed_order_then_throws()
         {
-            this.sut.Given(new OrderConfirmed { SourceId = OrderId });
+            sut.Given(new OrderConfirmed {SourceId = OrderId});
 
-            Assert.Throws<InvalidOperationException>(() => this.sut.When(new RejectOrder { OrderId = OrderId }));
+            Assert.Throws<InvalidOperationException>(() => sut.When(new RejectOrder {OrderId = OrderId}));
         }
 
         [Fact]
         public void when_rejecting_a_payment_confirmed_order_then_throws()
         {
-            this.sut.Given(new OrderPaymentConfirmed { SourceId = OrderId });
+            sut.Given(new OrderPaymentConfirmed {SourceId = OrderId});
 
-            Assert.Throws<InvalidOperationException>(() => this.sut.When(new RejectOrder { OrderId = OrderId }));
+            Assert.Throws<InvalidOperationException>(() => sut.When(new RejectOrder {OrderId = OrderId}));
         }
     }
 }

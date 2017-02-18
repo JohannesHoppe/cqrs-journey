@@ -7,14 +7,25 @@
 
 @section Head
 {
-<style>
-    #grid, #grid input, #grid button { clear: both; width: 100%; }
-    #grid thead { white-space: nowrap; }
-    #grid thead a { text-decoration: none; }
-    #grid .error { background-color: #f66; color: #000; }
-    #grid-container .hidden { display: none; }
-    .form__but.createRow, .form__but.editRow { margin: 1px 0px; }
-</style>
+    <style>
+        #grid, #grid input, #grid button {
+            clear: both;
+            width: 100%;
+        }
+
+        #grid thead { white-space: nowrap; }
+
+        #grid thead a { text-decoration: none; }
+
+        #grid .error {
+            background-color: #f66;
+            color: #000;
+        }
+
+        #grid-container .hidden { display: none; }
+
+        .form__but.createRow, .form__but.editRow { margin: 1px 0px; }
+    </style>
 }
 @section Navigation
 {
@@ -31,34 +42,38 @@
 
 <div class="page__content">
     <div class="page__wrapper">
-		<div class="content-main__wrapper">
+        <div class="content-main__wrapper">
             <div class="content-main__main">
                 <div id="grid-container" class="content">
-					<p>Click on a seat type name to edit<br/><br/></p>
-					<table id="grid" class="content__table_first-cell-wide">
+                    <p>
+                        Click on a seat type name to edit<br/><br/>
+                    </p>
+                    <table id="grid" class="content__table_first-cell-wide">
                         <thead>
-                            <tr>
-                                <th width="30%">Seat type</th>
-                                <th width="40%">Description</th>
-                                <th width="10%">Quota</th>
-                                @*<th>Min</th>
+                        <tr>
+                            <th width="30%">Seat type</th>
+                            <th width="40%">Description</th>
+                            <th width="10%">Quota</th>
+                            @*<th>Min</th>
                                 <th>Max</th>*@
-                                <th width="10%">Price</th>
-                                @*<th>Avail.&nbsp;from</th>
+                            <th width="10%">Price</th>
+                            @*<th>Avail.&nbsp;from</th>
 							    <th>Avail.&nbsp;to</th>*@
-                                @*<th class="content__table__pub">Actions</th>*@
-                                <th class="content__table__delete">&nbsp;</th>
-                                @*<th class="content__table__also-req">Also&nbsp;requires</th>*@
-                            </tr>
+                            @*<th class="content__table__pub">Actions</th>*@
+                            <th class="content__table__delete">&nbsp;</th>
+                            @*<th class="content__table__also-req">Also&nbsp;requires</th>*@
+                        </tr>
                         </thead>
                         <tbody>
-                            @{Html.RenderAction("SeatGrid", new { slug = ViewBag.Slug });}
-                            <tr class="seats-type-add hidden">
-                                <td colspan="10"><a href="#" class="js-add-edit-type">Add new seat type</a></td>
-                            </tr>
+                        @{ Html.RenderAction("SeatGrid", new {slug = ViewBag.Slug}); }
+                        <tr class="seats-type-add hidden">
+                            <td colspan="10">
+                                <a href="#" class="js-add-edit-type">Add new seat type</a>
+                            </td>
+                        </tr>
                         </tbody>
                     </table>
-@*					<div class="form__chb form__chb_seats">
+                    @*					<div class="form__chb form__chb_seats">
 						<label class="form__chb__item js-checkbox-seats">Seats availability on conference hub</label>
 						<span class="form__seats-select form__seats-select_green">
 							<select>
@@ -70,9 +85,9 @@
 						</span>
 					</div>*@
                 </div>
-				<div class="nav content-main__nav">
+                <div class="nav content-main__nav">
                     <a class="nav__left" href="@Url.Action("Index")">Back</a>
-@*                    <button class="nav__right">
+                    @*                    <button class="nav__right">
 						Save
 					</button>*@
                 </div>
@@ -106,11 +121,11 @@
 
 <script>
     (function($, undefined) {
-        $.ajaxSetup ({cache: false});
+        $.ajaxSetup({ cache: false });
 
         function createRow(row) {
             var postParams = getPostParams(row);
-            $.post('@Html.Raw(Url.Action("CreateSeat", new { slug = ViewBag.Slug }))', postParams)
+            $.post('@Html.Raw(Url.Action("CreateSeat", new {slug = ViewBag.Slug}))', postParams)
                 .done(function(newRow) {
                     row.replaceWith(newRow);
                 })
@@ -120,15 +135,19 @@
         }
 
         function makeRowEditable(row) {
-            $.get('@Html.Raw(Url.Action("EditSeat", new { slug = ViewBag.Slug, id = "__ID__" }))'.replace(/__ID__/, row.data('pkey')), function (editableRow) {
-                row.replaceWith(editableRow);
-            });
+            $.get('@Html.Raw(Url.Action("EditSeat", new {slug = ViewBag.Slug, id = "__ID__"}))'.replace(/__ID__/,
+                    row.data('pkey')),
+                function(editableRow) {
+                    row.replaceWith(editableRow);
+                });
         }
 
         function editRow(row) {
             var postParams = getPostParams(row);
-            postParams.push({name: 'Id', value: row.data('pkey')});
-            $.post('@Html.Raw(Url.Action("EditSeat", new { slug = ViewBag.Slug, id = "__ID__" }))'.replace(/__ID__/, row.data('pkey')), postParams)
+            postParams.push({ name: 'Id', value: row.data('pkey') });
+            $.post('@Html.Raw(Url.Action("EditSeat", new {slug = ViewBag.Slug, id = "__ID__"}))'.replace(/__ID__/,
+                        row.data('pkey')),
+                    postParams)
                 .done(function(newRow) {
                     row.replaceWith(newRow);
                 })
@@ -138,64 +157,81 @@
         }
 
         function getPostParams(row) {
-            return row.find(':input[name]:not(:disabled)').filter(':not(:checkbox), :checked').map(function () {
+            return row.find(':input[name]:not(:disabled)').filter(':not(:checkbox), :checked').map(function() {
                 var input = $(this);
                 return { name: input.attr('name'), value: input.val() };
             }).get();
         }
 
-        $(function () {
+        $(function() {
             var $containerContext = $('#grid-container');
             var $gridContext = $containerContext.find('#grid');
 
-            $containerContext.find('.seats-type-add').show().click(function (e) {
-                $.get('@Html.Raw(Url.Action("CreateSeat", new { slug = ViewBag.Slug }))', function (emptyRow) {
-                    $gridContext.find('tbody').prepend(emptyRow);
-                });
+            $containerContext.find('.seats-type-add').show().click(function(e) {
+                $.get('@Html.Raw(Url.Action("CreateSeat", new {slug = ViewBag.Slug}))',
+                    function(emptyRow) {
+                        $gridContext.find('tbody').prepend(emptyRow);
+                    });
                 e.preventDefault();
             });
             $gridContext.find('tr > *').filter(':last-child').removeClass('hidden');
-            $gridContext.delegate('.createRow', 'click', function () {
-                createRow($(this).parents('tr'));
-            });
-            $gridContext.delegate('.cancelCreateRow', 'click', function () {
-                $(this).parents('tr').remove();
-            });
+            $gridContext.delegate('.createRow',
+                'click',
+                function() {
+                    createRow($(this).parents('tr'));
+                });
+            $gridContext.delegate('.cancelCreateRow',
+                'click',
+                function() {
+                    $(this).parents('tr').remove();
+                });
 
-            $gridContext.delegate('.makeRowEditable', 'click', function (e) {
-                makeRowEditable($(this).parents('tr'));
-                e.preventDefault();
-            });
-            $gridContext.delegate('.editRow', 'click', function () {
-                editRow($(this).parents('tr'));
-            });
-            $gridContext.delegate('.cancelEditRow', 'click', function () {
-                var row = $(this).parents('tr');
-                $.get('@Html.Raw(Url.Action("SeatRow", new { slug = ViewBag.Slug, id = "__ID__" }))'.replace(/__ID__/, row.data('pkey')), function (newRow) {
-                    row.replaceWith(newRow);
-                }); 
-            });
+            $gridContext.delegate('.makeRowEditable',
+                'click',
+                function(e) {
+                    makeRowEditable($(this).parents('tr'));
+                    e.preventDefault();
+                });
+            $gridContext.delegate('.editRow',
+                'click',
+                function() {
+                    editRow($(this).parents('tr'));
+                });
+            $gridContext.delegate('.cancelEditRow',
+                'click',
+                function() {
+                    var row = $(this).parents('tr');
+                    $.get('@Html.Raw(Url.Action("SeatRow", new {slug = ViewBag.Slug, id = "__ID__"}))'.replace(/__ID__/,
+                            row.data('pkey')),
+                        function(newRow) {
+                            row.replaceWith(newRow);
+                        });
+                });
 
-            $gridContext.delegate('.deleteRow', 'click', function (e) {
-                var $lightbox = $('div.lightbox');
-                $lightbox.find('.lightbox-content_delete__action__yes').attr('data-row', $(this).parents('tr').data('pkey'));
-                $('div.lightbox').show();
-                e.preventDefault();
-            });
-            
-            $('.lightbox-content_delete__action__no').click(function (e) {
+            $gridContext.delegate('.deleteRow',
+                'click',
+                function(e) {
+                    var $lightbox = $('div.lightbox');
+                    $lightbox.find('.lightbox-content_delete__action__yes')
+                        .attr('data-row', $(this).parents('tr').data('pkey'));
+                    $('div.lightbox').show();
+                    e.preventDefault();
+                });
+
+            $('.lightbox-content_delete__action__no').click(function(e) {
                 $('div.lightbox').hide().find('.lightbox-content_delete__action__yes').attr('data-row', null);
                 e.preventDefault();
             });
-            
-            $('.lightbox-content_delete__action__yes').click(function (e) {
+
+            $('.lightbox-content_delete__action__yes').click(function(e) {
                 var $link = $('div.lightbox').hide().find('.lightbox-content_delete__action__yes');
                 var $row = $gridContext.find('tr[data-pkey=' + $link.attr('data-row') + ']');
-                $.post('@Html.Raw(Url.Action("DeleteSeat", new { slug = ViewBag.Slug, id = "__ID__" }))'.replace(/__ID__/, $row.data('pkey')))
-                    .done(function () {
+                $.post('@Html.Raw(Url.Action("DeleteSeat", new {slug = ViewBag.Slug, id = "__ID__"}))'.replace(/__ID__/,
+                        $row.data('pkey')))
+                    .done(function() {
                         $row.remove();
                     })
-                    .fail(function () {
+                    .fail(function() {
                         alert('Row deletion failed.');
                     });
                 $link.attr('data-row', null);

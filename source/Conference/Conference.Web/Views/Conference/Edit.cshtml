@@ -19,8 +19,7 @@
 </h1>
 <div class="page__content">
     <div class="page__wrapper content-main_create-conf">
-        @using (Html.BeginForm())
-        {
+        @using (Html.BeginForm()) {
             @Html.ValidationSummary(false)
             <div class="content-main__wrapper">
                 <div class="content-main__main">
@@ -31,7 +30,7 @@
                             <div class="form__field">
                                 <pre>@Model.OwnerName</pre>
                             </div>
-                        </div>    
+                        </div>
                         <div class="form__fieldset">
                             <label>Email address:</label>
                             <div class="form__field">
@@ -43,10 +42,10 @@
                             <div class="form__field">
                                 <pre>@Model.AccessCode</pre>
                             </div>
-                        </div>   
+                        </div>
                         <div class="g-clear"></div>
                     </fieldset>
-                    
+
                     <div class="content-main__header">Conference information</div>
                     <fieldset class="content">
                         <div class="form">
@@ -83,7 +82,7 @@
                                 <div class="form__field">
                                     <pre>@Model.Slug</pre>
                                 </div>
-                            </div>  
+                            </div>
                             <div class="form__fieldset">
                                 @Html.LabelFor(model => model.Location, "Location:*")
                                 <div class="form__field">
@@ -133,7 +132,7 @@
                             <div class="g-clear"></div>
                         </div>*@
                         <div class="form">
-@*                        <div class="form form__col3">
+                            @*                        <div class="form form__col3">
                             <div class="form__fieldset">
                                 <label class="form__label">Time zone:</label>
                                 <select>
@@ -144,11 +143,11 @@
                             </div>*@
                             <div class="form__fieldset">
                                 @Html.LabelFor(model => model.StartDate, "Start date:*")
-                                @Html.Hidden("StartDate", Model.StartDate.ToString("yyyy/MM/dd"), new { @class="inline-datepicker" })
+                                @Html.Hidden("StartDate", Model.StartDate.ToString("yyyy/MM/dd"), new {@class = "inline-datepicker"})
                             </div>
                             <div class="form__fieldset">
                                 @Html.LabelFor(model => model.EndDate, "End date:*")
-                                @Html.Hidden("EndDate", Model.EndDate.ToString("yyyy/MM/dd"), new { @class="inline-datepicker" })
+                                @Html.Hidden("EndDate", Model.EndDate.ToString("yyyy/MM/dd"), new {@class = "inline-datepicker"})
                             </div>
                             <div class="g-clear"></div>
                         </div>
@@ -158,12 +157,14 @@
                         <button class="nav__right">Save</button>
                     </div>
                 </div>
-            </div>@*
+            </div> @*
             <div class="content-main__aside">
                 <div class="content-main__header"></div>
                 
             </div>
-            *@<div class="g-clear"></div>
+            *@
+
+            <div class="g-clear"></div>
         }
     </div>
 </div>

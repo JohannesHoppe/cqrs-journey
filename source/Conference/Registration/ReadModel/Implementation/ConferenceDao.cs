@@ -11,12 +11,12 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace Registration.ReadModel.Implementation
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-
     public class ConferenceDao : IConferenceDao
     {
         private readonly Func<ConferenceRegistrationDbContext> contextFactory;
@@ -28,13 +28,11 @@ namespace Registration.ReadModel.Implementation
 
         public ConferenceDetails GetConferenceDetails(string conferenceCode)
         {
-            using (var context = this.contextFactory.Invoke())
-            {
+            using (var context = contextFactory.Invoke()) {
                 return context
                     .Query<Conference>()
                     .Where(dto => dto.Code == conferenceCode)
-                    .Select(x => new ConferenceDetails
-                    {
+                    .Select(x => new ConferenceDetails {
                         Id = x.Id,
                         Code = x.Code,
                         Name = x.Name,
@@ -50,32 +48,29 @@ namespace Registration.ReadModel.Implementation
 
         public ConferenceAlias GetConferenceAlias(string conferenceCode)
         {
-            using (var context = this.contextFactory.Invoke())
-            {
+            using (var context = contextFactory.Invoke()) {
                 return context
                     .Query<Conference>()
                     .Where(dto => dto.Code == conferenceCode)
-                    .Select(x => new ConferenceAlias { Id = x.Id, Code = x.Code, Name = x.Name, Tagline = x.Tagline })
+                    .Select(x => new ConferenceAlias {Id = x.Id, Code = x.Code, Name = x.Name, Tagline = x.Tagline})
                     .FirstOrDefault();
             }
         }
 
         public IList<ConferenceAlias> GetPublishedConferences()
         {
-            using (var context = this.contextFactory.Invoke())
-            {
+            using (var context = contextFactory.Invoke()) {
                 return context
                     .Query<Conference>()
                     .Where(dto => dto.IsPublished)
-                    .Select(x => new ConferenceAlias { Id = x.Id, Code = x.Code, Name = x.Name, Tagline = x.Tagline })
+                    .Select(x => new ConferenceAlias {Id = x.Id, Code = x.Code, Name = x.Name, Tagline = x.Tagline})
                     .ToList();
             }
         }
 
         public IList<SeatType> GetPublishedSeatTypes(Guid conferenceId)
         {
-            using (var context = this.contextFactory.Invoke())
-            {
+            using (var context = contextFactory.Invoke()) {
                 return context.Query<SeatType>()
                     .Where(c => c.ConferenceId == conferenceId)
                     .ToList();
@@ -85,14 +80,14 @@ namespace Registration.ReadModel.Implementation
         public IList<SeatTypeName> GetSeatTypeNames(IEnumerable<Guid> seatTypes)
         {
             var distinctIds = seatTypes.Distinct().ToArray();
-            if (distinctIds.Length == 0)
+            if (distinctIds.Length == 0) {
                 return new List<SeatTypeName>();
+            }
 
-            using (var context = this.contextFactory.Invoke())
-            {
+            using (var context = contextFactory.Invoke()) {
                 return context.Query<SeatType>()
                     .Where(x => distinctIds.Contains(x.Id))
-                    .Select(s => new SeatTypeName { Id = s.Id, Name = s.Name })
+                    .Select(s => new SeatTypeName {Id = s.Id, Name = s.Name})
                     .ToList();
             }
         }

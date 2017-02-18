@@ -11,18 +11,18 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Data.Entity;
+
 namespace Payments.Database
 {
-    using System.Data.Entity;
-
     public class PaymentsDbContext : DbContext
     {
         public const string SchemaName = "ConferencePayments";
 
+        public DbSet<ThirdPartyProcessorPayment> ThirdPartyProcessorPayments { get; set; }
+
         public PaymentsDbContext(string nameOrConnectionString)
-            : base(nameOrConnectionString)
-        {
-        }
+            : base(nameOrConnectionString) { }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
@@ -31,7 +31,5 @@ namespace Payments.Database
             modelBuilder.Entity<ThirdPartyProcessorPayment>().ToTable("ThirdPartyProcessorPayments", SchemaName);
             modelBuilder.Entity<ThidPartyProcessorPaymentItem>().ToTable("ThidPartyProcessorPaymentItems", SchemaName);
         }
-
-        public DbSet<ThirdPartyProcessorPayment> ThirdPartyProcessorPayments { get; set; }
     }
 }

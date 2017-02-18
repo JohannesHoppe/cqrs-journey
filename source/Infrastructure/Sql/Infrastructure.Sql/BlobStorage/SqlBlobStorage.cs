@@ -11,18 +11,18 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using Infrastructure.BlobStorage;
+using Infrastructure.Serialization;
+
 namespace Infrastructure.Sql.BlobStorage
 {
-    using Infrastructure.BlobStorage;
-    using Infrastructure.Serialization;
-
     /// <summary>
-    /// Simple local blob storage simulator for easy local debugging. 
-    /// Assumes the blobs are persisted as text through an <see cref="ITextSerializer"/>.
+    ///     Simple local blob storage simulator for easy local debugging.
+    ///     Assumes the blobs are persisted as text through an <see cref="ITextSerializer" />.
     /// </summary>
     public class SqlBlobStorage : IBlobStorage
     {
-        private string nameOrConnectionString;
+        private readonly string nameOrConnectionString;
 
         public SqlBlobStorage(string nameOrConnectionString)
         {
@@ -31,24 +31,21 @@ namespace Infrastructure.Sql.BlobStorage
 
         public byte[] Find(string id)
         {
-            using (var context = new BlobStorageDbContext(this.nameOrConnectionString))
-            {
+            using (var context = new BlobStorageDbContext(nameOrConnectionString)) {
                 return context.Find(id);
             }
         }
 
         public void Save(string id, string contentType, byte[] blob)
         {
-            using (var context = new BlobStorageDbContext(this.nameOrConnectionString))
-            {
+            using (var context = new BlobStorageDbContext(nameOrConnectionString)) {
                 context.Save(id, contentType, blob);
             }
         }
 
         public void Delete(string id)
         {
-            using (var context = new BlobStorageDbContext(this.nameOrConnectionString))
-            {
+            using (var context = new BlobStorageDbContext(nameOrConnectionString)) {
                 context.Delete(id);
             }
         }

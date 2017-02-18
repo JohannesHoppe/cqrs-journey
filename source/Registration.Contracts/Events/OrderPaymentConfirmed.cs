@@ -11,14 +11,12 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using Infrastructure.EventSourcing;
+
 namespace Registration.Events
 {
-    using Infrastructure.EventSourcing;
-
     /// <summary>
-    /// This event was deprecated in favor of <see cref="OrderConfirmed"/>.
+    ///     This event was deprecated in favor of <see cref="OrderConfirmed" />.
     /// </summary>
-    public class OrderPaymentConfirmed : VersionedEvent
-    {
-    }
+    public class OrderPaymentConfirmed : VersionedEvent { }
 }

@@ -11,12 +11,12 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using Infrastructure.EventSourcing;
+
 namespace Registration.Events
 {
-    using System;
-    using System.Collections.Generic;
-    using Infrastructure.EventSourcing;
-
     public class OrderPlaced : VersionedEvent
     {
         public Guid ConferenceId { get; set; }
@@ -24,7 +24,7 @@ namespace Registration.Events
         public IEnumerable<SeatQuantity> Seats { get; set; }
 
         /// <summary>
-        /// The expected expiration time if the reservation is not explicitly confirmed later.
+        ///     The expected expiration time if the reservation is not explicitly confirmed later.
         /// </summary>
         public DateTime ReservationAutoExpiration { get; set; }
 

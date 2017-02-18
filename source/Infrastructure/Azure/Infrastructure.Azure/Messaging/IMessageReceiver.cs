@@ -11,25 +11,25 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using Microsoft.ServiceBus.Messaging;
+
 namespace Infrastructure.Azure.Messaging
 {
-    using System;
-    using Microsoft.ServiceBus.Messaging;
-
     /// <summary>
-    /// Abstracts the behavior of a receiving component that raises 
-    /// an event for every received event.
+    ///     Abstracts the behavior of a receiving component that raises
+    ///     an event for every received event.
     /// </summary>
     public interface IMessageReceiver
     {
         /// <summary>
-        /// Starts the listener.
+        ///     Starts the listener.
         /// </summary>
         /// <param name="messageHandler">Handler for incoming messages. The return value indicates how to release the message lock.</param>
         void Start(Func<BrokeredMessage, MessageReleaseAction> messageHandler);
 
         /// <summary>
-        /// Stops the listener.
+        ///     Stops the listener.
         /// </summary>
         void Stop();
     }

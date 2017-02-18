@@ -11,29 +11,28 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using Infrastructure.Messaging;
+
 namespace Registration.Commands
 {
-    using System;
-    using Infrastructure.Messaging;
-
     public abstract class SeatsAvailabilityCommand : ICommand, IMessageSessionProvider
     {
+        public Guid ConferenceId { get; set; }
+
+        protected string SessionId {
+            get { return "SeatsAvailability_" + ConferenceId; }
+        }
+
         public SeatsAvailabilityCommand()
         {
-            this.Id = Guid.NewGuid();
+            Id = Guid.NewGuid();
         }
 
         public Guid Id { get; set; }
-        public Guid ConferenceId { get; set; }
 
-        string IMessageSessionProvider.SessionId
-        {
-            get { return this.SessionId; }
-        }
-
-        protected string SessionId
-        {
-            get { return "SeatsAvailability_" + this.ConferenceId.ToString(); }
+        string IMessageSessionProvider.SessionId {
+            get { return SessionId; }
         }
     }
 }

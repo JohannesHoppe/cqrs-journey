@@ -11,20 +11,22 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using Infrastructure.EventSourcing;
+
 namespace Registration.Events
 {
-    using System;
-    using Infrastructure.EventSourcing;
-
     public class SeatAssigned : VersionedEvent
     {
+        public int Position { get; set; }
+
+        public Guid SeatType { get; set; }
+
+        public PersonalInfo Attendee { get; set; }
+
         public SeatAssigned(Guid sourceId)
         {
-            this.SourceId = sourceId;
+            SourceId = sourceId;
         }
-
-        public int Position { get; set; }
-        public Guid SeatType { get; set; }
-        public PersonalInfo Attendee { get; set; }
     }
 }

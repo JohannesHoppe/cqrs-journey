@@ -11,23 +11,22 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Data.Entity;
+using System.Linq;
+using Payments.Database;
+
 namespace Payments.ReadModel.Implementation
 {
-    using System;
-    using System.Data.Entity;
-    using System.Linq;
-
     /// <summary>
-    /// A repository stored in a database for the views.
+    ///     A repository stored in a database for the views.
     /// </summary>
     public class PaymentsReadDbContext : DbContext
     {
-        public const string SchemaName = Payments.Database.PaymentsDbContext.SchemaName;
+        public const string SchemaName = PaymentsDbContext.SchemaName;
 
         public PaymentsReadDbContext(string nameOrConnectionString)
-            : base(nameOrConnectionString)
-        {
-        }
+            : base(nameOrConnectionString) { }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
@@ -36,14 +35,16 @@ namespace Payments.ReadModel.Implementation
             modelBuilder.Entity<ThirdPartyProcessorPaymentDetails>().ToTable("ThirdPartyProcessorPaymentDetailsView", SchemaName);
         }
 
-        public T Find<T>(Guid id) where T : class
+        public T Find<T>(Guid id)
+            where T : class
         {
-            return this.Set<T>().Find(id);
+            return Set<T>().Find(id);
         }
 
-        public IQueryable<T> Query<T>() where T : class
+        public IQueryable<T> Query<T>()
+            where T : class
         {
-            return this.Set<T>();
+            return Set<T>();
         }
     }
 }

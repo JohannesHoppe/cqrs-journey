@@ -11,14 +11,14 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using Infrastructure.Azure.Messaging;
+using Microsoft.ServiceBus;
+using Microsoft.ServiceBus.Messaging;
+
 namespace Infrastructure.Azure
 {
-    using Infrastructure.Azure.Messaging;
-    using Microsoft.ServiceBus;
-    using Microsoft.ServiceBus.Messaging;
-
     /// <summary>
-    /// Admin helpers for tests.
+    ///     Admin helpers for tests.
     /// </summary>
     public static class BusSettingsExtensions
     {
@@ -49,12 +49,11 @@ namespace Infrastructure.Azure
             return messagingFactory.CreateTopicClient(topic);
         }
 
-
         public static void CreateTopic(this ServiceBusSettings settings, string topic)
         {
             new NamespaceManager(
-                ServiceBusEnvironment.CreateServiceUri(settings.ServiceUriScheme, settings.ServiceNamespace, settings.ServicePath),
-                TokenProvider.CreateSharedSecretTokenProvider(settings.TokenIssuer, settings.TokenAccessKey))
+                    ServiceBusEnvironment.CreateServiceUri(settings.ServiceUriScheme, settings.ServiceNamespace, settings.ServicePath),
+                    TokenProvider.CreateSharedSecretTokenProvider(settings.TokenIssuer, settings.TokenAccessKey))
                 .CreateTopic(topic);
         }
 
@@ -63,8 +62,8 @@ namespace Infrastructure.Azure
             CreateTopic(settings, topic);
 
             new NamespaceManager(
-                ServiceBusEnvironment.CreateServiceUri(settings.ServiceUriScheme, settings.ServiceNamespace, settings.ServicePath),
-                TokenProvider.CreateSharedSecretTokenProvider(settings.TokenIssuer, settings.TokenAccessKey))
+                    ServiceBusEnvironment.CreateServiceUri(settings.ServiceUriScheme, settings.ServiceNamespace, settings.ServicePath),
+                    TokenProvider.CreateSharedSecretTokenProvider(settings.TokenIssuer, settings.TokenAccessKey))
                 .CreateSubscription(topic, subscription);
         }
 
@@ -73,33 +72,29 @@ namespace Infrastructure.Azure
             CreateTopic(settings, description.TopicPath);
 
             new NamespaceManager(
-                ServiceBusEnvironment.CreateServiceUri(settings.ServiceUriScheme, settings.ServiceNamespace, settings.ServicePath),
-                TokenProvider.CreateSharedSecretTokenProvider(settings.TokenIssuer, settings.TokenAccessKey))
+                    ServiceBusEnvironment.CreateServiceUri(settings.ServiceUriScheme, settings.ServiceNamespace, settings.ServicePath),
+                    TokenProvider.CreateSharedSecretTokenProvider(settings.TokenIssuer, settings.TokenAccessKey))
                 .CreateSubscription(description);
         }
 
         public static void TryDeleteSubscription(this ServiceBusSettings settings, string topic, string subscription)
         {
-            try
-            {
+            try {
                 new NamespaceManager(
-                    ServiceBusEnvironment.CreateServiceUri(settings.ServiceUriScheme, settings.ServiceNamespace, settings.ServicePath),
-                    TokenProvider.CreateSharedSecretTokenProvider(settings.TokenIssuer, settings.TokenAccessKey))
+                        ServiceBusEnvironment.CreateServiceUri(settings.ServiceUriScheme, settings.ServiceNamespace, settings.ServicePath),
+                        TokenProvider.CreateSharedSecretTokenProvider(settings.TokenIssuer, settings.TokenAccessKey))
                     .DeleteSubscription(topic, subscription);
-            }
-            catch { }
+            } catch { }
         }
 
         public static void TryDeleteTopic(this ServiceBusSettings settings, string topic)
         {
-            try
-            {
+            try {
                 new NamespaceManager(
-                    ServiceBusEnvironment.CreateServiceUri(settings.ServiceUriScheme, settings.ServiceNamespace, settings.ServicePath),
-                    TokenProvider.CreateSharedSecretTokenProvider(settings.TokenIssuer, settings.TokenAccessKey))
+                        ServiceBusEnvironment.CreateServiceUri(settings.ServiceUriScheme, settings.ServiceNamespace, settings.ServicePath),
+                        TokenProvider.CreateSharedSecretTokenProvider(settings.TokenIssuer, settings.TokenAccessKey))
                     .DeleteTopic(topic);
-            }
-            catch { }
+            } catch { }
         }
     }
 }

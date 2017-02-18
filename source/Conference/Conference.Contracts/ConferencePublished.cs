@@ -11,13 +11,13 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using Infrastructure.Messaging;
+
 namespace Conference
 {
-    using System;
-    using Infrastructure.Messaging;
-
     /// <summary>
-    /// Event published whenever a conference is made public.
+    ///     Event published whenever a conference is made public.
     /// </summary>
     public class ConferencePublished : IEvent
     {

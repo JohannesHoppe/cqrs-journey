@@ -11,22 +11,22 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using Registration.ReadModel.Implementation;
+
 namespace Registration.IntegrationTests
 {
-    using System;
-    using Registration.ReadModel.Implementation;
-
     public class given_a_read_model_database : IDisposable
     {
         protected string dbName;
 
         public given_a_read_model_database()
         {
-            dbName = this.GetType().Name + "-" + Guid.NewGuid().ToString();
-            using (var context = new ConferenceRegistrationDbContext(dbName))
-            {
-                if (context.Database.Exists())
+            dbName = GetType().Name + "-" + Guid.NewGuid();
+            using (var context = new ConferenceRegistrationDbContext(dbName)) {
+                if (context.Database.Exists()) {
                     context.Database.Delete();
+                }
 
                 context.Database.Create();
             }
@@ -34,10 +34,10 @@ namespace Registration.IntegrationTests
 
         public void Dispose()
         {
-            using (var context = new ConferenceRegistrationDbContext(dbName))
-            {
-                if (context.Database.Exists())
+            using (var context = new ConferenceRegistrationDbContext(dbName)) {
+                if (context.Database.Exists()) {
                     context.Database.Delete();
+                }
             }
         }
     }

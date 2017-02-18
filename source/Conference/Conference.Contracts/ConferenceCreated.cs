@@ -11,13 +11,10 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
-
 namespace Conference
 {
     /// <summary>
-    /// Event published whenever a new conference is created.
+    ///     Event published whenever a new conference is created.
     /// </summary>
-    public class ConferenceCreated : ConferenceEvent
-    {
-    }
+    public class ConferenceCreated : ConferenceEvent { }
 }

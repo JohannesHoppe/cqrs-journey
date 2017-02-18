@@ -11,22 +11,22 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Collections.Generic;
+using System.IO;
+using Infrastructure.Messaging;
+
 namespace Infrastructure
 {
-    using System.Collections.Generic;
-    using System.IO;
-    using Infrastructure.Messaging;
-
     /// <summary>
-    /// Extracts metadata about a payload so that it's placed in the 
-    /// message envelope.
+    ///     Extracts metadata about a payload so that it's placed in the
+    ///     message envelope.
     /// </summary>
     public class StandardMetadataProvider : IMetadataProvider
     {
         /// <summary>
-        /// Gets metadata associated with the payload, which can be
-        /// used by processors to filter and selectively subscribe to
-        /// messages.
+        ///     Gets metadata associated with the payload, which can be
+        ///     used by processors to filter and selectively subscribe to
+        ///     messages.
         /// </summary>
         public virtual IDictionary<string, string> GetMetadata(object payload)
         {
@@ -42,15 +42,13 @@ namespace Infrastructure
             metadata[StandardMetadata.TypeName] = type.Name;
 
             var e = payload as IEvent;
-            if (e != null)
-            {
+            if (e != null) {
                 metadata[StandardMetadata.SourceId] = e.SourceId.ToString();
                 metadata[StandardMetadata.Kind] = StandardMetadata.EventKind;
             }
 
             var c = payload as ICommand;
-            if (c != null)
-            {
+            if (c != null) {
                 metadata[StandardMetadata.Kind] = StandardMetadata.CommandKind;
             }
 

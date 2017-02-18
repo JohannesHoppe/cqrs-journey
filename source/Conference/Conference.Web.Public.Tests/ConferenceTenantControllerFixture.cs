@@ -11,32 +11,35 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Specialized;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+using Moq;
+using Moq.Protected;
+using Registration.ReadModel;
+using Xunit;
+
 namespace Conference.Web.Public.Tests
 {
-    using System;
-    using System.Collections.Specialized;
-    using System.Web;
-    using System.Web.Mvc;
-    using System.Web.Routing;
-    using Moq;
-    using Moq.Protected;
-    using Registration.ReadModel;
-    using Xunit;
-
     public class ConferenceTenantControllerFixture
     {
-        private RouteCollection routes;
-        private RouteData routeData;
-        private Mock<IConferenceDao> dao;
-        private TestController sut;
+        private readonly Mock<IConferenceDao> dao;
+
+        private readonly RouteData routeData;
+
+        private readonly RouteCollection routes;
+
+        private readonly TestController sut;
 
         public ConferenceTenantControllerFixture()
         {
-            this.routes = new RouteCollection();
+            routes = new RouteCollection();
 
-            this.routeData = new RouteData();
-            this.routeData.Values.Add("controller", "Test");
-            this.routeData.Values.Add("conferenceCode", "demo");
+            routeData = new RouteData();
+            routeData.Values.Add("controller", "Test");
+            routeData.Values.Add("conferenceCode", "demo");
 
             var requestMock = new Mock<HttpRequestBase>(MockBehavior.Strict);
             requestMock.SetupGet(x => x.ApplicationPath).Returns("/");
@@ -49,56 +52,56 @@ namespace Conference.Web.Public.Tests
 
             var context = Mock.Of<HttpContextBase>(c => c.Request == requestMock.Object && c.Response == responseMock.Object);
 
-            this.dao = new Mock<IConferenceDao>();
+            dao = new Mock<IConferenceDao>();
 
-            this.sut = new TestController(this.dao.Object);
-            this.sut.ControllerContext = new ControllerContext(context, this.routeData, this.sut);
-            this.sut.Url = new UrlHelper(new RequestContext(context, this.routeData), this.routes);
+            sut = new TestController(dao.Object);
+            sut.ControllerContext = new ControllerContext(context, routeData, sut);
+            sut.Url = new UrlHelper(new RequestContext(context, routeData), routes);
         }
 
         [Fact]
         public void when_rendering_view_then_sets_conference_view_model()
         {
             var dto = new ConferenceAlias();
-            this.dao.Setup(x => x.GetConferenceAlias("demo"))
+            dao.Setup(x => x.GetConferenceAlias("demo"))
                 .Returns(dto);
 
-            var invoker = new Mock<ControllerActionInvoker> { CallBase = true };
+            var invoker = new Mock<ControllerActionInvoker> {CallBase = true};
             invoker.Protected().Setup("InvokeActionResult", ItExpr.IsAny<ControllerContext>(), ItExpr.IsAny<ActionResult>());
 
-            this.routeData.Values.Add("action", "Display");
-            var result = invoker.Object.InvokeAction(this.sut.ControllerContext, "Display");
+            routeData.Values.Add("action", "Display");
+            var result = invoker.Object.InvokeAction(sut.ControllerContext, "Display");
 
             Assert.True(result);
-            Assert.NotNull((object)this.sut.ViewBag.Conference);
-            Assert.Same(dto, this.sut.ViewBag.Conference);
+            Assert.NotNull((object) sut.ViewBag.Conference);
+            Assert.Same(dto, sut.ViewBag.Conference);
         }
 
         [Fact]
         public void when_result_is_not_view_then_does_not_set_viewbag()
         {
-            var invoker = new Mock<ControllerActionInvoker> { CallBase = true };
+            var invoker = new Mock<ControllerActionInvoker> {CallBase = true};
             invoker.Protected().Setup("InvokeActionResult", ItExpr.IsAny<ControllerContext>(), ItExpr.IsAny<ActionResult>());
 
-            this.routeData.Values.Add("action", "Redirect");
-            var result = invoker.Object.InvokeAction(this.sut.ControllerContext, "Redirect");
+            routeData.Values.Add("action", "Redirect");
+            var result = invoker.Object.InvokeAction(sut.ControllerContext, "Redirect");
 
             Assert.True(result);
-            Assert.Null((object)this.sut.ViewBag.Conference);
+            Assert.Null((object) sut.ViewBag.Conference);
         }
 
         [Fact]
         public void when_invalid_conference_code_then_http_not_found()
         {
-            var invoker = new Mock<ControllerActionInvoker> { CallBase = true };
+            var invoker = new Mock<ControllerActionInvoker> {CallBase = true};
             ActionResult result = null;
             invoker.Protected()
                 .Setup("InvokeActionResult", ItExpr.IsAny<ControllerContext>(), ItExpr.IsAny<ActionResult>())
                 .Callback<ControllerContext, ActionResult>((c, r) => result = r);
 
             // No setup for retrieving a conference DTO.
-            this.routeData.Values.Add("action", "Display");
-            invoker.Object.InvokeAction(this.sut.ControllerContext, "Display");
+            routeData.Values.Add("action", "Display");
+            invoker.Object.InvokeAction(sut.ControllerContext, "Display");
 
             Assert.NotNull(result);
             Assert.IsType<HttpNotFoundResult>(result);
@@ -107,9 +110,7 @@ namespace Conference.Web.Public.Tests
         public class TestController : ConferenceTenantController
         {
             public TestController(IConferenceDao dao)
-                : base(dao)
-            {
-            }
+                : base(dao) { }
 
             public ActionResult Display()
             {

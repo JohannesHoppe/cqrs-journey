@@ -11,29 +11,20 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Infrastructure.Messaging;
+using Infrastructure.Messaging.Handling;
+
 namespace Infrastructure.Azure.Messaging.Handling
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Globalization;
-    using System.Linq;
-    using Infrastructure.Messaging;
-    using Infrastructure.Messaging.Handling;
-
     public class CommandDispatcher
     {
-        private Dictionary<Type, ICommandHandler> handlers = new Dictionary<Type, ICommandHandler>();
+        private readonly Dictionary<Type, ICommandHandler> handlers = new Dictionary<Type, ICommandHandler>();
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="CommandDispatcher"/> class.
-        /// </summary>
-        public CommandDispatcher()
-        {
-        }
-
-        /// <summary>
-        /// Registers the specified command handler.
+        ///     Registers the specified command handler.
         /// </summary>
         public void Register(ICommandHandler commandHandler)
         {
@@ -44,34 +35,30 @@ namespace Infrastructure.Azure.Messaging.Handling
                 .Select(iface => iface.GetGenericArguments()[0])
                 .ToList();
 
-            if (handlers.Keys.Any(registeredType => supportedCommandTypes.Contains(registeredType)))
+            if (handlers.Keys.Any(registeredType => supportedCommandTypes.Contains(registeredType))) {
                 throw new ArgumentException("The command handled by the received handler already has a registered handler.");
+            }
 
             // Register this handler for each of he handled types.
-            foreach (var commandType in supportedCommandTypes)
-            {
-                this.handlers.Add(commandType, commandHandler);
+            foreach (var commandType in supportedCommandTypes) {
+                handlers.Add(commandType, commandHandler);
             }
         }
 
         /// <summary>
-        /// Processes the message by calling the registered handler.
+        ///     Processes the message by calling the registered handler.
         /// </summary>
         public bool ProcessMessage(string traceIdentifier, ICommand payload, string messageId, string correlationId)
         {
             var commandType = payload.GetType();
             ICommandHandler handler = null;
 
-            if (this.handlers.TryGetValue(commandType, out handler))
-            {
+            if (handlers.TryGetValue(commandType, out handler)) {
                 // Trace.WriteLine(string.Format(CultureInfo.InvariantCulture, "Command{0} handled by {1}.", traceIdentifier, handler.GetType().FullName));
-                ((dynamic)handler).Handle((dynamic)payload);
+                ((dynamic) handler).Handle((dynamic) payload);
                 return true;
             }
-            else
-            {
-                return false;
-            }
+            return false;
         }
     }
 }

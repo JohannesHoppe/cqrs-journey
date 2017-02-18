@@ -17,12 +17,8 @@ namespace Conference.Web.Public.Areas.ThirdPartyProcessor
 {
     public class ThirdPartyProcessorAreaRegistration : AreaRegistration
     {
-        public override string AreaName
-        {
-            get
-            {
-                return "ThirdPartyProcessor";
-            }
+        public override string AreaName {
+            get { return "ThirdPartyProcessor"; }
         }
 
         public override void RegisterArea(AreaRegistrationContext context)
@@ -30,7 +26,7 @@ namespace Conference.Web.Public.Areas.ThirdPartyProcessor
             context.MapRoute(
                 "Pay",
                 "payment",
-                new { controller = "ThirdPartyProcessorPayment", action = "Pay" });
+                new {controller = "ThirdPartyProcessorPayment", action = "Pay"});
         }
     }
 }

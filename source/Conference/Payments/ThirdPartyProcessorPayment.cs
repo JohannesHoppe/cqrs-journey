@@ -11,100 +11,102 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel.DataAnnotations;
+using Infrastructure.Database;
+using Infrastructure.Messaging;
+using Payments.Contracts.Events;
+
 namespace Payments
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Collections.ObjectModel;
-    using System.ComponentModel.DataAnnotations;
-    using Infrastructure.Messaging;
-    using Infrastructure.Database;
-    using Payments.Contracts.Events;
-
     /// <summary>
-    /// Represents a payment through a 3rd party system.
+    ///     Represents a payment through a 3rd party system.
     /// </summary>
     /// <remarks>
-    /// <para>For more information on the Payments BC, see <see cref="http://go.microsoft.com/fwlink/p/?LinkID=258555">Journey chapter 5</see>.</para>
+    ///     <para>
+    ///         For more information on the Payments BC, see
+    ///         <see cref="http://go.microsoft.com/fwlink/p/?LinkID=258555">Journey chapter 5</see>.
+    ///     </para>
     /// </remarks>
     public class ThirdPartyProcessorPayment : IAggregateRoot, IEventPublisher
     {
         public enum States
         {
             Initiated = 0,
+
             Accepted = 1,
+
             Completed = 2,
+
             Rejected = 3
         }
 
-        private List<IEvent> events = new List<IEvent>();
-
-        public ThirdPartyProcessorPayment(Guid id, Guid paymentSourceId, string description, decimal totalAmount, IEnumerable<ThidPartyProcessorPaymentItem> items)
-            : this()
-        {
-            this.Id = id;
-            this.PaymentSourceId = paymentSourceId;
-            this.Description = description;
-            this.TotalAmount = totalAmount;
-            this.Items.AddRange(items);
-
-            this.AddEvent(new PaymentInitiated { SourceId = id, PaymentSourceId = paymentSourceId });
-        }
-
-        protected ThirdPartyProcessorPayment()
-        {
-            this.Items = new ObservableCollection<ThidPartyProcessorPaymentItem>();
-        }
+        private readonly List<IEvent> events = new List<IEvent>();
 
         public int StateValue { get; private set; }
 
         [NotMapped]
-        public States State
-        {
-            get { return (States)this.StateValue; }
-            internal set { this.StateValue = (int)value; }
+        public States State {
+            get { return (States) StateValue; }
+            internal set { StateValue = (int) value; }
         }
 
-        public IEnumerable<IEvent> Events
+        public Guid PaymentSourceId { get; }
+
+        public string Description { get; }
+
+        public decimal TotalAmount { get; }
+
+        public virtual ICollection<ThidPartyProcessorPaymentItem> Items { get; }
+
+        public ThirdPartyProcessorPayment(Guid id, Guid paymentSourceId, string description, decimal totalAmount, IEnumerable<ThidPartyProcessorPaymentItem> items)
+            : this()
         {
-            get { return this.events; }
+            Id = id;
+            PaymentSourceId = paymentSourceId;
+            Description = description;
+            TotalAmount = totalAmount;
+            Items.AddRange(items);
+
+            AddEvent(new PaymentInitiated {SourceId = id, PaymentSourceId = paymentSourceId});
         }
 
-        public Guid Id { get; private set; }
-
-        public Guid PaymentSourceId { get; private set; }
-
-        public string Description { get; private set; }
-
-        public decimal TotalAmount { get; private set; }
-
-        public virtual ICollection<ThidPartyProcessorPaymentItem> Items { get; private set; }
+        protected ThirdPartyProcessorPayment()
+        {
+            Items = new ObservableCollection<ThidPartyProcessorPaymentItem>();
+        }
 
         public void Complete()
         {
-            if (this.State != States.Initiated)
-            {
+            if (State != States.Initiated) {
                 throw new InvalidOperationException();
             }
 
-            this.State = States.Completed;
-            this.AddEvent(new PaymentCompleted { SourceId = this.Id, PaymentSourceId = this.PaymentSourceId });
+            State = States.Completed;
+            AddEvent(new PaymentCompleted {SourceId = Id, PaymentSourceId = PaymentSourceId});
         }
 
         public void Cancel()
         {
-            if (this.State != States.Initiated)
-            {
+            if (State != States.Initiated) {
                 throw new InvalidOperationException();
             }
 
-            this.State = States.Rejected;
-            this.AddEvent(new PaymentRejected { SourceId = this.Id, PaymentSourceId = this.PaymentSourceId });
+            State = States.Rejected;
+            AddEvent(new PaymentRejected {SourceId = Id, PaymentSourceId = PaymentSourceId});
         }
 
         protected void AddEvent(IEvent @event)
         {
-            this.events.Add(@event);
+            events.Add(@event);
+        }
+
+        public Guid Id { get; }
+
+        public IEnumerable<IEvent> Events {
+            get { return events; }
         }
     }
 }

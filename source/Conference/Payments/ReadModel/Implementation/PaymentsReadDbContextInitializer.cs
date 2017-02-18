@@ -11,34 +11,22 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Data.Entity;
+using System.Linq;
+using Payments.Database;
+
 namespace Payments.ReadModel.Implementation
 {
-    using System.Data.Entity;
-    using System.Linq;
-    using Payments.Database;
-
     public class PaymentsReadDbContextInitializer : IDatabaseInitializer<PaymentsDbContext>
     {
         // NOTE: we initialize the same OrmRepository for both because we happen to 
         // persist the views in the same database. This is not required and could be 
         // a separate one if we weren't using SQL Views to drive them.
-        private IDatabaseInitializer<PaymentsDbContext> innerInitializer;
+        private readonly IDatabaseInitializer<PaymentsDbContext> innerInitializer;
 
         public PaymentsReadDbContextInitializer(IDatabaseInitializer<PaymentsDbContext> innerInitializer)
         {
             this.innerInitializer = innerInitializer;
-        }
-
-        public void InitializeDatabase(PaymentsDbContext context)
-        {
-            this.innerInitializer.InitializeDatabase(context);
-
-            if (!context.Database.SqlQuery<int>("SELECT object_id FROM sys.views WHERE object_id = OBJECT_ID(N'[" + PaymentsReadDbContext.SchemaName + "].[ThirdPartyProcessorPaymentDetailsView]')").Any())
-            {
-                CreateViews(context);
-            }
-
-            context.SaveChanges();
         }
 
         public static void CreateViews(DbContext context)
@@ -63,6 +51,18 @@ FROM " + PaymentsDbContext.SchemaName + ".ThirdPartyProcessorPayments");
             //    Payments.PaymentItems.SeatType as SeatType,
             //    Payments.PaymentItems.Quantity as Quantity
             //FROM Payments.PaymentItems");
+        }
+
+        public void InitializeDatabase(PaymentsDbContext context)
+        {
+            innerInitializer.InitializeDatabase(context);
+
+            if (!context.Database.SqlQuery<int>("SELECT object_id FROM sys.views WHERE object_id = OBJECT_ID(N'[" + PaymentsReadDbContext.SchemaName + "].[ThirdPartyProcessorPaymentDetailsView]')")
+                .Any()) {
+                CreateViews(context);
+            }
+
+            context.SaveChanges();
         }
     }
 }

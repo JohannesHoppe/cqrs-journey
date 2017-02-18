@@ -11,23 +11,23 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Xml.Serialization;
+
 namespace Infrastructure.Azure.BlobStorage
 {
-    using System.Xml.Serialization;
-
     /// <summary>
-    /// Simple settings class to configure the connection to Windows Azure blobs.
+    ///     Simple settings class to configure the connection to Windows Azure blobs.
     /// </summary>
     [XmlRoot("BlobStorage", Namespace = InfrastructureSettings.XmlNamespace)]
     public class BlobStorageSettings
     {
         /// <summary>
-        /// Gets or sets the service URI scheme.
+        ///     Gets or sets the service URI scheme.
         /// </summary>
         public string ConnectionString { get; set; }
 
         /// <summary>
-        /// Gets or sets the name of the Windows Azure blob container used for read models.
+        ///     Gets or sets the name of the Windows Azure blob container used for read models.
         /// </summary>
         public string RootContainerName { get; set; }
     }

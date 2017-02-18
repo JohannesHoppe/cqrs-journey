@@ -11,11 +11,11 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Web.Mvc;
+using Registration.ReadModel;
+
 namespace Conference.Web.Public.Controllers
 {
-    using System.Web.Mvc;
-    using Registration.ReadModel;
-
     public class DefaultController : Controller
     {
         private readonly IConferenceDao dao;
@@ -27,7 +27,7 @@ namespace Conference.Web.Public.Controllers
 
         public ActionResult Index()
         {
-            return View(this.dao.GetPublishedConferences());
+            return View(dao.GetPublishedConferences());
         }
     }
 }

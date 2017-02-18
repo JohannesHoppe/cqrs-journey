@@ -11,135 +11,132 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Text;
+using Infrastructure.Azure.BlobStorage;
+using Microsoft.WindowsAzure;
+using Microsoft.WindowsAzure.StorageClient;
+using Xunit;
+
 namespace Infrastructure.Azure.IntegrationTests.Storage.BlobStorageFixture
 {
-    using System;
-    using System.Text;
-    using Infrastructure.Azure.BlobStorage;
-    using Microsoft.WindowsAzure;
-    using Microsoft.WindowsAzure.StorageClient;
-    using Xunit;
-
     public class given_blob_storage : IDisposable
     {
-        protected readonly CloudBlobStorage sut;
         protected readonly CloudStorageAccount account;
+
         protected readonly string rootContainerName;
+
+        protected readonly CloudBlobStorage sut;
 
         public given_blob_storage()
         {
             var settings = InfrastructureSettings.Read("Settings.xml").BlobStorage;
-            this.account = CloudStorageAccount.Parse(settings.ConnectionString);
-            this.rootContainerName = Guid.NewGuid().ToString();
-            this.sut = new CloudBlobStorage(account, this.rootContainerName);
+            account = CloudStorageAccount.Parse(settings.ConnectionString);
+            rootContainerName = Guid.NewGuid().ToString();
+            sut = new CloudBlobStorage(account, rootContainerName);
         }
 
         public void Dispose()
         {
-            var client = this.account.CreateCloudBlobClient();
-            var containerReference = client.GetContainerReference(this.rootContainerName);
+            var client = account.CreateCloudBlobClient();
+            var containerReference = client.GetContainerReference(rootContainerName);
 
-            try
-            {
+            try {
                 containerReference.Delete();
-            }
-            catch (StorageClientException)
-            {
-            }
+            } catch (StorageClientException) { }
         }
     }
 
     public class when_retrieving_from_non_existing_container : given_blob_storage
     {
-        private byte[] bytes;
+        private readonly byte[] bytes;
 
         public when_retrieving_from_non_existing_container()
         {
-            this.bytes = this.sut.Find(Guid.NewGuid().ToString());
+            bytes = sut.Find(Guid.NewGuid().ToString());
         }
 
         [Fact]
         public void then_returns_null()
         {
-            Assert.Null(this.bytes);
+            Assert.Null(bytes);
         }
     }
 
     public class given_blob_storage_with_existing_root_container : IDisposable
     {
-        protected readonly CloudBlobStorage sut;
         protected readonly CloudStorageAccount account;
+
         protected readonly string rootContainerName;
+
+        protected readonly CloudBlobStorage sut;
 
         public given_blob_storage_with_existing_root_container()
         {
             var settings = InfrastructureSettings.Read("Settings.xml").BlobStorage;
-            this.account = CloudStorageAccount.Parse(settings.ConnectionString);
-            this.rootContainerName = Guid.NewGuid().ToString();
+            account = CloudStorageAccount.Parse(settings.ConnectionString);
+            rootContainerName = Guid.NewGuid().ToString();
 
-            var client = this.account.CreateCloudBlobClient();
-            var containerReference = client.GetContainerReference(this.rootContainerName);
+            var client = account.CreateCloudBlobClient();
+            var containerReference = client.GetContainerReference(rootContainerName);
 
             containerReference.Create();
 
-            this.sut = new CloudBlobStorage(account, this.rootContainerName);
+            sut = new CloudBlobStorage(account, rootContainerName);
         }
 
         public void Dispose()
         {
-            var client = this.account.CreateCloudBlobClient();
-            var containerReference = client.GetContainerReference(this.rootContainerName);
+            var client = account.CreateCloudBlobClient();
+            var containerReference = client.GetContainerReference(rootContainerName);
 
-            try
-            {
+            try {
                 containerReference.Delete();
-            }
-            catch (StorageClientException)
-            {
-            }
+            } catch (StorageClientException) { }
         }
     }
 
     public class when_retrieving_non_existing_blob : given_blob_storage_with_existing_root_container
     {
-        private byte[] bytes;
+        private readonly byte[] bytes;
 
         public when_retrieving_non_existing_blob()
         {
-            this.bytes = this.sut.Find(Guid.NewGuid().ToString());
+            bytes = sut.Find(Guid.NewGuid().ToString());
         }
 
         [Fact]
         public void then_returns_null()
         {
-            Assert.Null(this.bytes);
+            Assert.Null(bytes);
         }
 
         [Fact]
         public void then_can_delete_blob()
         {
-            this.sut.Delete(Guid.NewGuid().ToString());
+            sut.Delete(Guid.NewGuid().ToString());
         }
     }
 
     public class when_saving_blob : given_blob_storage
     {
         private readonly byte[] bytes;
+
         private readonly string id;
 
         public when_saving_blob()
         {
-            this.id = Guid.NewGuid().ToString();
-            this.bytes = Guid.NewGuid().ToByteArray();
+            id = Guid.NewGuid().ToString();
+            bytes = Guid.NewGuid().ToByteArray();
 
-            this.sut.Save(this.id, "text/plain", this.bytes);
+            sut.Save(id, "text/plain", bytes);
         }
 
         [Fact]
         public void then_writes_blob()
         {
-            var client = this.account.CreateCloudBlobClient();
-            var blobReference = client.GetBlobReference(this.rootContainerName + '/' + this.id);
+            var client = account.CreateCloudBlobClient();
+            var blobReference = client.GetBlobReference(rootContainerName + '/' + id);
 
             blobReference.FetchAttributes();
         }
@@ -147,17 +144,17 @@ namespace Infrastructure.Azure.IntegrationTests.Storage.BlobStorageFixture
         [Fact]
         public void then_can_find_blob()
         {
-            var retrievedBytes = this.sut.Find(this.id);
+            var retrievedBytes = sut.Find(id);
 
-            Assert.Equal(this.bytes, retrievedBytes);
+            Assert.Equal(bytes, retrievedBytes);
         }
 
         [Fact]
         public void then_can_delete_blob()
         {
-            this.sut.Delete(this.id);
+            sut.Delete(id);
 
-            var retrievedBytes = this.sut.Find(this.id);
+            var retrievedBytes = sut.Find(id);
 
             Assert.Null(retrievedBytes);
         }
@@ -165,10 +162,10 @@ namespace Infrastructure.Azure.IntegrationTests.Storage.BlobStorageFixture
         [Fact]
         public void then_can_delete_multiple_times()
         {
-            this.sut.Delete(this.id);
-            this.sut.Delete(this.id);
+            sut.Delete(id);
+            sut.Delete(id);
 
-            var retrievedBytes = this.sut.Find(this.id);
+            var retrievedBytes = sut.Find(id);
 
             Assert.Null(retrievedBytes);
         }
@@ -176,11 +173,11 @@ namespace Infrastructure.Azure.IntegrationTests.Storage.BlobStorageFixture
         [Fact]
         public void then_can_overwrite_blob()
         {
-            var newBytes = Encoding.UTF8.GetBytes(Guid.NewGuid().ToString() + Guid.NewGuid().ToString());
+            var newBytes = Encoding.UTF8.GetBytes(Guid.NewGuid() + Guid.NewGuid().ToString());
 
-            this.sut.Save(this.id, "text/plain", newBytes);
+            sut.Save(id, "text/plain", newBytes);
 
-            var retrievedBytes = this.sut.Find(this.id);
+            var retrievedBytes = sut.Find(id);
 
             Assert.Equal(newBytes, retrievedBytes);
         }
@@ -189,21 +186,22 @@ namespace Infrastructure.Azure.IntegrationTests.Storage.BlobStorageFixture
     public class when_saving_blob_with_compound_id : given_blob_storage
     {
         private readonly byte[] bytes;
+
         private readonly string id;
 
         public when_saving_blob_with_compound_id()
         {
-            this.id = Guid.NewGuid().ToString() + '/' + Guid.NewGuid().ToString();
-            this.bytes = Guid.NewGuid().ToByteArray();
+            id = Guid.NewGuid().ToString() + '/' + Guid.NewGuid();
+            bytes = Guid.NewGuid().ToByteArray();
 
-            this.sut.Save(this.id, "text/plain", this.bytes);
+            sut.Save(id, "text/plain", bytes);
         }
 
         [Fact]
         public void then_writes_blob()
         {
-            var client = this.account.CreateCloudBlobClient();
-            var blobReference = client.GetBlobReference(this.rootContainerName + '/' + this.id);
+            var client = account.CreateCloudBlobClient();
+            var blobReference = client.GetBlobReference(rootContainerName + '/' + id);
 
             blobReference.FetchAttributes();
         }
@@ -211,9 +209,9 @@ namespace Infrastructure.Azure.IntegrationTests.Storage.BlobStorageFixture
         [Fact]
         public void then_can_find_blob()
         {
-            var retrievedBytes = this.sut.Find(this.id);
+            var retrievedBytes = sut.Find(id);
 
-            Assert.Equal(this.bytes, retrievedBytes);
+            Assert.Equal(bytes, retrievedBytes);
         }
     }
 }

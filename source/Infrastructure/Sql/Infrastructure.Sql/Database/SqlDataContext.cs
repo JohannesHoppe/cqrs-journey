@@ -11,61 +11,65 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Data;
+using System.Data.Entity;
+using Infrastructure.Database;
+using Infrastructure.Messaging;
+
 namespace Infrastructure.Sql.Database
 {
-    using System;
-    using System.Data.Entity;
-    using Infrastructure.Messaging;
-    using Infrastructure.Database;
-
-    public class SqlDataContext<T> : IDataContext<T> where T : class, IAggregateRoot
+    public class SqlDataContext<T> : IDataContext<T>
+        where T : class, IAggregateRoot
     {
-        private readonly IEventBus eventBus;
         private readonly DbContext context;
+
+        private readonly IEventBus eventBus;
 
         public SqlDataContext(Func<DbContext> contextFactory, IEventBus eventBus)
         {
             this.eventBus = eventBus;
-            this.context = contextFactory.Invoke();
-        }
-
-        public T Find(Guid id)
-        {
-            return this.context.Set<T>().Find(id);
-        }
-
-        public void Save(T aggregateRoot)
-        {
-            var entry = this.context.Entry(aggregateRoot);
-
-            if (entry.State == System.Data.EntityState.Detached)
-                this.context.Set<T>().Add(aggregateRoot);
-
-            // Can't have transactions across storage and message bus.
-            this.context.SaveChanges();
-
-            var eventPublisher = aggregateRoot as IEventPublisher;
-            if (eventPublisher != null)
-                this.eventBus.Publish(eventPublisher.Events);
-        }
-
-        public void Dispose()
-        {
-            this.Dispose(true);
-            GC.SuppressFinalize(this);
+            context = contextFactory.Invoke();
         }
 
         ~SqlDataContext()
         {
-            this.Dispose(false);
+            Dispose(false);
         }
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposing)
-            {
-                this.context.Dispose();
+            if (disposing) {
+                context.Dispose();
             }
+        }
+
+        public T Find(Guid id)
+        {
+            return context.Set<T>().Find(id);
+        }
+
+        public void Save(T aggregateRoot)
+        {
+            var entry = context.Entry(aggregateRoot);
+
+            if (entry.State == EntityState.Detached) {
+                context.Set<T>().Add(aggregateRoot);
+            }
+
+            // Can't have transactions across storage and message bus.
+            context.SaveChanges();
+
+            var eventPublisher = aggregateRoot as IEventPublisher;
+            if (eventPublisher != null) {
+                eventBus.Publish(eventPublisher.Events);
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
 }

@@ -11,64 +11,64 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using Microsoft.WindowsAzure.StorageClient;
+
 namespace Infrastructure.Azure.MessageLog
 {
-    using Microsoft.WindowsAzure.StorageClient;
-
     public class MessageLogEntity : TableServiceEntity
     {
         /// <summary>
-        /// Gets or sets the kind of entry, Command or Event.
+        ///     Gets or sets the kind of entry, Command or Event.
         /// </summary>
         public string Kind { get; set; }
 
         /// <summary>
-        /// Gets or sets the message correlation id.
+        ///     Gets or sets the message correlation id.
         /// </summary>
         public string CorrelationId { get; set; }
 
         /// <summary>
-        /// Gets or sets the message id.
+        ///     Gets or sets the message id.
         /// </summary>
         public string MessageId { get; set; }
 
         /// <summary>
-        /// The identifier of the object that generated the event.
+        ///     The identifier of the object that generated the event.
         /// </summary>
         public string SourceId { get; set; }
 
         /// <summary>
-        /// The simple assembly name of the message payload (i.e. event or command).
+        ///     The simple assembly name of the message payload (i.e. event or command).
         /// </summary>
         public string AssemblyName { get; set; }
 
         /// <summary>
-        /// The namespace of the message payload (i.e. event or command).
+        ///     The namespace of the message payload (i.e. event or command).
         /// </summary>
         public string Namespace { get; set; }
 
         /// <summary>
-        /// The full type name of the message payload (i.e. event or command).
+        ///     The full type name of the message payload (i.e. event or command).
         /// </summary>
         public string FullName { get; set; }
 
         /// <summary>
-        /// The simple type name (without the namespace) of the message payload (i.e. event or command).
+        ///     The simple type name (without the namespace) of the message payload (i.e. event or command).
         /// </summary>
         public string TypeName { get; set; }
 
         /// <summary>
-        /// The name of the entity that originated this message.
+        ///     The name of the entity that originated this message.
         /// </summary>
         public string SourceType { get; set; }
 
         /// <summary>
-        /// The date and time when this message was created (in Round-trip format)
+        ///     The date and time when this message was created (in Round-trip format)
         /// </summary>
         public string CreationDate { get; set; }
 
         /// <summary>
-        /// Gets or sets the payload of the log.
+        ///     Gets or sets the payload of the log.
         /// </summary>
         public string Payload { get; set; }
     }

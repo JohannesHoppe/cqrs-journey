@@ -11,25 +11,26 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+
 namespace Registration.ReadModel
 {
-    using System;
-
     public class DraftOrderItem
     {
+        public Guid OrderId { get; private set; }
+
+        public Guid SeatType { get; set; }
+
+        public int RequestedSeats { get; set; }
+
+        public int ReservedSeats { get; set; }
+
         public DraftOrderItem(Guid seatType, int requestedSeats)
         {
-            this.SeatType = seatType;
-            this.RequestedSeats = requestedSeats;
+            SeatType = seatType;
+            RequestedSeats = requestedSeats;
         }
 
-        protected DraftOrderItem()
-        {
-        }
-
-        public Guid OrderId { get; private set; }
-        public Guid SeatType { get; set; }
-        public int RequestedSeats { get; set; }
-        public int ReservedSeats { get; set; }
+        protected DraftOrderItem() { }
     }
 }

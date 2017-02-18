@@ -11,33 +11,34 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Data.Entity;
+using Conference;
+using Infrastructure;
+using Infrastructure.BlobStorage;
+using Infrastructure.EventSourcing;
+using Infrastructure.Messaging;
+using Infrastructure.Messaging.Handling;
+using Infrastructure.Serialization;
+using Infrastructure.Sql.BlobStorage;
+using Infrastructure.Sql.EventSourcing;
+using Infrastructure.Sql.MessageLog;
+using Infrastructure.Sql.Messaging;
+using Infrastructure.Sql.Messaging.Handling;
+using Infrastructure.Sql.Messaging.Implementation;
+using Microsoft.Practices.Unity;
+using Registration;
+using Registration.Handlers;
+
 namespace WorkerRoleCommandProcessor
 {
-    using System.Data.Entity;
-    using Infrastructure;
-    using Infrastructure.BlobStorage;
-    using Infrastructure.EventSourcing;
-    using Infrastructure.Messaging;
-    using Infrastructure.Messaging.Handling;
-    using Infrastructure.Serialization;
-    using Infrastructure.Sql.BlobStorage;
-    using Infrastructure.Sql.EventSourcing;
-    using Infrastructure.Sql.MessageLog;
-    using Infrastructure.Sql.Messaging;
-    using Infrastructure.Sql.Messaging.Handling;
-    using Infrastructure.Sql.Messaging.Implementation;
-    using Microsoft.Practices.Unity;
-    using Registration;
-    using Registration.Handlers;
-
     /// <summary>
-    /// Local-side of the processor, which is included for compilation conditionally 
-    /// at the csproj level.
+    ///     Local-side of the processor, which is included for compilation conditionally
+    ///     at the csproj level.
     /// </summary>
     /// <devdoc>
-    /// NOTE: this file is only compiled on DebugLocal configurations. In non-DebugLocal 
-    /// you will not see full syntax coloring, intellisense, etc.. But it is still 
-    /// much more readable and usable than a grayed-out piece of code inside an #if
+    ///     NOTE: this file is only compiled on DebugLocal configurations. In non-DebugLocal
+    ///     you will not see full syntax coloring, intellisense, etc.. But it is still
+    ///     much more readable and usable than a grayed-out piece of code inside an #if
     /// </devdoc>
     partial class ConferenceProcessor
     {
@@ -79,7 +80,7 @@ namespace WorkerRoleCommandProcessor
             eventProcessor.Register(container.Resolve<ConferenceViewModelGenerator>());
             eventProcessor.Register(container.Resolve<SeatAssignmentsViewModelGenerator>());
             eventProcessor.Register(container.Resolve<SeatAssignmentsHandler>());
-            eventProcessor.Register(container.Resolve<global::Conference.OrderEventHandler>());
+            eventProcessor.Register(container.Resolve<OrderEventHandler>());
             eventProcessor.Register(container.Resolve<SqlMessageLogHandler>());
         }
 
@@ -94,8 +95,7 @@ namespace WorkerRoleCommandProcessor
         {
             var commandHandlerRegistry = unityContainer.Resolve<ICommandHandlerRegistry>();
 
-            foreach (var commandHandler in unityContainer.ResolveAll<ICommandHandler>())
-            {
+            foreach (var commandHandler in unityContainer.ResolveAll<ICommandHandler>()) {
                 commandHandlerRegistry.Register(commandHandler);
             }
         }

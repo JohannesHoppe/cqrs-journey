@@ -11,16 +11,17 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Diagnostics.CodeAnalysis;
+using Microsoft.WindowsAzure;
+using Microsoft.WindowsAzure.Diagnostics;
+using Microsoft.WindowsAzure.ServiceRuntime;
+
 namespace Conference.Web.Public
 {
-    using System;
-    using Microsoft.WindowsAzure;
-    using Microsoft.WindowsAzure.Diagnostics;
-    using Microsoft.WindowsAzure.ServiceRuntime;
-
     public class WebRole : RoleEntryPoint
     {
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2122:DoNotIndirectlyExposeMethodsWithLinkDemands")]
+        [SuppressMessage("Microsoft.Security", "CA2122:DoNotIndirectlyExposeMethodsWithLinkDemands")]
         public override bool OnStart()
         {
             var config = DiagnosticMonitor.GetDefaultInitialConfiguration();
@@ -39,7 +40,7 @@ namespace Conference.Web.Public
             }
 
             LogLevel logLevel;
-            if (!Enum.TryParse<LogLevel>(RoleEnvironment.GetConfigurationSettingValue("Diagnostics.LogLevelFilter"), out logLevel)) {
+            if (!Enum.TryParse(RoleEnvironment.GetConfigurationSettingValue("Diagnostics.LogLevelFilter"), out logLevel)) {
                 logLevel = LogLevel.Verbose;
             }
 

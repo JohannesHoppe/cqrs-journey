@@ -11,28 +11,27 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
-
+using System.Data.Entity;
+using System.Diagnostics;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+using Conference.Common;
+using Conference.Web.Utils;
+using Infrastructure.Messaging;
+using Infrastructure.Serialization;
+using Infrastructure.Sql.Messaging;
+using Infrastructure.Sql.Messaging.Implementation;
+using Microsoft.WindowsAzure.Diagnostics;
+using Microsoft.WindowsAzure.ServiceRuntime;
 
 namespace Conference.Web.Admin
 {
-    using System.Data.Entity;
-    using System.Web;
-    using System.Web.Mvc;
-    using System.Web.Routing;
-    using Conference.Common;
-    using Conference.Common.Entity;
-    using Conference.Web.Utils;
-    using Infrastructure;
-    using Infrastructure.Messaging;
-    using Infrastructure.Serialization;
 #if LOCAL
-    using Infrastructure.Sql.Messaging;
-    using Infrastructure.Sql.Messaging.Implementation;
 #else
     using Infrastructure.Azure.Messaging;
     using Infrastructure.Azure;
 #endif
-    using Microsoft.WindowsAzure.Diagnostics;
 
     public class MvcApplication : HttpApplication
     {
@@ -49,39 +48,35 @@ namespace Conference.Web.Admin
             routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
 
             routes.MapRoute(
-                name: "Conference.Locate",
-                url: "locate",
-                defaults: new { controller = "Conference", action = "Locate" }
+                "Conference.Locate",
+                "locate",
+                new {controller = "Conference", action = "Locate"}
             );
 
             routes.MapRoute(
-                name: "Conference.Create",
-                url: "create",
-                defaults: new { controller = "Conference", action = "Create" }
+                "Conference.Create",
+                "create",
+                new {controller = "Conference", action = "Create"}
             );
 
             routes.MapRoute(
-                name: "Conference",
-                url: "{slug}/{accessCode}/{action}",
-                defaults: new { controller = "Conference", action = "Index" }
+                "Conference",
+                "{slug}/{accessCode}/{action}",
+                new {controller = "Conference", action = "Index"}
             );
 
             routes.MapRoute(
-                name: "Home",
-                url: "",
-                defaults: new { controller = "Home", action = "Index" }
+                "Home",
+                "",
+                new {controller = "Home", action = "Index"}
             );
-
         }
 
         protected void Application_Start()
         {
 #if AZURESDK
-            Microsoft.WindowsAzure.ServiceRuntime.RoleEnvironment.Changed +=
-                (s, a) =>
-                {
-                    Microsoft.WindowsAzure.ServiceRuntime.RoleEnvironment.RequestRecycle();
-                };
+            RoleEnvironment.Changed +=
+                (s, a) => { RoleEnvironment.RequestRecycle(); };
 #endif
             MaintenanceMode.RefreshIsInMaintainanceMode();
 
@@ -107,10 +102,9 @@ namespace Conference.Web.Admin
 #endif
 
 #if AZURESDK
-            if (Microsoft.WindowsAzure.ServiceRuntime.RoleEnvironment.IsAvailable)
-            {
-                System.Diagnostics.Trace.Listeners.Add(new DiagnosticMonitorTraceListener());
-                System.Diagnostics.Trace.AutoFlush = true;
+            if (RoleEnvironment.IsAvailable) {
+                Trace.Listeners.Add(new DiagnosticMonitorTraceListener());
+                Trace.AutoFlush = true;
             }
 #endif
         }

@@ -11,17 +11,17 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using Infrastructure.Messaging;
+
 namespace Infrastructure.EventSourcing
 {
-    using Infrastructure.Messaging;
-
     /// <summary>
-    /// Represents an event message that belongs to an ordered event stream.
+    ///     Represents an event message that belongs to an ordered event stream.
     /// </summary>
     public interface IVersionedEvent : IEvent
     {
         /// <summary>
-        /// Gets the version or order of the event in the stream.
+        ///     Gets the version or order of the event in the stream.
         /// </summary>
         int Version { get; }
     }

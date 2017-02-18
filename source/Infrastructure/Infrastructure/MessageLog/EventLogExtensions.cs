@@ -12,20 +12,19 @@
 // ==============================================================================================================
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using Infrastructure.Messaging;
 
 namespace Infrastructure.MessageLog
 {
-    using System.Collections;
-    using System.Collections.Generic;
-    using Infrastructure.Messaging;
-
     /// <summary>
-    /// Provides usability overloads and fluent querying API for the event log.
+    ///     Provides usability overloads and fluent querying API for the event log.
     /// </summary>
     public static class EventLogExtensions
     {
         /// <summary>
-        /// Reads all events in the log.
+        ///     Reads all events in the log.
         /// </summary>
         public static IEnumerable<IEvent> ReadAll(this IEventLogReader log)
         {
@@ -33,7 +32,7 @@ namespace Infrastructure.MessageLog
         }
 
         /// <summary>
-        /// Queries the specified log using a fluent API.
+        ///     Queries the specified log using a fluent API.
         /// </summary>
         public static IEventQuery Query(this IEventLogReader log)
         {
@@ -41,54 +40,55 @@ namespace Infrastructure.MessageLog
         }
 
         /// <summary>
-        /// Provides a fluent API to filter events from the event log. 
+        ///     Provides a fluent API to filter events from the event log.
         /// </summary>
-        public partial interface IEventQuery : IEnumerable<IEvent>
+        public interface IEventQuery : IEnumerable<IEvent>
         {
             /// <summary>
-            /// Executes the query built using the fluent API 
-            /// against the underlying store.
+            ///     Executes the query built using the fluent API
+            ///     against the underlying store.
             /// </summary>
             IEnumerable<IEvent> Execute();
 
             /// <summary>
-            /// Filters events with a matching type name metadata.
+            ///     Filters events with a matching type name metadata.
             /// </summary>
             IEventQuery WithTypeName(string typeName);
 
             /// <summary>
-            /// Filters events with a matching full type name metadata.
+            ///     Filters events with a matching full type name metadata.
             /// </summary>
             IEventQuery WithFullName(string fullName);
 
             /// <summary>
-            /// Filters events with a matching assembly name metadata.
+            ///     Filters events with a matching assembly name metadata.
             /// </summary>
             IEventQuery FromAssembly(string assemblyName);
 
             /// <summary>
-            /// Filters events with a matching namespace metadata.
+            ///     Filters events with a matching namespace metadata.
             /// </summary>
             IEventQuery FromNamespace(string @namespace);
 
             /// <summary>
-            /// Filters events with a matching source type name metadata.
+            ///     Filters events with a matching source type name metadata.
             /// </summary>
             IEventQuery FromSource(string sourceType);
 
             /// <summary>
-            /// Filters events that occurred until the specified date.
+            ///     Filters events that occurred until the specified date.
             /// </summary>
             IEventQuery Until(DateTime endDate);
         }
 
         /// <summary>
-        /// Implements the criteria builder fluent API.
+        ///     Implements the criteria builder fluent API.
         /// </summary>
         private class EventQuery : IEventQuery, IEnumerable<IEvent>
         {
-            private IEventLogReader log;
-            private QueryCriteria criteria = new QueryCriteria();
+            private readonly QueryCriteria criteria = new QueryCriteria();
+
+            private readonly IEventLogReader log;
 
             public EventQuery(IEventLogReader log)
             {
@@ -97,17 +97,17 @@ namespace Infrastructure.MessageLog
 
             public IEnumerable<IEvent> Execute()
             {
-                return log.Query(this.criteria);
+                return log.Query(criteria);
             }
 
             public IEnumerator<IEvent> GetEnumerator()
             {
-                return this.Execute().GetEnumerator();
+                return Execute().GetEnumerator();
             }
 
             IEnumerator IEnumerable.GetEnumerator()
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
 
             public IEventQuery WithTypeName(string typeName)

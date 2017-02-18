@@ -11,10 +11,10 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+
 namespace Registration
 {
-    using System;
-
     public class OrderLine
     {
         public decimal LineTotal { get; set; }

@@ -11,39 +11,41 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Data.Entity;
+using System.Linq;
+using System.Threading;
+using Conference;
+using Infrastructure;
+using Infrastructure.Database;
+using Infrastructure.Messaging;
+using Infrastructure.Messaging.Handling;
+using Infrastructure.Processes;
+using Infrastructure.Serialization;
+using Infrastructure.Sql.Database;
+using Infrastructure.Sql.Processes;
+using Microsoft.Practices.Unity;
+using Payments;
+using Payments.Database;
+using Payments.Handlers;
+using Registration;
+using Registration.Database;
+using Registration.Handlers;
+using Registration.ReadModel;
+using Registration.ReadModel.Implementation;
+
 namespace WorkerRoleCommandProcessor
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Data.Entity;
-    using System.Linq;
-    using System.Threading;
-    using Infrastructure;
-    using Infrastructure.BlobStorage;
-    using Infrastructure.Database;
-    using Infrastructure.Messaging;
-    using Infrastructure.Messaging.Handling;
-    using Infrastructure.Processes;
-    using Infrastructure.Serialization;
-    using Infrastructure.Sql.BlobStorage;
-    using Infrastructure.Sql.Database;
-    using Infrastructure.Sql.Processes;
-    using Microsoft.Practices.Unity;
-    using Payments;
-    using Payments.Database;
-    using Payments.Handlers;
-    using Registration;
-    using Registration.Database;
-    using Registration.Handlers;
-    using Registration.ReadModel;
-    using Registration.ReadModel.Implementation;
-
     public sealed partial class ConferenceProcessor : IDisposable
     {
-        private IUnityContainer container;
-        private CancellationTokenSource cancellationTokenSource;
-        private List<IProcessor> processors;
-        private bool instrumentationEnabled;
+        private readonly CancellationTokenSource cancellationTokenSource;
+
+        private readonly IUnityContainer container;
+
+        private readonly bool instrumentationEnabled;
+
+        private readonly List<IProcessor> processors;
 
         public ConferenceProcessor(bool instrumentationEnabled = false)
         {
@@ -51,28 +53,22 @@ namespace WorkerRoleCommandProcessor
 
             OnCreating();
 
-            this.cancellationTokenSource = new CancellationTokenSource();
-            this.container = CreateContainer();
+            cancellationTokenSource = new CancellationTokenSource();
+            container = CreateContainer();
 
-            this.processors = this.container.ResolveAll<IProcessor>().ToList();
+            processors = container.ResolveAll<IProcessor>().ToList();
         }
 
         public void Start()
         {
-            this.processors.ForEach(p => p.Start());
+            processors.ForEach(p => p.Start());
         }
 
         public void Stop()
         {
-            this.cancellationTokenSource.Cancel();
+            cancellationTokenSource.Cancel();
 
-            this.processors.ForEach(p => p.Stop());
-        }
-
-        public void Dispose()
-        {
-            this.container.Dispose();
-            this.cancellationTokenSource.Dispose();
+            processors.ForEach(p => p.Stop());
         }
 
         private UnityContainer CreateContainer()
@@ -108,7 +104,7 @@ namespace WorkerRoleCommandProcessor
             container.RegisterType<ICommandHandler, SeatAssignmentsHandler>("SeatAssignmentsHandler");
 
             // Conference management integration
-            container.RegisterType<global::Conference.ConferenceContext>(new TransientLifetimeManager(), new InjectionConstructor("ConferenceManagement"));
+            container.RegisterType<ConferenceContext>(new TransientLifetimeManager(), new InjectionConstructor("ConferenceManagement"));
 
             OnCreateContainer(container);
 
@@ -116,6 +112,13 @@ namespace WorkerRoleCommandProcessor
         }
 
         partial void OnCreating();
+
         partial void OnCreateContainer(UnityContainer container);
+
+        public void Dispose()
+        {
+            container.Dispose();
+            cancellationTokenSource.Dispose();
+        }
     }
 }

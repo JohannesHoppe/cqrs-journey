@@ -11,70 +11,59 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Diagnostics;
+
 namespace Infrastructure.Azure.Instrumentation
 {
-    using System;
-    using System.Diagnostics;
-
     public class SessionSubscriptionReceiverInstrumentation : SubscriptionReceiverInstrumentation, ISessionSubscriptionReceiverInstrumentation
     {
         public const string TotalSessionsCounterName = "Total sessions";
+
         public const string CurrentSessionsCounterName = "Current sessions";
 
-        private readonly PerformanceCounter totalSessionsCounter;
         private readonly PerformanceCounter currentSessionsCounter;
+
+        private readonly PerformanceCounter totalSessionsCounter;
 
         public SessionSubscriptionReceiverInstrumentation(string instanceName, bool instrumentationEnabled)
             : base(instanceName, instrumentationEnabled)
         {
-            if (this.InstrumentationEnabled)
-            {
-                this.totalSessionsCounter = new PerformanceCounter(Constants.ReceiversPerformanceCountersCategory, TotalSessionsCounterName, this.InstanceName, false);
-                this.currentSessionsCounter = new PerformanceCounter(Constants.ReceiversPerformanceCountersCategory, CurrentSessionsCounterName, this.InstanceName, false);
+            if (InstrumentationEnabled) {
+                totalSessionsCounter = new PerformanceCounter(Constants.ReceiversPerformanceCountersCategory, TotalSessionsCounterName, InstanceName, false);
+                currentSessionsCounter = new PerformanceCounter(Constants.ReceiversPerformanceCountersCategory, CurrentSessionsCounterName, InstanceName, false);
 
-                this.totalSessionsCounter.RawValue = 0;
-                this.currentSessionsCounter.RawValue = 0;
-            }
-        }
-
-        public void SessionStarted()
-        {
-            if (this.InstrumentationEnabled)
-            {
-                try
-                {
-                    this.totalSessionsCounter.Increment();
-                    this.currentSessionsCounter.Increment();
-                }
-                catch (ObjectDisposedException)
-                {
-                }
-            }
-        }
-
-        public void SessionEnded()
-        {
-            if (this.InstrumentationEnabled)
-            {
-                try
-                {
-                    this.currentSessionsCounter.Decrement();
-                }
-                catch (ObjectDisposedException)
-                {
-                }
+                totalSessionsCounter.RawValue = 0;
+                currentSessionsCounter.RawValue = 0;
             }
         }
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing)
-            {
-                if (this.InstrumentationEnabled)
-                {
-                    this.totalSessionsCounter.Dispose();
-                    this.currentSessionsCounter.Dispose();
+            if (disposing) {
+                if (InstrumentationEnabled) {
+                    totalSessionsCounter.Dispose();
+                    currentSessionsCounter.Dispose();
                 }
+            }
+        }
+
+        public void SessionStarted()
+        {
+            if (InstrumentationEnabled) {
+                try {
+                    totalSessionsCounter.Increment();
+                    currentSessionsCounter.Increment();
+                } catch (ObjectDisposedException) { }
+            }
+        }
+
+        public void SessionEnded()
+        {
+            if (InstrumentationEnabled) {
+                try {
+                    currentSessionsCounter.Decrement();
+                } catch (ObjectDisposedException) { }
             }
         }
     }

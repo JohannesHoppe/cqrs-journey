@@ -11,20 +11,21 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Threading;
+using System.Web.Mvc;
+using Infrastructure.Messaging;
+using Payments.Contracts.Commands;
+using Payments.ReadModel;
+
 namespace Conference.Web.Public.Controllers
 {
-    using System;
-    using System.Threading;
-    using System.Web.Mvc;
-    using Infrastructure.Messaging;
-    using Payments.Contracts.Commands;
-    using Payments.ReadModel;
-
     public class PaymentController : Controller
     {
         private const int WaitTimeoutInSeconds = 5;
 
         private readonly ICommandBus commandBus;
+
         private readonly IPaymentDao paymentDao;
 
         public PaymentController(ICommandBus commandBus, IPaymentDao paymentDao)
@@ -35,23 +36,21 @@ namespace Conference.Web.Public.Controllers
 
         public ActionResult ThirdPartyProcessorPayment(string conferenceCode, Guid paymentId, string paymentAcceptedUrl, string paymentRejectedUrl)
         {
-            var returnUrl = Url.Action("ThirdPartyProcessorPaymentAccepted", new { conferenceCode, paymentId, paymentAcceptedUrl });
-            var cancelReturnUrl = Url.Action("ThirdPartyProcessorPaymentRejected", new { conferenceCode, paymentId, paymentRejectedUrl });
+            var returnUrl = Url.Action("ThirdPartyProcessorPaymentAccepted", new {conferenceCode, paymentId, paymentAcceptedUrl});
+            var cancelReturnUrl = Url.Action("ThirdPartyProcessorPaymentRejected", new {conferenceCode, paymentId, paymentRejectedUrl});
 
             // TODO retrieve payment information from payment read model
 
-            var paymentDTO = this.WaitUntilAvailable(paymentId);
-            if (paymentDTO == null)
-            {
-                return this.View("WaitForPayment");
+            var paymentDTO = WaitUntilAvailable(paymentId);
+            if (paymentDTO == null) {
+                return View("WaitForPayment");
             }
 
             var paymentProcessorUrl =
-                this.Url.Action(
+                Url.Action(
                     "Pay",
                     "ThirdPartyProcessorPayment",
-                    new
-                    {
+                    new {
                         area = "ThirdPartyProcessor",
                         itemName = paymentDTO.Description,
                         itemAmount = paymentDTO.TotalAmount,
@@ -60,33 +59,31 @@ namespace Conference.Web.Public.Controllers
                     });
 
             // redirect to external site
-            return this.Redirect(paymentProcessorUrl);
+            return Redirect(paymentProcessorUrl);
         }
 
         public ActionResult ThirdPartyProcessorPaymentAccepted(string conferenceCode, Guid paymentId, string paymentAcceptedUrl)
         {
-            this.commandBus.Send(new CompleteThirdPartyProcessorPayment { PaymentId = paymentId });
+            commandBus.Send(new CompleteThirdPartyProcessorPayment {PaymentId = paymentId});
 
-            return this.Redirect(paymentAcceptedUrl);
+            return Redirect(paymentAcceptedUrl);
         }
 
         public ActionResult ThirdPartyProcessorPaymentRejected(string conferenceCode, Guid paymentId, string paymentRejectedUrl)
         {
-            this.commandBus.Send(new CancelThirdPartyProcessorPayment { PaymentId = paymentId });
+            commandBus.Send(new CancelThirdPartyProcessorPayment {PaymentId = paymentId});
 
-            return this.Redirect(paymentRejectedUrl);
+            return Redirect(paymentRejectedUrl);
         }
 
         private ThirdPartyProcessorPaymentDetails WaitUntilAvailable(Guid paymentId)
         {
             var deadline = DateTime.Now.AddSeconds(WaitTimeoutInSeconds);
 
-            while (DateTime.Now < deadline)
-            {
-                var paymentDTO = this.paymentDao.GetThirdPartyProcessorPaymentDetails(paymentId);
+            while (DateTime.Now < deadline) {
+                var paymentDTO = paymentDao.GetThirdPartyProcessorPaymentDetails(paymentId);
 
-                if (paymentDTO != null)
-                {
+                if (paymentDTO != null) {
                     return paymentDTO;
                 }
 

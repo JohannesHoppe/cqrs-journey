@@ -11,13 +11,14 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Collections.Generic;
+
 namespace Infrastructure.Messaging
 {
-    using System.Collections.Generic;
-
     public interface ICommandBus
     {
         void Send(Envelope<ICommand> command);
+
         void Send(IEnumerable<Envelope<ICommand>> commands);
     }
 }

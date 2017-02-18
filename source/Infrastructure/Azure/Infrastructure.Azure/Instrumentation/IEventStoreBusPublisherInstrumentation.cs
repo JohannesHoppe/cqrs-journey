@@ -16,9 +16,11 @@ namespace Infrastructure.Azure.Instrumentation
     public interface IEventStoreBusPublisherInstrumentation
     {
         void EventsPublishingRequested(int eventCount);
+
         void EventPublished();
 
         void EventPublisherStarted();
+
         void EventPublisherFinished();
     }
 }

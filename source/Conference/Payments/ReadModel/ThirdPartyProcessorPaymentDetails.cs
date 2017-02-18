@@ -11,42 +11,39 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.ComponentModel.DataAnnotations;
+
 namespace Payments.ReadModel
 {
-    using System;
-    using System.ComponentModel.DataAnnotations;
-
     public class ThirdPartyProcessorPaymentDetails
     {
-        public ThirdPartyProcessorPaymentDetails(Guid id, ThirdPartyProcessorPayment.States state, Guid paymentSourceId, string description, decimal totalAmount)
-        {
-            this.Id = id;
-            this.State = state;
-            this.PaymentSourceId = paymentSourceId;
-            this.Description = description;
-            this.TotalAmount = totalAmount;
-        }
-
-        protected ThirdPartyProcessorPaymentDetails()
-        {
-        }
-
         [Key]
-        public Guid Id { get; private set; }
+        public Guid Id { get; }
 
         public int StateValue { get; private set; }
 
         [NotMapped]
-        public ThirdPartyProcessorPayment.States State
-        {
-            get { return (ThirdPartyProcessorPayment.States)this.StateValue; }
-            set { this.StateValue = (int)value; }
+        public ThirdPartyProcessorPayment.States State {
+            get { return (ThirdPartyProcessorPayment.States) StateValue; }
+            set { StateValue = (int) value; }
         }
 
-        public Guid PaymentSourceId { get; private set; }
+        public Guid PaymentSourceId { get; }
 
-        public string Description { get; private set; }
+        public string Description { get; }
 
-        public decimal TotalAmount { get; private set; }
+        public decimal TotalAmount { get; }
+
+        public ThirdPartyProcessorPaymentDetails(Guid id, ThirdPartyProcessorPayment.States state, Guid paymentSourceId, string description, decimal totalAmount)
+        {
+            Id = id;
+            State = state;
+            PaymentSourceId = paymentSourceId;
+            Description = description;
+            TotalAmount = totalAmount;
+        }
+
+        protected ThirdPartyProcessorPaymentDetails() { }
     }
 }

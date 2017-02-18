@@ -3,7 +3,7 @@
 @foreach (var item in Model) {
     <tr data-pkey="@item.Id">
         <td>
-            <a href="#makeRowEditable" class="makeRowEditable">@item.Name</a> 
+            <a href="#makeRowEditable" class="makeRowEditable">@item.Name</a>
         </td>
         <td>
             @Html.DisplayFor(modelItem => item.Description)

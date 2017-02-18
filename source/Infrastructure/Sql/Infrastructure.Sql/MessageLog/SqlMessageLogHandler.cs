@@ -11,33 +11,33 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using Infrastructure.Messaging;
+using Infrastructure.Messaging.Handling;
+
 namespace Infrastructure.Sql.MessageLog
 {
-    using Infrastructure.Messaging;
-    using Infrastructure.Messaging.Handling;
-
     /// <summary>
-    /// The SQL version of the event log runs directly in-proc 
-    /// and is implemented as an event and command handler instead of a 
-    /// raw message listener.
+    ///     The SQL version of the event log runs directly in-proc
+    ///     and is implemented as an event and command handler instead of a
+    ///     raw message listener.
     /// </summary>
     public class SqlMessageLogHandler : IEventHandler<IEvent>, ICommandHandler<ICommand>
     {
-        private SqlMessageLog log;
+        private readonly SqlMessageLog log;
 
         public SqlMessageLogHandler(SqlMessageLog log)
         {
             this.log = log;
         }
 
-        public void Handle(IEvent @event)
-        {
-            this.log.Save(@event);
-        }
-
         public void Handle(ICommand command)
         {
-            this.log.Save(command);
+            log.Save(command);
+        }
+
+        public void Handle(IEvent @event)
+        {
+            log.Save(@event);
         }
     }
 }

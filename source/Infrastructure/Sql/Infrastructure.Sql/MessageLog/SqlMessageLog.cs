@@ -11,21 +11,23 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using Infrastructure.MessageLog;
+using Infrastructure.Messaging;
+using Infrastructure.Serialization;
+
 namespace Infrastructure.Sql.MessageLog
 {
-    using System;
-    using System.Collections;
-    using System.Collections.Generic;
-    using System.Linq;
-    using Infrastructure.MessageLog;
-    using Infrastructure.Messaging;
-    using Infrastructure.Serialization;
-
     public class SqlMessageLog : IEventLogReader
     {
-        private string nameOrConnectionString;
-        private IMetadataProvider metadataProvider;
-        private ITextSerializer serializer;
+        private readonly IMetadataProvider metadataProvider;
+
+        private readonly string nameOrConnectionString;
+
+        private readonly ITextSerializer serializer;
 
         public SqlMessageLog(string nameOrConnectionString, ITextSerializer serializer, IMetadataProvider metadataProvider)
         {
@@ -36,60 +38,60 @@ namespace Infrastructure.Sql.MessageLog
 
         public void Save(IEvent @event)
         {
-            using (var context = new MessageLogDbContext(this.nameOrConnectionString))
-            {
-                var metadata = this.metadataProvider.GetMetadata(@event);
+            using (var context = new MessageLogDbContext(nameOrConnectionString)) {
+                var metadata = metadataProvider.GetMetadata(@event);
 
-                context.Set<MessageLogEntity>().Add(new MessageLogEntity
-                {
-                    Id = Guid.NewGuid(),
-                    SourceId = @event.SourceId.ToString(),
-                    Kind = metadata.TryGetValue(StandardMetadata.Kind),
-                    AssemblyName = metadata.TryGetValue(StandardMetadata.AssemblyName),
-                    FullName = metadata.TryGetValue(StandardMetadata.FullName),
-                    Namespace = metadata.TryGetValue(StandardMetadata.Namespace),
-                    TypeName = metadata.TryGetValue(StandardMetadata.TypeName),
-                    SourceType = metadata.TryGetValue(StandardMetadata.SourceType) as string,
-                    CreationDate = DateTime.UtcNow.ToString("o"),
-                    Payload = serializer.Serialize(@event),
-                });
+                context.Set<MessageLogEntity>()
+                    .Add(new MessageLogEntity {
+                        Id = Guid.NewGuid(),
+                        SourceId = @event.SourceId.ToString(),
+                        Kind = metadata.TryGetValue(StandardMetadata.Kind),
+                        AssemblyName = metadata.TryGetValue(StandardMetadata.AssemblyName),
+                        FullName = metadata.TryGetValue(StandardMetadata.FullName),
+                        Namespace = metadata.TryGetValue(StandardMetadata.Namespace),
+                        TypeName = metadata.TryGetValue(StandardMetadata.TypeName),
+                        SourceType = metadata.TryGetValue(StandardMetadata.SourceType),
+                        CreationDate = DateTime.UtcNow.ToString("o"),
+                        Payload = serializer.Serialize(@event)
+                    });
                 context.SaveChanges();
             }
         }
 
         public void Save(ICommand command)
         {
-            using (var context = new MessageLogDbContext(this.nameOrConnectionString))
-            {
-                var metadata = this.metadataProvider.GetMetadata(command);
+            using (var context = new MessageLogDbContext(nameOrConnectionString)) {
+                var metadata = metadataProvider.GetMetadata(command);
 
-                context.Set<MessageLogEntity>().Add(new MessageLogEntity
-                {
-                    Id = Guid.NewGuid(),
-                    SourceId = command.Id.ToString(),
-                    Kind = metadata.TryGetValue(StandardMetadata.Kind),
-                    AssemblyName = metadata.TryGetValue(StandardMetadata.AssemblyName),
-                    FullName = metadata.TryGetValue(StandardMetadata.FullName),
-                    Namespace = metadata.TryGetValue(StandardMetadata.Namespace),
-                    TypeName = metadata.TryGetValue(StandardMetadata.TypeName),
-                    SourceType = metadata.TryGetValue(StandardMetadata.SourceType) as string,
-                    CreationDate = DateTime.UtcNow.ToString("o"),
-                    Payload = serializer.Serialize(command),
-                });
+                context.Set<MessageLogEntity>()
+                    .Add(new MessageLogEntity {
+                        Id = Guid.NewGuid(),
+                        SourceId = command.Id.ToString(),
+                        Kind = metadata.TryGetValue(StandardMetadata.Kind),
+                        AssemblyName = metadata.TryGetValue(StandardMetadata.AssemblyName),
+                        FullName = metadata.TryGetValue(StandardMetadata.FullName),
+                        Namespace = metadata.TryGetValue(StandardMetadata.Namespace),
+                        TypeName = metadata.TryGetValue(StandardMetadata.TypeName),
+                        SourceType = metadata.TryGetValue(StandardMetadata.SourceType),
+                        CreationDate = DateTime.UtcNow.ToString("o"),
+                        Payload = serializer.Serialize(command)
+                    });
                 context.SaveChanges();
             }
         }
 
         public IEnumerable<IEvent> Query(QueryCriteria criteria)
         {
-            return new SqlQuery(this.nameOrConnectionString, this.serializer, criteria);
+            return new SqlQuery(nameOrConnectionString, serializer, criteria);
         }
 
         private class SqlQuery : IEnumerable<IEvent>
         {
-            private string nameOrConnectionString;
-            private ITextSerializer serializer;
-            private QueryCriteria criteria;
+            private readonly QueryCriteria criteria;
+
+            private readonly string nameOrConnectionString;
+
+            private readonly ITextSerializer serializer;
 
             public SqlQuery(string nameOrConnectionString, ITextSerializer serializer, QueryCriteria criteria)
             {
@@ -110,9 +112,11 @@ namespace Infrastructure.Sql.MessageLog
 
             private class DisposingEnumerator : IEnumerator<IEvent>
             {
-                private SqlQuery sqlQuery;
                 private MessageLogDbContext context;
+
                 private IEnumerator<IEvent> events;
+
+                private readonly SqlQuery sqlQuery;
 
                 public DisposingEnumerator(SqlQuery sqlQuery)
                 {
@@ -121,41 +125,47 @@ namespace Infrastructure.Sql.MessageLog
 
                 ~DisposingEnumerator()
                 {
-                    if (context != null) context.Dispose();
+                    if (context != null) {
+                        context.Dispose();
+                    }
                 }
 
                 public void Dispose()
                 {
-                    if (context != null)
-                    {
+                    if (context != null) {
                         context.Dispose();
                         context = null;
                         GC.SuppressFinalize(this);
                     }
-                    if (events != null)
-                    {
+                    if (events != null) {
                         events.Dispose();
                     }
                 }
 
-                public IEvent Current { get { return events.Current; } }
-                object IEnumerator.Current { get { return this.Current; } }
+                public IEvent Current {
+                    get { return events.Current; }
+                }
+
+                object IEnumerator.Current {
+                    get { return Current; }
+                }
 
                 public bool MoveNext()
                 {
-                    if (context == null)
-                    {
+                    if (context == null) {
                         context = new MessageLogDbContext(sqlQuery.nameOrConnectionString);
-                        var queryable = context.Set<MessageLogEntity>().AsQueryable()
+                        var queryable = context.Set<MessageLogEntity>()
+                            .AsQueryable()
                             .Where(x => x.Kind == StandardMetadata.EventKind);
 
                         var where = sqlQuery.criteria.ToExpression();
-                        if (where != null)
+                        if (where != null) {
                             queryable = queryable.Where(where);
+                        }
 
                         events = queryable
                             .AsEnumerable()
-                            .Select(x => this.sqlQuery.serializer.Deserialize<IEvent>(x.Payload))
+                            .Select(x => sqlQuery.serializer.Deserialize<IEvent>(x.Payload))
                             .GetEnumerator();
                     }
 

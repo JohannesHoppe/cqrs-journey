@@ -11,25 +11,26 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Linq;
+using Infrastructure.Database;
+using Moq;
+using Payments.Contracts.Commands;
+using Payments.Handlers;
+using Xunit;
+
 namespace Payments.Tests.ThirdPartyProcessorPaymentCommandHandlerFixture
 {
-    using System;
-    using System.Linq;
-    using Infrastructure.Database;
-    using Moq;
-    using Payments.Contracts.Commands;
-    using Payments.Handlers;
-    using Xunit;
-
     public class given_no_payment
     {
-        private Mock<IDataContext<ThirdPartyProcessorPayment>> contextMock;
-        private ThirdPartyProcessorPaymentCommandHandler handler;
+        private readonly Mock<IDataContext<ThirdPartyProcessorPayment>> contextMock;
+
+        private readonly ThirdPartyProcessorPaymentCommandHandler handler;
 
         public given_no_payment()
         {
-            this.contextMock = new Mock<IDataContext<ThirdPartyProcessorPayment>>();
-            this.handler = new ThirdPartyProcessorPaymentCommandHandler(() => this.contextMock.Object);
+            contextMock = new Mock<IDataContext<ThirdPartyProcessorPayment>>();
+            handler = new ThirdPartyProcessorPaymentCommandHandler(() => contextMock.Object);
         }
 
         [Fact]
@@ -40,19 +41,17 @@ namespace Payments.Tests.ThirdPartyProcessorPaymentCommandHandlerFixture
             var paymentId = Guid.NewGuid();
             var conferenceId = Guid.NewGuid();
 
-            this.contextMock
+            contextMock
                 .Setup(x => x.Save(It.IsAny<ThirdPartyProcessorPayment>()))
                 .Callback<ThirdPartyProcessorPayment>(p => payment = p);
 
-            this.handler.Handle(
-                new InitiateThirdPartyProcessorPayment
-                {
+            handler.Handle(
+                new InitiateThirdPartyProcessorPayment {
                     PaymentId = paymentId,
                     PaymentSourceId = orderId,
                     ConferenceId = conferenceId,
-                    Items = 
-                    { 
-                        new InitiateThirdPartyProcessorPayment.PaymentItem{ Description = "payment", Amount = 100 } 
+                    Items = {
+                        new InitiateThirdPartyProcessorPayment.PaymentItem {Description = "payment", Amount = 100}
                     }
                 });
 
@@ -65,15 +64,17 @@ namespace Payments.Tests.ThirdPartyProcessorPaymentCommandHandlerFixture
 
     public class given_initiated_payment
     {
-        private Mock<IDataContext<ThirdPartyProcessorPayment>> contextMock;
-        private ThirdPartyProcessorPayment payment;
-        private ThirdPartyProcessorPaymentCommandHandler handler;
+        private readonly Mock<IDataContext<ThirdPartyProcessorPayment>> contextMock;
+
+        private readonly ThirdPartyProcessorPaymentCommandHandler handler;
+
+        private readonly ThirdPartyProcessorPayment payment;
 
         public given_initiated_payment()
         {
-            this.contextMock = new Mock<IDataContext<ThirdPartyProcessorPayment>>();
-            this.payment = new ThirdPartyProcessorPayment(Guid.NewGuid(), Guid.NewGuid(), "payment", 100, new ThidPartyProcessorPaymentItem[0]);
-            this.handler = new ThirdPartyProcessorPaymentCommandHandler(() => this.contextMock.Object);
+            contextMock = new Mock<IDataContext<ThirdPartyProcessorPayment>>();
+            payment = new ThirdPartyProcessorPayment(Guid.NewGuid(), Guid.NewGuid(), "payment", 100, new ThidPartyProcessorPaymentItem[0]);
+            handler = new ThirdPartyProcessorPaymentCommandHandler(() => contextMock.Object);
 
             contextMock.Setup(x => x.Find(payment.Id)).Returns(payment);
         }
@@ -81,27 +82,25 @@ namespace Payments.Tests.ThirdPartyProcessorPaymentCommandHandlerFixture
         [Fact]
         public void when_completing_payment_then_updates_payment()
         {
-            this.handler.Handle(
-                new CompleteThirdPartyProcessorPayment
-                {
-                    PaymentId = this.payment.Id
+            handler.Handle(
+                new CompleteThirdPartyProcessorPayment {
+                    PaymentId = payment.Id
                 });
 
-            Assert.Equal(ThirdPartyProcessorPayment.States.Completed, this.payment.State);
-            this.contextMock.Verify(r => r.Save(this.payment), Times.Once());
+            Assert.Equal(ThirdPartyProcessorPayment.States.Completed, payment.State);
+            contextMock.Verify(r => r.Save(payment), Times.Once());
         }
 
         [Fact]
         public void when_cancelling_payment_then_updates_payment()
         {
-            this.handler.Handle(
-                new CancelThirdPartyProcessorPayment
-                {
-                    PaymentId = this.payment.Id
+            handler.Handle(
+                new CancelThirdPartyProcessorPayment {
+                    PaymentId = payment.Id
                 });
 
-            Assert.Equal(ThirdPartyProcessorPayment.States.Rejected, this.payment.State);
-            this.contextMock.Verify(r => r.Save(this.payment), Times.Once());
+            Assert.Equal(ThirdPartyProcessorPayment.States.Rejected, payment.State);
+            contextMock.Verify(r => r.Save(payment), Times.Once());
         }
     }
 }

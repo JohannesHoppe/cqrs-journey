@@ -20,52 +20,52 @@ namespace Registration.Tests
         [Fact]
         public void when_comparing_to_null_object_then_equals_false()
         {
-            Assert.False(new PersonalInfo().Equals((object)null));
+            Assert.False(new PersonalInfo().Equals((object) null));
         }
 
         [Fact]
         public void when_comparing_to_null_then_equals_false()
         {
-            Assert.False(new PersonalInfo().Equals((PersonalInfo)null));
+            Assert.False(new PersonalInfo().Equals(null));
         }
 
         [Fact]
         public void when_comparing_value_equal_then_returns_true()
         {
             Assert.Equal(
-                new PersonalInfo { Email = "test@contoso.com" },
-                new PersonalInfo { Email = "test@contoso.com" });
+                new PersonalInfo {Email = "test@contoso.com"},
+                new PersonalInfo {Email = "test@contoso.com"});
 
             Assert.Equal(
-                new PersonalInfo { FirstName = "test@contoso.com" },
-                new PersonalInfo { FirstName = "test@contoso.com" });
+                new PersonalInfo {FirstName = "test@contoso.com"},
+                new PersonalInfo {FirstName = "test@contoso.com"});
 
             Assert.Equal(
-                new PersonalInfo { LastName = "test@contoso.com" },
-                new PersonalInfo { LastName = "test@contoso.com" });
+                new PersonalInfo {LastName = "test@contoso.com"},
+                new PersonalInfo {LastName = "test@contoso.com"});
 
             Assert.Equal(
-                new PersonalInfo { Email = "test@contoso.com", FirstName = "test" },
-                new PersonalInfo { Email = "test@contoso.com", FirstName = "test" });
+                new PersonalInfo {Email = "test@contoso.com", FirstName = "test"},
+                new PersonalInfo {Email = "test@contoso.com", FirstName = "test"});
 
             Assert.Equal(
-                new PersonalInfo { Email = "test@contoso.com", FirstName = "test", LastName = "one" },
-                new PersonalInfo { Email = "test@contoso.com", FirstName = "test", LastName = "one" });
+                new PersonalInfo {Email = "test@contoso.com", FirstName = "test", LastName = "one"},
+                new PersonalInfo {Email = "test@contoso.com", FirstName = "test", LastName = "one"});
         }
 
         [Fact]
         public void when_comparing_with_operator_overload_then_succeeds()
         {
             Assert.True(
-                new PersonalInfo { Email = "test@contoso.com" } == new PersonalInfo { Email = "test@contoso.com" });
+                new PersonalInfo {Email = "test@contoso.com"} == new PersonalInfo {Email = "test@contoso.com"});
             Assert.True(
-                new PersonalInfo { Email = "test@contoso.com" } != new PersonalInfo { Email = "hello@world.com" });
+                new PersonalInfo {Email = "test@contoso.com"} != new PersonalInfo {Email = "hello@world.com"});
         }
 
         [Fact]
         public void when_comparing_to_null_with_operator_overload_then_succeeds()
         {
-            Assert.True(((PersonalInfo)null) == null);
+            Assert.True((PersonalInfo) null == null);
             Assert.True(new PersonalInfo() != null);
             Assert.True(null != new PersonalInfo());
         }

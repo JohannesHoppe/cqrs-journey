@@ -11,20 +11,20 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Threading;
+using Infrastructure.Azure.Messaging;
+using Infrastructure.Azure.Messaging.Handling;
+using Infrastructure.Messaging;
+using Infrastructure.Messaging.Handling;
+using Infrastructure.Serialization;
+using Microsoft.ServiceBus.Messaging;
+using Moq;
+using Moq.Protected;
+using Xunit;
+
 namespace Infrastructure.Azure.IntegrationTests.CommandProcessingIntegration
 {
-    using System;
-    using System.Threading;
-    using Infrastructure.Azure.Messaging;
-    using Infrastructure.Azure.Messaging.Handling;
-    using Infrastructure.Messaging;
-    using Infrastructure.Messaging.Handling;
-    using Infrastructure.Serialization;
-    using Microsoft.ServiceBus.Messaging;
-    using Moq;
-    using Moq.Protected;
-    using Xunit;
-
     public class given_an_azure_command_bus : given_a_topic_and_subscription
     {
         private const int TimeoutPeriod = 20000;
@@ -32,8 +32,8 @@ namespace Infrastructure.Azure.IntegrationTests.CommandProcessingIntegration
         [Fact]
         public void when_receiving_command_then_calls_handler()
         {
-            var processor = new CommandProcessor(new SubscriptionReceiver(this.Settings, this.Topic, this.Subscription), new JsonTextSerializer());
-            var bus = new CommandBus(new TopicSender(this.Settings, this.Topic), new StandardMetadataProvider(), new JsonTextSerializer());
+            var processor = new CommandProcessor(new SubscriptionReceiver(Settings, Topic, Subscription), new JsonTextSerializer());
+            var bus = new CommandBus(new TopicSender(Settings, Topic), new StandardMetadataProvider(), new JsonTextSerializer());
 
             var e = new ManualResetEventSlim();
             var handler = new FooCommandHandler(e);
@@ -42,16 +42,13 @@ namespace Infrastructure.Azure.IntegrationTests.CommandProcessingIntegration
 
             processor.Start();
 
-            try
-            {
+            try {
                 bus.Send(new FooCommand());
 
                 e.Wait(TimeoutPeriod);
 
                 Assert.True(handler.Called);
-            }
-            finally
-            {
+            } finally {
                 processor.Stop();
             }
         }
@@ -59,8 +56,8 @@ namespace Infrastructure.Azure.IntegrationTests.CommandProcessingIntegration
         [Fact]
         public void when_same_handler_handles_multiple_commands_then_gets_called_for_all()
         {
-            var processor = new CommandProcessor(new SubscriptionReceiver(this.Settings, this.Topic, this.Subscription), new JsonTextSerializer());
-            var bus = new CommandBus(new TopicSender(this.Settings, this.Topic), new StandardMetadataProvider(), new JsonTextSerializer());
+            var processor = new CommandProcessor(new SubscriptionReceiver(Settings, Topic, Subscription), new JsonTextSerializer());
+            var bus = new CommandBus(new TopicSender(Settings, Topic), new StandardMetadataProvider(), new JsonTextSerializer());
 
             var fooWaiter = new ManualResetEventSlim();
             var barWaiter = new ManualResetEventSlim();
@@ -70,8 +67,7 @@ namespace Infrastructure.Azure.IntegrationTests.CommandProcessingIntegration
 
             processor.Start();
 
-            try
-            {
+            try {
                 bus.Send(new FooCommand());
                 bus.Send(new BarCommand());
 
@@ -80,9 +76,7 @@ namespace Infrastructure.Azure.IntegrationTests.CommandProcessingIntegration
 
                 Assert.True(handler.HandledFooCommand);
                 Assert.True(handler.HandledBarCommand);
-            }
-            finally
-            {
+            } finally {
                 processor.Stop();
             }
         }
@@ -90,9 +84,9 @@ namespace Infrastructure.Azure.IntegrationTests.CommandProcessingIntegration
         [Fact]
         public void when_receiving_not_registered_command_then_ignores()
         {
-            var receiverMock = new Mock<SubscriptionReceiver>(this.Settings, this.Topic, this.Subscription, false);
+            var receiverMock = new Mock<SubscriptionReceiver>(Settings, Topic, Subscription, false);
             var processor = new CommandProcessor(receiverMock.Object, new JsonTextSerializer());
-            var bus = new CommandBus(new TopicSender(this.Settings, this.Topic), new StandardMetadataProvider(), new JsonTextSerializer());
+            var bus = new CommandBus(new TopicSender(Settings, Topic), new StandardMetadataProvider(), new JsonTextSerializer());
 
             var e = new ManualResetEventSlim();
             var handler = new FooCommandHandler(e);
@@ -103,8 +97,7 @@ namespace Infrastructure.Azure.IntegrationTests.CommandProcessingIntegration
 
             processor.Start();
 
-            try
-            {
+            try {
                 bus.Send(new BarCommand());
 
                 e.Wait(TimeoutPeriod);
@@ -112,9 +105,7 @@ namespace Infrastructure.Azure.IntegrationTests.CommandProcessingIntegration
                 Thread.Sleep(100);
 
                 Assert.False(handler.Called);
-            }
-            finally
-            {
+            } finally {
                 processor.Stop();
             }
         }
@@ -122,8 +113,8 @@ namespace Infrastructure.Azure.IntegrationTests.CommandProcessingIntegration
         [Fact]
         public void when_sending_multiple_commands_then_calls_all_handlers()
         {
-            var processor = new CommandProcessor(new SubscriptionReceiver(this.Settings, this.Topic, this.Subscription), new JsonTextSerializer());
-            var bus = new CommandBus(new TopicSender(this.Settings, this.Topic), new StandardMetadataProvider(), new JsonTextSerializer());
+            var processor = new CommandProcessor(new SubscriptionReceiver(Settings, Topic, Subscription), new JsonTextSerializer());
+            var bus = new CommandBus(new TopicSender(Settings, Topic), new StandardMetadataProvider(), new JsonTextSerializer());
 
             var fooEvent = new ManualResetEventSlim();
             var fooHandler = new FooCommandHandler(fooEvent);
@@ -136,18 +127,15 @@ namespace Infrastructure.Azure.IntegrationTests.CommandProcessingIntegration
 
             processor.Start();
 
-            try
-            {
-                bus.Send(new ICommand[] { new FooCommand(), new BarCommand() });
+            try {
+                bus.Send(new ICommand[] {new FooCommand(), new BarCommand()});
 
                 fooEvent.Wait(TimeoutPeriod);
                 barEvent.Wait(TimeoutPeriod);
 
                 Assert.True(fooHandler.Called);
                 Assert.True(barHandler.Called);
-            }
-            finally
-            {
+            } finally {
                 processor.Stop();
             }
         }
@@ -162,7 +150,7 @@ namespace Infrastructure.Azure.IntegrationTests.CommandProcessingIntegration
             sender.Setup(x => x.Send(It.IsAny<Func<BrokeredMessage>>()))
                 .Callback<Func<BrokeredMessage>>(mf => message = mf());
 
-            bus.Send(new Envelope<ICommand>(new FooCommand()) { Delay = TimeSpan.FromMinutes(5) });
+            bus.Send(new Envelope<ICommand>(new FooCommand()) {Delay = TimeSpan.FromMinutes(5)});
 
             Assert.NotNull(message);
             Assert.True(message.ScheduledEnqueueTimeUtc > DateTime.UtcNow.Add(TimeSpan.FromMinutes(4)));
@@ -176,15 +164,15 @@ namespace Infrastructure.Azure.IntegrationTests.CommandProcessingIntegration
 
             BrokeredMessage message = null;
             sender.Setup(x => x.Send(It.IsAny<Func<BrokeredMessage>>()))
-                .Callback<Func<BrokeredMessage>>(mf =>
-                {
+                .Callback<Func<BrokeredMessage>>(mf => {
                     var m = mf();
-                    if (m.ScheduledEnqueueTimeUtc > DateTime.UtcNow.Add(TimeSpan.FromMinutes(4))) message = m;
+                    if (m.ScheduledEnqueueTimeUtc > DateTime.UtcNow.Add(TimeSpan.FromMinutes(4))) {
+                        message = m;
+                    }
                 });
 
-            bus.Send(new[] 
-            {
-                new Envelope<ICommand>(new FooCommand()) { Delay = TimeSpan.FromMinutes(5) }, 
+            bus.Send(new[] {
+                new Envelope<ICommand>(new FooCommand()) {Delay = TimeSpan.FromMinutes(5)},
                 new Envelope<ICommand>(new BarCommand())
             });
 
@@ -196,8 +184,9 @@ namespace Infrastructure.Azure.IntegrationTests.CommandProcessingIntegration
         {
             public FooCommand()
             {
-                this.Id = Guid.NewGuid();
+                Id = Guid.NewGuid();
             }
+
             public Guid Id { get; set; }
         }
 
@@ -206,15 +195,21 @@ namespace Infrastructure.Azure.IntegrationTests.CommandProcessingIntegration
         {
             public BarCommand()
             {
-                this.Id = Guid.NewGuid();
+                Id = Guid.NewGuid();
             }
+
             public Guid Id { get; set; }
         }
 
         public class MultipleHandler : ICommandHandler<FooCommand>, ICommandHandler<BarCommand>
         {
-            private ManualResetEventSlim fooWaiter;
-            private ManualResetEventSlim barWaiter;
+            private readonly ManualResetEventSlim barWaiter;
+
+            private readonly ManualResetEventSlim fooWaiter;
+
+            public bool HandledBarCommand { get; private set; }
+
+            public bool HandledFooCommand { get; private set; }
 
             public MultipleHandler(ManualResetEventSlim fooWaiter, ManualResetEventSlim barWaiter)
             {
@@ -222,25 +217,24 @@ namespace Infrastructure.Azure.IntegrationTests.CommandProcessingIntegration
                 this.barWaiter = barWaiter;
             }
 
-            public bool HandledBarCommand { get; private set; }
-            public bool HandledFooCommand { get; private set; }
-
             public void Handle(BarCommand command)
             {
-                this.HandledBarCommand = true;
-                this.barWaiter.Set();
+                HandledBarCommand = true;
+                barWaiter.Set();
             }
 
             public void Handle(FooCommand command)
             {
-                this.HandledFooCommand = true;
-                this.fooWaiter.Set();
+                HandledFooCommand = true;
+                fooWaiter.Set();
             }
         }
 
         public class FooCommandHandler : ICommandHandler<FooCommand>
         {
-            private ManualResetEventSlim e;
+            private readonly ManualResetEventSlim e;
+
+            public bool Called { get; set; }
 
             public FooCommandHandler(ManualResetEventSlim e)
             {
@@ -249,16 +243,16 @@ namespace Infrastructure.Azure.IntegrationTests.CommandProcessingIntegration
 
             public void Handle(FooCommand command)
             {
-                this.Called = true;
+                Called = true;
                 e.Set();
             }
-
-            public bool Called { get; set; }
         }
 
         public class BarCommandHandler : ICommandHandler<BarCommand>
         {
-            private ManualResetEventSlim e;
+            private readonly ManualResetEventSlim e;
+
+            public bool Called { get; set; }
 
             public BarCommandHandler(ManualResetEventSlim e)
             {
@@ -267,11 +261,9 @@ namespace Infrastructure.Azure.IntegrationTests.CommandProcessingIntegration
 
             public void Handle(BarCommand command)
             {
-                this.Called = true;
+                Called = true;
                 e.Set();
             }
-
-            public bool Called { get; set; }
         }
     }
 }

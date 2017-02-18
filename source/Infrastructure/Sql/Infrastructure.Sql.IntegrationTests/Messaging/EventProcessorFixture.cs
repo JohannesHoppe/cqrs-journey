@@ -11,45 +11,47 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Diagnostics;
+using System.IO;
+using Infrastructure.Messaging;
+using Infrastructure.Messaging.Handling;
+using Infrastructure.Serialization;
+using Infrastructure.Sql.Messaging;
+using Infrastructure.Sql.Messaging.Handling;
+using Moq;
+using Xunit;
+
 namespace Infrastructure.Sql.IntegrationTests.Messaging.EventProcessorFixture
 {
-    using System;
-    using System.IO;
-    using Infrastructure.Messaging;
-    using Infrastructure.Messaging.Handling;
-    using Infrastructure.Serialization;
-    using Infrastructure.Sql.Messaging;
-    using Infrastructure.Sql.Messaging.Handling;
-    using Moq;
-    using Xunit;
-
     public class given_event_processor
     {
-        private Mock<IMessageReceiver> receiverMock;
-        private EventProcessor processor;
+        private readonly EventProcessor processor;
+
+        private readonly Mock<IMessageReceiver> receiverMock;
 
         public given_event_processor()
         {
-            System.Diagnostics.Trace.Listeners.Clear();
-            this.receiverMock = new Mock<IMessageReceiver>();
-            this.processor = new EventProcessor(this.receiverMock.Object, CreateSerializer());
+            Trace.Listeners.Clear();
+            receiverMock = new Mock<IMessageReceiver>();
+            processor = new EventProcessor(receiverMock.Object, CreateSerializer());
         }
 
         [Fact]
         public void when_starting_then_starts_receiver()
         {
-            this.processor.Start();
+            processor.Start();
 
-            this.receiverMock.Verify(r => r.Start());
+            receiverMock.Verify(r => r.Start());
         }
 
         [Fact]
         public void when_stopping_after_starting_then_stops_receiver()
         {
-            this.processor.Start();
-            this.processor.Stop();
+            processor.Start();
+            processor.Stop();
 
-            this.receiverMock.Verify(r => r.Stop());
+            receiverMock.Verify(r => r.Stop());
         }
 
         [Fact]
@@ -62,16 +64,16 @@ namespace Infrastructure.Sql.IntegrationTests.Messaging.EventProcessorFixture
             var handlerBMock = new Mock<IEventHandler>();
             handlerBMock.As<IEventHandler<Event2>>();
 
-            this.processor.Register(handlerAMock.Object);
-            this.processor.Register(handlerBMock.Object);
+            processor.Register(handlerAMock.Object);
+            processor.Register(handlerBMock.Object);
 
-            this.processor.Start();
+            processor.Start();
 
-            var event1 = new Event1 { SourceId = Guid.NewGuid() };
-            var event2 = new Event2 { SourceId = Guid.NewGuid() };
+            var event1 = new Event1 {SourceId = Guid.NewGuid()};
+            var event2 = new Event2 {SourceId = Guid.NewGuid()};
 
-            this.receiverMock.Raise(r => r.MessageReceived += null, new MessageReceivedEventArgs(new Message(Serialize(event1))));
-            this.receiverMock.Raise(r => r.MessageReceived += null, new MessageReceivedEventArgs(new Message(Serialize(event2))));
+            receiverMock.Raise(r => r.MessageReceived += null, new MessageReceivedEventArgs(new Message(Serialize(event1))));
+            receiverMock.Raise(r => r.MessageReceived += null, new MessageReceivedEventArgs(new Message(Serialize(event2))));
 
             handlerAMock.As<IEventHandler<Event1>>().Verify(h => h.Handle(It.Is<Event1>(e => e.SourceId == event1.SourceId)));
             handlerAMock.As<IEventHandler<Event2>>().Verify(h => h.Handle(It.Is<Event2>(e => e.SourceId == event2.SourceId)));
@@ -84,15 +86,15 @@ namespace Infrastructure.Sql.IntegrationTests.Messaging.EventProcessorFixture
             var handler = new Mock<IEventHandler>();
             handler.As<IEventHandler<IEvent>>();
 
-            this.processor.Register(handler.Object);
+            processor.Register(handler.Object);
 
-            this.processor.Start();
+            processor.Start();
 
-            var event1 = new Event1 { SourceId = Guid.NewGuid() };
-            var event2 = new Event2 { SourceId = Guid.NewGuid() };
+            var event1 = new Event1 {SourceId = Guid.NewGuid()};
+            var event2 = new Event2 {SourceId = Guid.NewGuid()};
 
-            this.receiverMock.Raise(r => r.MessageReceived += null, new MessageReceivedEventArgs(new Message(Serialize(event1))));
-            this.receiverMock.Raise(r => r.MessageReceived += null, new MessageReceivedEventArgs(new Message(Serialize(event2))));
+            receiverMock.Raise(r => r.MessageReceived += null, new MessageReceivedEventArgs(new Message(Serialize(event1))));
+            receiverMock.Raise(r => r.MessageReceived += null, new MessageReceivedEventArgs(new Message(Serialize(event2))));
 
             handler.As<IEventHandler<IEvent>>().Verify(h => h.Handle(It.Is<Event1>(e => e.SourceId == event1.SourceId)));
             handler.As<IEventHandler<IEvent>>().Verify(h => h.Handle(It.Is<Event2>(e => e.SourceId == event2.SourceId)));
@@ -102,8 +104,7 @@ namespace Infrastructure.Sql.IntegrationTests.Messaging.EventProcessorFixture
         {
             var serializer = CreateSerializer();
 
-            using (var writer = new StringWriter())
-            {
+            using (var writer = new StringWriter()) {
                 serializer.Serialize(writer, payload);
                 return writer.ToString();
             }

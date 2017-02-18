@@ -11,64 +11,69 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel.DataAnnotations;
+
 namespace Conference
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Collections.ObjectModel;
-    using System.ComponentModel.DataAnnotations;
-
     public class Order
     {
         public enum OrderStatus
         {
             Pending,
-            Paid,
-        }
 
-        public Order(Guid conferenceId, Guid orderId, string accessCode)
-            : this()
-        {
-            this.Id = orderId;
-            this.ConferenceId = conferenceId;
-            this.AccessCode = accessCode;
-        }
-
-        protected Order()
-        {
-            this.Seats = new ObservableCollection<OrderSeat>();
+            Paid
         }
 
         [Key]
         public Guid Id { get; set; }
+
         public Guid ConferenceId { get; set; }
 
         /// <summary>
-        /// Used for correlating with the seat assignments.
+        ///     Used for correlating with the seat assignments.
         /// </summary>
         public Guid? AssignmentsId { get; set; }
 
         [Display(Name = "Order Code")]
         public string AccessCode { get; set; }
+
         [Display(Name = "Registrant Name")]
         public string RegistrantName { get; set; }
+
         [Display(Name = "Registrant Email")]
         public string RegistrantEmail { get; set; }
+
         [Display(Name = "Total Amount")]
         public decimal TotalAmount { get; set; }
 
         /// <summary>
-        /// This pattern is typical for EF 4 since it does 
-        /// not support native enum persistence. EF 4.5 does.
+        ///     This pattern is typical for EF 4 since it does
+        ///     not support native enum persistence. EF 4.5 does.
         /// </summary>
         [NotMapped]
-        public OrderStatus Status
-        {
-            get { return (OrderStatus)this.StatusValue; }
-            set { this.StatusValue = (int)value; }
+        public OrderStatus Status {
+            get { return (OrderStatus) StatusValue; }
+            set { StatusValue = (int) value; }
         }
+
         public int StatusValue { get; set; }
 
         public ICollection<OrderSeat> Seats { get; set; }
+
+        public Order(Guid conferenceId, Guid orderId, string accessCode)
+            : this()
+        {
+            Id = orderId;
+            ConferenceId = conferenceId;
+            AccessCode = accessCode;
+        }
+
+        protected Order()
+        {
+            Seats = new ObservableCollection<OrderSeat>();
+        }
     }
 }

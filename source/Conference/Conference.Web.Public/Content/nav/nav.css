@@ -14,46 +14,52 @@ See the License for the specific language governing permissions and limitations 
 */
 
 .nav {
-    overflow: hidden;
     font-family: "Segoe UI light";
     font-size: 36px;
-	padding: 20px 0 0 0;
+    overflow: hidden;
+    padding: 20px 0 0 0;
 }
+
 .nav__left,
 .nav__right {
-    min-height: 40px;
-    text-decoration: none;
-    line-height: 28px;
-    padding-bottom: 9px;
-	border: none;
-	font-family: "Segoe UI light";
+    border: none;
+    font-family: "Segoe UI light";
     font-size: 36px;
-}
-.nav__left {
-    background:no-repeat left 1px url(nav__left.png);
-    padding-left: 48px;
-    float: left;
-    color: #0099ff;
-	text-align: right;
-}
-.nav__left:hover {
-	background:no-repeat left 1px url(nav__left_a.png);
-	color: #33ccff;
-	}
-.nav__right {
-    background:no-repeat right 1px url(nav__right.png);
-    padding-right: 48px;
-    float: right;
-    color: #ff9900;
-	text-align: right;
-	}
-.nav__right:hover {
-    background:no-repeat right 1px url(nav__right_a.png);
-	color: #ffcc33;
-	}
-.nav__right-small {
+    line-height: 28px;
+    min-height: 40px;
+    padding-bottom: 9px;
     text-decoration: none;
-	font-size: 13px;
-	display: block;
-	margin: 5px 0 0 0;
-	}
+}
+
+.nav__left {
+    background: no-repeat left 1px url(nav__left.png);
+    color: #0099ff;
+    float: left;
+    padding-left: 48px;
+    text-align: right;
+}
+
+.nav__left:hover {
+    background: no-repeat left 1px url(nav__left_a.png);
+    color: #33ccff;
+}
+
+.nav__right {
+    background: no-repeat right 1px url(nav__right.png);
+    color: #ff9900;
+    float: right;
+    padding-right: 48px;
+    text-align: right;
+}
+
+.nav__right:hover {
+    background: no-repeat right 1px url(nav__right_a.png);
+    color: #ffcc33;
+}
+
+.nav__right-small {
+    display: block;
+    font-size: 13px;
+    margin: 5px 0 0 0;
+    text-decoration: none;
+}

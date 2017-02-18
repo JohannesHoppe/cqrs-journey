@@ -11,30 +11,30 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.IO;
+using System.Text;
+using System.Threading;
+using Infrastructure.Azure.Messaging;
+using Infrastructure.Azure.Messaging.Handling;
+using Infrastructure.Serialization;
+using Microsoft.ServiceBus.Messaging;
+using Moq;
+using Moq.Protected;
+using Xunit;
+
 namespace Infrastructure.Azure.IntegrationTests.MessageProcessorIntegration
 {
-    using System;
-    using System.IO;
-    using System.Text;
-    using System.Threading;
-    using Infrastructure.Azure.Messaging;
-    using Infrastructure.Azure.Messaging.Handling;
-    using Infrastructure.Serialization;
-    using Microsoft.ServiceBus.Messaging;
-    using Moq;
-    using Moq.Protected;
-    using Xunit;
-
     public class given_a_processor : given_a_topic_and_subscription
     {
         [Fact]
         public void when_message_received_then_calls_process_message()
         {
             var waiter = new ManualResetEventSlim();
-            var sender = new TopicSender(this.Settings, this.Topic);
+            var sender = new TopicSender(Settings, Topic);
             var processor = new FakeProcessor(
                 waiter,
-                new SubscriptionReceiver(this.Settings, this.Topic, this.Subscription),
+                new SubscriptionReceiver(Settings, Topic, Subscription),
                 new JsonTextSerializer());
 
             processor.Start();
@@ -44,7 +44,7 @@ namespace Infrastructure.Azure.IntegrationTests.MessageProcessorIntegration
             var stream = new MemoryStream();
             new JsonTextSerializer().Serialize(new StreamWriter(stream), "Foo");
             stream.Position = 0;
-            sender.SendAsync(() => new BrokeredMessage(stream, true) { MessageId = messageId, CorrelationId = correlationId });
+            sender.SendAsync(() => new BrokeredMessage(stream, true) {MessageId = messageId, CorrelationId = correlationId});
 
             waiter.Wait(5000);
 
@@ -58,17 +58,17 @@ namespace Infrastructure.Azure.IntegrationTests.MessageProcessorIntegration
         {
             var failCount = 0;
             var waiter = new ManualResetEventSlim();
-            var sender = new TopicSender(this.Settings, this.Topic);
+            var sender = new TopicSender(Settings, Topic);
             var processor = new Mock<MessageProcessor>(
-                new SubscriptionReceiver(this.Settings, this.Topic, this.Subscription), new JsonTextSerializer()) { CallBase = true };
+                new SubscriptionReceiver(Settings, Topic, Subscription), new JsonTextSerializer()) {CallBase = true};
 
             processor.Protected()
                 .Setup("ProcessMessage", ItExpr.IsAny<string>(), ItExpr.IsAny<object>(), ItExpr.IsAny<string>(), ItExpr.IsAny<string>())
-                .Callback(() =>
-                {
+                .Callback(() => {
                     failCount++;
-                    if (failCount == 5)
+                    if (failCount == 5) {
                         waiter.Set();
+                    }
 
                     throw new ArgumentException();
                 });
@@ -82,7 +82,7 @@ namespace Infrastructure.Azure.IntegrationTests.MessageProcessorIntegration
 
             waiter.Wait(5000);
 
-            var deadReceiver = this.Settings.CreateMessageReceiver(this.Topic, this.Subscription);
+            var deadReceiver = Settings.CreateMessageReceiver(Topic, Subscription);
 
             var deadMessage = deadReceiver.Receive(TimeSpan.FromSeconds(5));
 
@@ -91,17 +91,17 @@ namespace Infrastructure.Azure.IntegrationTests.MessageProcessorIntegration
             Assert.NotNull(deadMessage);
             var data = new JsonTextSerializer().Deserialize(new StreamReader(deadMessage.GetBody<Stream>()));
 
-            Assert.Equal("Foo", (string)data);
+            Assert.Equal("Foo", (string) data);
         }
 
         [Fact]
         public void when_message_fails_to_deserialize_then_dead_letters_message()
         {
             var waiter = new ManualResetEventSlim();
-            var sender = new TopicSender(this.Settings, this.Topic);
+            var sender = new TopicSender(Settings, Topic);
             var processor = new FakeProcessor(
                 waiter,
-                new SubscriptionReceiver(this.Settings, this.Topic, this.Subscription),
+                new SubscriptionReceiver(Settings, Topic, Subscription),
                 new JsonTextSerializer());
 
             processor.Start();
@@ -115,7 +115,7 @@ namespace Infrastructure.Azure.IntegrationTests.MessageProcessorIntegration
 
             waiter.Wait(5000);
 
-            var deadReceiver = this.Settings.CreateMessageReceiver(this.Topic, this.Subscription);
+            var deadReceiver = Settings.CreateMessageReceiver(Topic, Subscription);
             var deadMessage = deadReceiver.Receive(TimeSpan.FromSeconds(5));
 
             processor.Dispose();
@@ -129,7 +129,13 @@ namespace Infrastructure.Azure.IntegrationTests.MessageProcessorIntegration
 
     public class FakeProcessor : MessageProcessor
     {
-        private ManualResetEventSlim waiter;
+        private readonly ManualResetEventSlim waiter;
+
+        public object Payload { get; private set; }
+
+        public string MessageId { get; private set; }
+
+        public string CorrelationId { get; private set; }
 
         public FakeProcessor(ManualResetEventSlim waiter, IMessageReceiver receiver, ITextSerializer serializer)
             : base(receiver, serializer)
@@ -139,20 +145,14 @@ namespace Infrastructure.Azure.IntegrationTests.MessageProcessorIntegration
 
         protected override void ProcessMessage(string traceIdentifier, object payload, string messageId, string correlationId)
         {
-            this.Payload = payload;
-            this.MessageId = messageId;
-            this.CorrelationId = correlationId;
+            Payload = payload;
+            MessageId = messageId;
+            CorrelationId = correlationId;
 
-            this.waiter.Set();
+            waiter.Set();
         }
-
-        public object Payload { get; private set; }
-        public string MessageId { get; private set; }
-        public string CorrelationId { get; private set; }
     }
 
     [Serializable]
-    public class Data
-    {
-    }
+    public class Data { }
 }

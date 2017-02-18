@@ -10,20 +10,20 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+
 namespace Registration
 {
-    using System;
-
     public class OrderItem
     {
+        public Guid SeatType { get; }
+
+        public int Quantity { get; }
+
         public OrderItem(Guid seatType, int quantity)
         {
-            this.SeatType = seatType;
-            this.Quantity = quantity;
+            SeatType = seatType;
+            Quantity = quantity;
         }
-
-        public Guid SeatType { get; private set; }
-
-        public int Quantity { get; private set; }
     }
 }

@@ -11,13 +11,13 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Collections.Generic;
+using Infrastructure.Messaging;
+
 namespace Infrastructure.MessageLog
 {
-    using System.Collections.Generic;
-    using Infrastructure.Messaging;
-
     /// <summary>
-    /// Exposes the message log for all events that the system processed.
+    ///     Exposes the message log for all events that the system processed.
     /// </summary>
     public interface IEventLogReader
     {

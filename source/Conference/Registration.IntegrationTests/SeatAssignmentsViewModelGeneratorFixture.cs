@@ -11,30 +11,32 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using Infrastructure.Serialization;
+using Moq;
+using Registration.Events;
+using Registration.Handlers;
+using Registration.ReadModel;
+using Registration.ReadModel.Implementation;
+using Xunit;
+
 namespace Registration.IntegrationTests.SeatAssignmentsViewModelGeneratorFixture
 {
-    using System;
-    using System.Collections.Generic;
-    using Infrastructure.Serialization;
-    using Moq;
-    using Registration.Events;
-    using Registration.Handlers;
-    using Registration.ReadModel;
-    using Registration.ReadModel.Implementation;
-    using Xunit;
-
     public class given_created_seat_assignments : given_a_read_model_database
     {
-        private static readonly List<SeatTypeName> seatTypes = new List<SeatTypeName>
-        {
-            new SeatTypeName { Id = Guid.NewGuid(), Name= "General" }, 
-            new SeatTypeName { Id = Guid.NewGuid(), Name= "Precon" }, 
+        private static readonly List<SeatTypeName> seatTypes = new List<SeatTypeName> {
+            new SeatTypeName {Id = Guid.NewGuid(), Name = "General"},
+            new SeatTypeName {Id = Guid.NewGuid(), Name = "Precon"}
         };
 
         protected static readonly Guid assignmentsId = Guid.NewGuid();
+
         protected static readonly Guid orderId = Guid.NewGuid();
-        protected SeatAssignmentsViewModelGenerator sut;
+
         protected IOrderDao dao;
+
+        protected SeatAssignmentsViewModelGenerator sut;
 
         public given_created_seat_assignments()
         {
@@ -43,17 +45,15 @@ namespace Registration.IntegrationTests.SeatAssignmentsViewModelGeneratorFixture
                 .Returns(seatTypes);
 
             var blobs = new MemoryBlobStorage();
-            this.dao = new OrderDao(() => new ConferenceRegistrationDbContext(dbName), blobs, new JsonTextSerializer());
-            this.sut = new SeatAssignmentsViewModelGenerator(conferenceDao.Object, blobs, new JsonTextSerializer());
+            dao = new OrderDao(() => new ConferenceRegistrationDbContext(dbName), blobs, new JsonTextSerializer());
+            sut = new SeatAssignmentsViewModelGenerator(conferenceDao.Object, blobs, new JsonTextSerializer());
 
-            this.sut.Handle(new SeatAssignmentsCreated
-            {
+            sut.Handle(new SeatAssignmentsCreated {
                 SourceId = assignmentsId,
                 OrderId = orderId,
-                Seats = new[]
-                {
-                    new SeatAssignmentsCreated.SeatAssignmentInfo { Position = 0, SeatType = seatTypes[0].Id },
-                    new SeatAssignmentsCreated.SeatAssignmentInfo { Position = 1, SeatType = seatTypes[1].Id },
+                Seats = new[] {
+                    new SeatAssignmentsCreated.SeatAssignmentInfo {Position = 0, SeatType = seatTypes[0].Id},
+                    new SeatAssignmentsCreated.SeatAssignmentInfo {Position = 1, SeatType = seatTypes[1].Id}
                 }
             });
         }
@@ -61,7 +61,7 @@ namespace Registration.IntegrationTests.SeatAssignmentsViewModelGeneratorFixture
         [Fact]
         public void then_creates_model_with_seat_names()
         {
-            var dto = this.dao.FindOrderSeats(assignmentsId);
+            var dto = dao.FindOrderSeats(assignmentsId);
 
             Assert.NotNull(dto);
             Assert.Equal(dto.Seats.Count, 2);
@@ -74,18 +74,16 @@ namespace Registration.IntegrationTests.SeatAssignmentsViewModelGeneratorFixture
         [Fact]
         public void when_seat_assigned_then_sets_attendee()
         {
-            this.sut.Handle(new SeatAssigned(assignmentsId)
-            {
+            sut.Handle(new SeatAssigned(assignmentsId) {
                 Position = 0,
-                Attendee = new PersonalInfo
-                {
+                Attendee = new PersonalInfo {
                     Email = "a@b.com",
                     FirstName = "a",
-                    LastName = "b",
+                    LastName = "b"
                 }
             });
 
-            var dto = this.dao.FindOrderSeats(assignmentsId);
+            var dto = dao.FindOrderSeats(assignmentsId);
 
             Assert.Equal("a@b.com", dto.Seats[0].Attendee.Email);
             Assert.Equal("a", dto.Seats[0].Attendee.FirstName);
@@ -95,20 +93,18 @@ namespace Registration.IntegrationTests.SeatAssignmentsViewModelGeneratorFixture
         [Fact]
         public void when_assigned_seat_unassigned_then_clears_attendee_info()
         {
-            this.sut.Handle(new SeatAssigned(assignmentsId)
-            {
+            sut.Handle(new SeatAssigned(assignmentsId) {
                 Position = 0,
-                Attendee = new PersonalInfo
-                {
+                Attendee = new PersonalInfo {
                     Email = "a@b.com",
                     FirstName = "a",
-                    LastName = "b",
+                    LastName = "b"
                 }
             });
 
-            this.sut.Handle(new SeatUnassigned(assignmentsId) { Position = 0 });
+            sut.Handle(new SeatUnassigned(assignmentsId) {Position = 0});
 
-            var dto = this.dao.FindOrderSeats(assignmentsId);
+            var dto = dao.FindOrderSeats(assignmentsId);
 
             Assert.Null(dto.Seats[0].Attendee.Email);
             Assert.Null(dto.Seats[0].Attendee.FirstName);
@@ -118,35 +114,29 @@ namespace Registration.IntegrationTests.SeatAssignmentsViewModelGeneratorFixture
         [Fact]
         public void when_assigned_seat_updated_then_sets_attendee_info()
         {
-            this.sut.Handle(new SeatAssigned(assignmentsId)
-            {
+            sut.Handle(new SeatAssigned(assignmentsId) {
                 Position = 0,
-                Attendee = new PersonalInfo
-                {
+                Attendee = new PersonalInfo {
                     Email = "a@b.com",
                     FirstName = "a",
-                    LastName = "b",
+                    LastName = "b"
                 }
             });
 
-            this.sut.Handle(new SeatAssignmentUpdated(assignmentsId)
-            {
+            sut.Handle(new SeatAssignmentUpdated(assignmentsId) {
                 Position = 0,
-                Attendee = new PersonalInfo
-                {
+                Attendee = new PersonalInfo {
                     Email = "b@c.com",
                     FirstName = "b",
-                    LastName = "c",
+                    LastName = "c"
                 }
             });
 
-            var dto = this.dao.FindOrderSeats(assignmentsId);
+            var dto = dao.FindOrderSeats(assignmentsId);
 
             Assert.Equal("b@c.com", dto.Seats[0].Attendee.Email);
             Assert.Equal("b", dto.Seats[0].Attendee.FirstName);
             Assert.Equal("c", dto.Seats[0].Attendee.LastName);
         }
     }
-
-
 }

@@ -11,11 +11,11 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using Infrastructure.EventSourcing;
+
 namespace Registration.Events
 {
-    using System;
-    using Infrastructure.EventSourcing;
-
     public class SeatsReservationCommitted : VersionedEvent
     {
         public Guid ReservationId { get; set; }

@@ -11,30 +11,35 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Data;
+using System.Data.Entity.Infrastructure;
+using System.Data.SqlClient;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace Infrastructure.Sql.Messaging.Implementation
 {
-    using System;
-    using System.Data;
-    using System.Data.Entity.Infrastructure;
-    using System.Data.SqlClient;
-    using System.Globalization;
-    using System.Threading;
-    using System.Threading.Tasks;
-
     public class MessageReceiver : IMessageReceiver, IDisposable
     {
         private readonly IDbConnectionFactory connectionFactory;
-        private readonly string name;
-        private readonly string readQuery;
+
         private readonly string deleteQuery;
-        private readonly TimeSpan pollDelay;
+
         private readonly object lockObject = new object();
+
+        private readonly string name;
+
+        private readonly TimeSpan pollDelay;
+
+        private readonly string readQuery;
+
         private CancellationTokenSource cancellationSource;
 
         public MessageReceiver(IDbConnectionFactory connectionFactory, string name, string tableName)
-            : this(connectionFactory, name, tableName, TimeSpan.FromMilliseconds(100))
-        {
-        }
+            : this(connectionFactory, name, tableName, TimeSpan.FromMilliseconds(100)) { }
 
         public MessageReceiver(IDbConnectionFactory connectionFactory, string name, string tableName, TimeSpan pollDelay)
         {
@@ -42,7 +47,7 @@ namespace Infrastructure.Sql.Messaging.Implementation
             this.name = name;
             this.pollDelay = pollDelay;
 
-            this.readQuery =
+            readQuery =
                 string.Format(
                     CultureInfo.InvariantCulture,
                     @"SELECT TOP (1) 
@@ -54,55 +59,16 @@ namespace Infrastructure.Sql.Messaging.Implementation
                     WHERE ({0}.[DeliveryDate] IS NULL) OR ({0}.[DeliveryDate] <= @CurrentDate)
                     ORDER BY {0}.[Id] ASC",
                     tableName);
-            this.deleteQuery =
+            deleteQuery =
                 string.Format(
-                   CultureInfo.InvariantCulture,
-                   "DELETE FROM {0} WHERE Id = @Id",
-                   tableName);
-        }
-
-        public event EventHandler<MessageReceivedEventArgs> MessageReceived = (sender, args) => { };
-
-        public void Start()
-        {
-            lock (this.lockObject)
-            {
-                if (this.cancellationSource == null)
-                {
-                    this.cancellationSource = new CancellationTokenSource();
-                    Task.Factory.StartNew(
-                        () => this.ReceiveMessages(this.cancellationSource.Token),
-                        this.cancellationSource.Token,
-                        TaskCreationOptions.LongRunning,
-                        TaskScheduler.Current);
-                }
-            }
-        }
-
-        public void Stop()
-        {
-            lock (this.lockObject)
-            {
-                using (this.cancellationSource)
-                {
-                    if (this.cancellationSource != null)
-                    {
-                        this.cancellationSource.Cancel();
-                        this.cancellationSource = null;
-                    }
-                }
-            }
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+                    CultureInfo.InvariantCulture,
+                    "DELETE FROM {0} WHERE Id = @Id",
+                    tableName);
         }
 
         protected virtual void Dispose(bool disposing)
         {
-            this.Stop();
+            Stop();
         }
 
         ~MessageReceiver()
@@ -111,87 +77,71 @@ namespace Infrastructure.Sql.Messaging.Implementation
         }
 
         /// <summary>
-        /// Receives the messages in an endless loop.
+        ///     Receives the messages in an endless loop.
         /// </summary>
         private void ReceiveMessages(CancellationToken cancellationToken)
         {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                if (!this.ReceiveMessage())
-                {
-                    Thread.Sleep(this.pollDelay);
+            while (!cancellationToken.IsCancellationRequested) {
+                if (!ReceiveMessage()) {
+                    Thread.Sleep(pollDelay);
                 }
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2100:Review SQL queries for security vulnerabilities", Justification = "Does not contain user input.")]
+        [SuppressMessage("Microsoft.Security", "CA2100:Review SQL queries for security vulnerabilities", Justification = "Does not contain user input.")]
         protected bool ReceiveMessage()
         {
-            using (var connection = this.connectionFactory.CreateConnection(this.name))
-            {
+            using (var connection = connectionFactory.CreateConnection(name)) {
                 var currentDate = GetCurrentDate();
 
                 connection.Open();
-                using (var transaction = connection.BeginTransaction(IsolationLevel.ReadCommitted))
-                {
-                    try
-                    {
+                using (var transaction = connection.BeginTransaction(IsolationLevel.ReadCommitted)) {
+                    try {
                         long messageId = -1;
                         Message message = null;
 
-                        using (var command = connection.CreateCommand())
-                        {
+                        using (var command = connection.CreateCommand()) {
                             command.Transaction = transaction;
                             command.CommandType = CommandType.Text;
-                            command.CommandText = this.readQuery;
-                            ((SqlCommand)command).Parameters.Add("@CurrentDate", SqlDbType.DateTime).Value = currentDate;
+                            command.CommandText = readQuery;
+                            ((SqlCommand) command).Parameters.Add("@CurrentDate", SqlDbType.DateTime).Value = currentDate;
 
-                            using (var reader = command.ExecuteReader())
-                            {
-                                if (!reader.Read())
-                                {
+                            using (var reader = command.ExecuteReader()) {
+                                if (!reader.Read()) {
                                     return false;
                                 }
 
-                                var body = (string)reader["Body"];
+                                var body = (string) reader["Body"];
                                 var deliveryDateValue = reader["DeliveryDate"];
-                                var deliveryDate = deliveryDateValue == DBNull.Value ? (DateTime?)null : new DateTime?((DateTime)deliveryDateValue);
+                                var deliveryDate = deliveryDateValue == DBNull.Value ? null : (DateTime) deliveryDateValue;
                                 var correlationIdValue = reader["CorrelationId"];
-                                var correlationId = (string)(correlationIdValue == DBNull.Value ? null : correlationIdValue);
+                                var correlationId = (string) (correlationIdValue == DBNull.Value ? null : correlationIdValue);
 
                                 message = new Message(body, deliveryDate, correlationId);
-                                messageId = (long)reader["Id"];
+                                messageId = (long) reader["Id"];
                             }
                         }
 
-                        this.MessageReceived(this, new MessageReceivedEventArgs(message));
+                        MessageReceived(this, new MessageReceivedEventArgs(message));
 
-                        using (var command = connection.CreateCommand())
-                        {
+                        using (var command = connection.CreateCommand()) {
                             command.Transaction = transaction;
                             command.CommandType = CommandType.Text;
-                            command.CommandText = this.deleteQuery;
-                            ((SqlCommand)command).Parameters.Add("@Id", SqlDbType.BigInt).Value = messageId;
+                            command.CommandText = deleteQuery;
+                            ((SqlCommand) command).Parameters.Add("@Id", SqlDbType.BigInt).Value = messageId;
 
                             command.ExecuteNonQuery();
                         }
 
                         transaction.Commit();
-                    }
-                    catch (Exception)
-                    {
-                        try
-                        {
+                    } catch (Exception) {
+                        try {
                             transaction.Rollback();
-                        }
-                        catch
-                        {
-                        }
+                        } catch { }
                         throw;
                     }
                 }
             }
-
 
             return true;
         }
@@ -199,6 +149,40 @@ namespace Infrastructure.Sql.Messaging.Implementation
         protected virtual DateTime GetCurrentDate()
         {
             return DateTime.UtcNow;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        public event EventHandler<MessageReceivedEventArgs> MessageReceived = (sender, args) => { };
+
+        public void Start()
+        {
+            lock (lockObject) {
+                if (cancellationSource == null) {
+                    cancellationSource = new CancellationTokenSource();
+                    Task.Factory.StartNew(
+                        () => ReceiveMessages(cancellationSource.Token),
+                        cancellationSource.Token,
+                        TaskCreationOptions.LongRunning,
+                        TaskScheduler.Current);
+                }
+            }
+        }
+
+        public void Stop()
+        {
+            lock (lockObject) {
+                using (cancellationSource) {
+                    if (cancellationSource != null) {
+                        cancellationSource.Cancel();
+                        cancellationSource = null;
+                    }
+                }
+            }
         }
     }
 }

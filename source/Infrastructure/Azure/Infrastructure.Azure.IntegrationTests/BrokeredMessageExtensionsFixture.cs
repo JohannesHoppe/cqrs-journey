@@ -11,36 +11,40 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Diagnostics;
+using Infrastructure.Azure.Utils;
+using Microsoft.ServiceBus.Messaging;
+using Moq;
+using Xunit;
+
 namespace Infrastructure.Azure.IntegrationTests
 {
-    using System;
-    using System.Diagnostics;
-    using Infrastructure.Azure.Utils;
-    using Microsoft.ServiceBus.Messaging;
-    using Moq;
-    using Xunit;
-
     public class BrokeredMessageExtensionsFixture
     {
         [Fact]
         public void when_failing_transiently_then_retries()
         {
-            int endCounts = 0;
+            var endCounts = 0;
             bool? success = null;
             var stopwatch = Stopwatch.StartNew();
 
             BrokeredMessageExtensions
                 .SafeMessagingActionAsync(
-                   c => c(Mock.Of<IAsyncResult>()),
-                   ar => { if (++endCounts < 2) throw new TimeoutException(); },
-                   new BrokeredMessage(),
-                   s => success = s,
-                   "error: '{0}' '{1}' '{2}' '{3}' '{4}' '{5}' '{6}'",
-                   "message id",
-                   "sub",
-                   5000,
-                   1000,
-                   stopwatch);
+                    c => c(Mock.Of<IAsyncResult>()),
+                    ar => {
+                        if (++endCounts < 2) {
+                            throw new TimeoutException();
+                        }
+                    },
+                    new BrokeredMessage(),
+                    s => success = s,
+                    "error: '{0}' '{1}' '{2}' '{3}' '{4}' '{5}' '{6}'",
+                    "message id",
+                    "sub",
+                    5000,
+                    1000,
+                    stopwatch);
 
             Assert.Equal(2, endCounts);
             Assert.True(success.HasValue);
@@ -56,16 +60,16 @@ namespace Infrastructure.Azure.IntegrationTests
 
             BrokeredMessageExtensions
                 .SafeMessagingActionAsync(
-                   c => c(Mock.Of<IAsyncResult>()),
-                   ar => { throw new TimeoutException(); },
-                   new BrokeredMessage(),
-                   s => success = s,
-                   "error: '{0}' '{1}' '{2}' '{3}' '{4}' '{5}' '{6}'",
-                   "message id",
-                   "sub",
-                   5000,
-                   100,
-                   stopwatch);
+                    c => c(Mock.Of<IAsyncResult>()),
+                    ar => { throw new TimeoutException(); },
+                    new BrokeredMessage(),
+                    s => success = s,
+                    "error: '{0}' '{1}' '{2}' '{3}' '{4}' '{5}' '{6}'",
+                    "message id",
+                    "sub",
+                    5000,
+                    100,
+                    stopwatch);
 
             Assert.True(success.HasValue);
             Assert.False(success.Value);

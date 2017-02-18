@@ -11,25 +11,23 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Collections.Generic;
+using System.IO;
+using Microsoft.ServiceBus.Messaging;
+
 namespace Infrastructure.Azure.MessageLog
 {
-    using System.Collections.Generic;
-    using System.IO;
-    using Microsoft.ServiceBus.Messaging;
-
     public static class BrokeredMessageExtension
     {
         public static MessageLogEntity ToMessageLogEntity(this BrokeredMessage message)
         {
             var stream = message.GetBody<Stream>();
             var payload = "";
-            using (var reader = new StreamReader(stream))
-            {
+            using (var reader = new StreamReader(stream)) {
                 payload = reader.ReadToEnd();
             }
 
-            return new MessageLogEntity
-            {
+            return new MessageLogEntity {
                 PartitionKey = message.EnqueuedTimeUtc.ToString("yyyMM"),
                 RowKey = message.EnqueuedTimeUtc.Ticks.ToString("D20") + "_" + message.MessageId,
                 MessageId = message.MessageId,
@@ -42,7 +40,7 @@ namespace Infrastructure.Azure.MessageLog
                 TypeName = message.Properties.TryGetValue(StandardMetadata.TypeName) as string,
                 SourceType = message.Properties.TryGetValue(StandardMetadata.SourceType) as string,
                 CreationDate = message.EnqueuedTimeUtc.ToString("o"),
-                Payload = payload,
+                Payload = payload
             };
         }
     }

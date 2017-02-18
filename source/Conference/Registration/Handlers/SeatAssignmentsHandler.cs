@@ -11,22 +11,23 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using AutoMapper;
+using Infrastructure.EventSourcing;
+using Infrastructure.Messaging.Handling;
+using Registration.Commands;
+using Registration.Events;
+
 namespace Registration.Handlers
 {
-    using AutoMapper;
-    using Infrastructure.EventSourcing;
-    using Infrastructure.Messaging.Handling;
-    using Registration.Commands;
-    using Registration.Events;
-
     public class SeatAssignmentsHandler :
         IEventHandler<OrderConfirmed>,
         IEventHandler<OrderPaymentConfirmed>,
         ICommandHandler<UnassignSeat>,
         ICommandHandler<AssignSeat>
     {
-        private readonly IEventSourcedRepository<Order> ordersRepo;
         private readonly IEventSourcedRepository<SeatAssignments> assignmentsRepo;
+
+        private readonly IEventSourcedRepository<Order> ordersRepo;
 
         static SeatAssignmentsHandler()
         {
@@ -42,30 +43,30 @@ namespace Registration.Handlers
             this.assignmentsRepo = assignmentsRepo;
         }
 
-        public void Handle(OrderPaymentConfirmed @event)
-        {
-            this.Handle(Mapper.Map<OrderConfirmed>(@event));
-        }
-
-        public void Handle(OrderConfirmed @event)
-        {
-            var order = this.ordersRepo.Get(@event.SourceId);
-            var assignments = order.CreateSeatAssignments();
-            assignmentsRepo.Save(assignments, null);
-        }
-
         public void Handle(AssignSeat command)
         {
-            var assignments = this.assignmentsRepo.Get(command.SeatAssignmentsId);
+            var assignments = assignmentsRepo.Get(command.SeatAssignmentsId);
             assignments.AssignSeat(command.Position, command.Attendee);
             assignmentsRepo.Save(assignments, command.Id.ToString());
         }
 
         public void Handle(UnassignSeat command)
         {
-            var assignments = this.assignmentsRepo.Get(command.SeatAssignmentsId);
+            var assignments = assignmentsRepo.Get(command.SeatAssignmentsId);
             assignments.Unassign(command.Position);
             assignmentsRepo.Save(assignments, command.Id.ToString());
+        }
+
+        public void Handle(OrderConfirmed @event)
+        {
+            var order = ordersRepo.Get(@event.SourceId);
+            var assignments = order.CreateSeatAssignments();
+            assignmentsRepo.Save(assignments, null);
+        }
+
+        public void Handle(OrderPaymentConfirmed @event)
+        {
+            Handle(Mapper.Map<OrderConfirmed>(@event));
         }
     }
 }

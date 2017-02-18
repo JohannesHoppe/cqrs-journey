@@ -11,13 +11,13 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Linq;
+using Infrastructure.EventSourcing;
+using Infrastructure.Messaging.Handling;
+using Registration.Commands;
+
 namespace Registration.Handlers
 {
-    using System.Linq;
-    using Infrastructure.EventSourcing;
-    using Infrastructure.Messaging.Handling;
-    using Registration.Commands;
-
     // Note: ConfirmOrderPayment was renamed to this from V1. Make sure there are no commands pending for processing when this is deployed,
     // otherwise the ConfirmOrderPayment commands will not be processed.
     public class OrderCommandHandler :
@@ -27,47 +27,14 @@ namespace Registration.Handlers
         ICommandHandler<AssignRegistrantDetails>,
         ICommandHandler<ConfirmOrder>
     {
-        private readonly IEventSourcedRepository<Order> repository;
         private readonly IPricingService pricingService;
+
+        private readonly IEventSourcedRepository<Order> repository;
 
         public OrderCommandHandler(IEventSourcedRepository<Order> repository, IPricingService pricingService)
         {
             this.repository = repository;
             this.pricingService = pricingService;
-        }
-
-        public void Handle(RegisterToConference command)
-        {
-            var items = command.Seats.Select(t => new OrderItem(t.SeatType, t.Quantity)).ToList();
-            var order = repository.Find(command.OrderId);
-            if (order == null)
-            {
-                order = new Order(command.OrderId, command.ConferenceId, items, pricingService);
-            }
-            else
-            {
-                order.UpdateSeats(items, pricingService);
-            }
-
-            repository.Save(order, command.Id.ToString());
-        }
-
-        public void Handle(MarkSeatsAsReserved command)
-        {
-            var order = repository.Get(command.OrderId);
-            order.MarkAsReserved(this.pricingService, command.Expiration, command.Seats);
-            repository.Save(order, command.Id.ToString());
-        }
-
-        public void Handle(RejectOrder command)
-        {
-            var order = repository.Find(command.OrderId);
-            // Explicitly idempotent. 
-            if (order != null)
-            {
-                order.Expire();
-                repository.Save(order, command.Id.ToString());
-            }
         }
 
         public void Handle(AssignRegistrantDetails command)
@@ -82,6 +49,36 @@ namespace Registration.Handlers
             var order = repository.Get(command.OrderId);
             order.Confirm();
             repository.Save(order, command.Id.ToString());
+        }
+
+        public void Handle(MarkSeatsAsReserved command)
+        {
+            var order = repository.Get(command.OrderId);
+            order.MarkAsReserved(pricingService, command.Expiration, command.Seats);
+            repository.Save(order, command.Id.ToString());
+        }
+
+        public void Handle(RegisterToConference command)
+        {
+            var items = command.Seats.Select(t => new OrderItem(t.SeatType, t.Quantity)).ToList();
+            var order = repository.Find(command.OrderId);
+            if (order == null) {
+                order = new Order(command.OrderId, command.ConferenceId, items, pricingService);
+            } else {
+                order.UpdateSeats(items, pricingService);
+            }
+
+            repository.Save(order, command.Id.ToString());
+        }
+
+        public void Handle(RejectOrder command)
+        {
+            var order = repository.Find(command.OrderId);
+            // Explicitly idempotent. 
+            if (order != null) {
+                order.Expire();
+                repository.Save(order, command.Id.ToString());
+            }
         }
     }
 }

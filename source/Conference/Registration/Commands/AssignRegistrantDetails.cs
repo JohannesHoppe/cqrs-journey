@@ -11,22 +11,15 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.ComponentModel.DataAnnotations;
+using Infrastructure.Messaging;
+using Registration.Properties;
+
 namespace Registration.Commands
 {
-    using System;
-    using System.ComponentModel.DataAnnotations;
-    using Infrastructure.Messaging;
-    using Registration.Properties;
-
     public class AssignRegistrantDetails : ICommand
     {
-        public AssignRegistrantDetails()
-        {
-            this.Id = Guid.NewGuid();
-        }
-
-        public Guid Id { get; private set; }
-
         public Guid OrderId { get; set; }
 
         [Required(AllowEmptyStrings = false)]
@@ -38,5 +31,12 @@ namespace Registration.Commands
         [Required(AllowEmptyStrings = false)]
         [RegularExpression(@"[\w-]+(\.?[\w-])*\@[\w-]+(\.[\w-]+)+", ErrorMessageResourceType = typeof(Resources), ErrorMessageResourceName = "InvalidEmail")]
         public string Email { get; set; }
+
+        public AssignRegistrantDetails()
+        {
+            Id = Guid.NewGuid();
+        }
+
+        public Guid Id { get; }
     }
 }

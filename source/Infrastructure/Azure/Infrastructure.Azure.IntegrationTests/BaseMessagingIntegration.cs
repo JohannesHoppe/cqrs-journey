@@ -11,52 +11,54 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Diagnostics;
+using Infrastructure.Azure.Messaging;
+using Microsoft.Practices.EnterpriseLibrary.WindowsAzure.TransientFaultHandling.ServiceBus;
+using Microsoft.Practices.TransientFaultHandling;
+
 namespace Infrastructure.Azure.IntegrationTests
 {
-    using System;
-    using Infrastructure.Azure.Messaging;
-    using Microsoft.Practices.EnterpriseLibrary.WindowsAzure.TransientFaultHandling.ServiceBus;
-    using Microsoft.Practices.TransientFaultHandling;
-
     /// <summary>
-    /// Base class for messaging integration tests.
+    ///     Base class for messaging integration tests.
     /// </summary>
     public class given_messaging_settings
     {
+        public ServiceBusSettings Settings { get; }
+
         public given_messaging_settings()
         {
-            System.Diagnostics.Trace.Listeners.Clear();
-            this.Settings = InfrastructureSettings.Read("Settings.xml").ServiceBus;
+            Trace.Listeners.Clear();
+            Settings = InfrastructureSettings.Read("Settings.xml").ServiceBus;
         }
-
-        public ServiceBusSettings Settings { get; private set; }
     }
 
     public class given_a_topic_and_subscription : given_messaging_settings, IDisposable
     {
-        private RetryPolicy<ServiceBusTransientErrorDetectionStrategy> retryPolicy;
+        private readonly RetryPolicy<ServiceBusTransientErrorDetectionStrategy> retryPolicy;
+
+        public string Topic { get; }
+
+        public string Subscription { get; }
 
         public given_a_topic_and_subscription()
         {
-            System.Diagnostics.Trace.Listeners.Clear();
+            Trace.Listeners.Clear();
 
-            this.Topic = "cqrsjourney-test-" + Guid.NewGuid().ToString();
-            this.Subscription = "test-" + Guid.NewGuid().ToString();
+            Topic = "cqrsjourney-test-" + Guid.NewGuid();
+            Subscription = "test-" + Guid.NewGuid();
 
             var retryStrategy = new Incremental(3, TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(1));
-            this.retryPolicy = new RetryPolicy<ServiceBusTransientErrorDetectionStrategy>(retryStrategy);
+            retryPolicy = new RetryPolicy<ServiceBusTransientErrorDetectionStrategy>(retryStrategy);
 
             // Creates the topic too.
-            this.retryPolicy.ExecuteAction(() => this.Settings.CreateSubscription(this.Topic, this.Subscription));
+            retryPolicy.ExecuteAction(() => Settings.CreateSubscription(Topic, Subscription));
         }
 
         public virtual void Dispose()
         {
             // Deletes subscriptions too.
-            this.retryPolicy.ExecuteAction(() => this.Settings.TryDeleteTopic(this.Topic));
+            retryPolicy.ExecuteAction(() => Settings.TryDeleteTopic(Topic));
         }
-
-        public string Topic { get; private set; }
-        public string Subscription { get; private set; }
     }
 }

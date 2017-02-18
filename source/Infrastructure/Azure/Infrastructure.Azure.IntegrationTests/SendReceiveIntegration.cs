@@ -11,34 +11,31 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Runtime.Serialization;
+using System.Threading;
+using Infrastructure.Azure.Messaging;
+using Microsoft.ServiceBus.Messaging;
+using Xunit;
+
 namespace Infrastructure.Azure.IntegrationTests.SendReceiveIntegration
 {
-    using System;
-    using System.Runtime.Serialization;
-    using System.Threading;
-    using Infrastructure.Azure.Messaging;
-    using Microsoft.Practices.TransientFaultHandling;
-    using Microsoft.ServiceBus.Messaging;
-    using Xunit;
-
     /// <summary>
-    /// Tests the send/receive behavior.
+    ///     Tests the send/receive behavior.
     /// </summary>
     public class given_a_sender_and_receiver : given_a_topic_and_subscription
     {
         [Fact]
         public void when_sending_message_then_can_receive_it()
         {
-            var sender = new TopicSender(this.Settings, this.Topic);
-            Data data = new Data { Id = Guid.NewGuid(), Title = "Foo" };
+            var sender = new TopicSender(Settings, Topic);
+            var data = new Data {Id = Guid.NewGuid(), Title = "Foo"};
             Data received = null;
-            using (var receiver = new SubscriptionReceiver(this.Settings, this.Topic, this.Subscription))
-            {
+            using (var receiver = new SubscriptionReceiver(Settings, Topic, Subscription)) {
                 var signal = new ManualResetEventSlim();
 
                 receiver.Start(
-                    m =>
-                    {
+                    m => {
                         received = m.GetBody<Data>();
                         signal.Set();
                         return MessageReleaseAction.CompleteMessage;
@@ -60,6 +57,7 @@ namespace Infrastructure.Azure.IntegrationTests.SendReceiveIntegration
     {
         [DataMember]
         public Guid Id { get; set; }
+
         [DataMember]
         public string Title { get; set; }
     }

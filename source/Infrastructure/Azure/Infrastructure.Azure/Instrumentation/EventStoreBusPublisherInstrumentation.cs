@@ -11,78 +11,65 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Diagnostics;
+
 namespace Infrastructure.Azure.Instrumentation
 {
-    using System;
-    using System.Diagnostics;
-
     public class EventStoreBusPublisherInstrumentation : IEventStoreBusPublisherInstrumentation, IDisposable
     {
         public const string CurrentEventPublishersCounterName = "Event publishers";
+
         public const string TotalEventsPublishingRequestsCounterName = "Total events publishing requested";
+
         public const string EventPublishingRequestsPerSecondCounterName = "Event publishing requests/sec";
+
         public const string TotalEventsPublishedCounterName = "Total events published";
+
         public const string EventsPublishedPerSecondCounterName = "Events published/sec";
+
+        private readonly PerformanceCounter currentEventPublishersCounter;
+
+        private readonly PerformanceCounter eventPublishingRequestsPerSecondCounter;
+
+        private readonly PerformanceCounter eventsPublishedPerSecondCounter;
 
         private readonly bool instrumentationEnabled;
 
-        private readonly PerformanceCounter currentEventPublishersCounter;
-        private readonly PerformanceCounter totalEventsPublishingRequestedCounter;
-        private readonly PerformanceCounter eventPublishingRequestsPerSecondCounter;
-        private readonly PerformanceCounter eventsPublishedPerSecondCounter;
         private readonly PerformanceCounter totalEventsPublishedCounter;
+
+        private readonly PerformanceCounter totalEventsPublishingRequestedCounter;
 
         public EventStoreBusPublisherInstrumentation(string instanceName, bool instrumentationEnabled)
         {
             this.instrumentationEnabled = instrumentationEnabled;
 
-            if (this.instrumentationEnabled)
-            {
-                this.currentEventPublishersCounter = new PerformanceCounter(Constants.EventPublishersPerformanceCountersCategory, CurrentEventPublishersCounterName, instanceName, false);
-                this.totalEventsPublishingRequestedCounter = new PerformanceCounter(Constants.EventPublishersPerformanceCountersCategory, TotalEventsPublishingRequestsCounterName, instanceName, false);
-                this.eventPublishingRequestsPerSecondCounter = new PerformanceCounter(Constants.EventPublishersPerformanceCountersCategory, EventPublishingRequestsPerSecondCounterName, instanceName, false);
-                this.totalEventsPublishedCounter = new PerformanceCounter(Constants.EventPublishersPerformanceCountersCategory, TotalEventsPublishedCounterName, instanceName, false);
-                this.eventsPublishedPerSecondCounter = new PerformanceCounter(Constants.EventPublishersPerformanceCountersCategory, EventsPublishedPerSecondCounterName, instanceName, false);
+            if (this.instrumentationEnabled) {
+                currentEventPublishersCounter = new PerformanceCounter(Constants.EventPublishersPerformanceCountersCategory, CurrentEventPublishersCounterName, instanceName, false);
+                totalEventsPublishingRequestedCounter = new PerformanceCounter(Constants.EventPublishersPerformanceCountersCategory, TotalEventsPublishingRequestsCounterName, instanceName, false);
+                eventPublishingRequestsPerSecondCounter = new PerformanceCounter(Constants.EventPublishersPerformanceCountersCategory, EventPublishingRequestsPerSecondCounterName, instanceName,
+                    false);
+                totalEventsPublishedCounter = new PerformanceCounter(Constants.EventPublishersPerformanceCountersCategory, TotalEventsPublishedCounterName, instanceName, false);
+                eventsPublishedPerSecondCounter = new PerformanceCounter(Constants.EventPublishersPerformanceCountersCategory, EventsPublishedPerSecondCounterName, instanceName, false);
 
-                this.currentEventPublishersCounter.RawValue = 0;
-                this.totalEventsPublishingRequestedCounter.RawValue = 0;
-                this.eventPublishingRequestsPerSecondCounter.RawValue = 0;
-                this.totalEventsPublishedCounter.RawValue = 0;
-                this.eventsPublishedPerSecondCounter.RawValue = 0;
+                currentEventPublishersCounter.RawValue = 0;
+                totalEventsPublishingRequestedCounter.RawValue = 0;
+                eventPublishingRequestsPerSecondCounter.RawValue = 0;
+                totalEventsPublishedCounter.RawValue = 0;
+                eventsPublishedPerSecondCounter.RawValue = 0;
             }
         }
 
-        public void EventsPublishingRequested(int eventCount)
+        protected virtual void Dispose(bool disposing)
         {
-            if (this.instrumentationEnabled)
-            {
-                this.totalEventsPublishingRequestedCounter.IncrementBy(eventCount);
-                this.eventPublishingRequestsPerSecondCounter.IncrementBy(eventCount);
-            }
-        }
-
-        public void EventPublished()
-        {
-            if (this.instrumentationEnabled)
-            {
-                this.totalEventsPublishedCounter.Increment();
-                this.eventsPublishedPerSecondCounter.Increment();
-            }
-        }
-
-        public void EventPublisherStarted()
-        {
-            if (this.instrumentationEnabled)
-            {
-                this.currentEventPublishersCounter.Increment();
-            }
-        }
-
-        public void EventPublisherFinished()
-        {
-            if (this.instrumentationEnabled)
-            {
-                this.currentEventPublishersCounter.Decrement();
+            if (disposing) {
+                if (instrumentationEnabled) {
+                    currentEventPublishersCounter.Dispose();
+                    totalEventsPublishingRequestedCounter.Dispose();
+                    eventPublishingRequestsPerSecondCounter.Dispose();
+                    eventsPublishedPerSecondCounter.Dispose();
+                    totalEventsPublishedCounter.Dispose();
+                }
             }
         }
 
@@ -92,18 +79,33 @@ namespace Infrastructure.Azure.Instrumentation
             GC.SuppressFinalize(this);
         }
 
-        protected virtual void Dispose(bool disposing)
+        public void EventsPublishingRequested(int eventCount)
         {
-            if (disposing)
-            {
-                if (this.instrumentationEnabled)
-                {
-                    this.currentEventPublishersCounter.Dispose();
-                    this.totalEventsPublishingRequestedCounter.Dispose();
-                    this.eventPublishingRequestsPerSecondCounter.Dispose();
-                    this.eventsPublishedPerSecondCounter.Dispose();
-                    this.totalEventsPublishedCounter.Dispose();
-                }
+            if (instrumentationEnabled) {
+                totalEventsPublishingRequestedCounter.IncrementBy(eventCount);
+                eventPublishingRequestsPerSecondCounter.IncrementBy(eventCount);
+            }
+        }
+
+        public void EventPublished()
+        {
+            if (instrumentationEnabled) {
+                totalEventsPublishedCounter.Increment();
+                eventsPublishedPerSecondCounter.Increment();
+            }
+        }
+
+        public void EventPublisherStarted()
+        {
+            if (instrumentationEnabled) {
+                currentEventPublishersCounter.Increment();
+            }
+        }
+
+        public void EventPublisherFinished()
+        {
+            if (instrumentationEnabled) {
+                currentEventPublishersCounter.Decrement();
             }
         }
     }

@@ -11,11 +11,11 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Linq;
+
 namespace Payments.ReadModel.Implementation
 {
-    using System;
-    using System.Linq;
-
     public class PaymentDao : IPaymentDao
     {
         private readonly Func<PaymentsReadDbContext> contextFactory;
@@ -27,8 +27,7 @@ namespace Payments.ReadModel.Implementation
 
         public ThirdPartyProcessorPaymentDetails GetThirdPartyProcessorPaymentDetails(Guid paymentId)
         {
-            using (var repository = this.contextFactory())
-            {
+            using (var repository = contextFactory()) {
                 return repository.Query<ThirdPartyProcessorPaymentDetails>().Where(dto => dto.Id == paymentId).FirstOrDefault();
             }
         }

@@ -11,20 +11,20 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using Infrastructure.Messaging;
+
 namespace Payments.Contracts.Commands
 {
-    using System;
-    using Infrastructure.Messaging;
-
     public class CompleteThirdPartyProcessorPayment : ICommand
     {
+        public Guid PaymentId { get; set; }
+
         public CompleteThirdPartyProcessorPayment()
         {
-            this.Id = Guid.NewGuid();
+            Id = Guid.NewGuid();
         }
 
-        public Guid Id { get; private set; }
-
-        public Guid PaymentId { get; set; }
+        public Guid Id { get; }
     }
 }

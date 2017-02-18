@@ -2,7 +2,8 @@
     ViewBag.Title = "Reservation for " + ViewBag.Conference.Name + " is unknown";
 }
 @ConferenceHelpers.ConferenceTitle(ViewBag.Conference.Name, ViewBag.Conference.Tagline)
-<h2 class="page__head page__wrapper">Cannot determine the state of the registration
+<h2 class="page__head page__wrapper">
+    Cannot determine the state of the registration
 </h2>
 <div class="page__content">
     <div class="page__wrapper content-main content-main_register">
@@ -10,8 +11,7 @@
             <div class="content-main__main">
                 <p>Please wait until the request is processed. </p>
                 <p>The page will refresh automatically in 5 seconds. If this does not happen, please click the Retry button to continue.</p>
-                @using (Html.BeginForm("StartPayment", "Registration", FormMethod.Post, new { id = "repostForm"}))
-                {
+                @using (Html.BeginForm("StartPayment", "Registration", FormMethod.Post, new {id = "repostForm"})) {
                     @Html.Hidden("paymentType")
                     @Html.Hidden("orderId")
                     @Html.Hidden("orderVersion")

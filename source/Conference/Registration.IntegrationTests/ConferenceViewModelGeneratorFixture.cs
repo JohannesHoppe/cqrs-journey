@@ -11,36 +11,38 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using Conference;
+using Infrastructure.Messaging;
+using Moq;
+using Registration.Commands;
+using Registration.Events;
+using Registration.Handlers;
+using Registration.IntegrationTests;
+using Registration.ReadModel;
+using Registration.ReadModel.Implementation;
+using Xunit;
+
 namespace Registration.Tests.ConferenceViewModelGeneratorFixture
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using Conference;
-    using Infrastructure.Messaging;
-    using Moq;
-    using Registration.Commands;
-    using Registration.Events;
-    using Registration.Handlers;
-    using Registration.IntegrationTests;
-    using Registration.ReadModel;
-    using Registration.ReadModel.Implementation;
-    using Xunit;
-
     public class given_a_view_model_generator : given_a_read_model_database
     {
-        protected ConferenceViewModelGenerator sut;
         protected List<ICommand> commands = new List<ICommand>();
+
+        protected ConferenceViewModelGenerator sut;
 
         public given_a_view_model_generator()
         {
             var bus = new Mock<ICommandBus>();
             bus.Setup(x => x.Send(It.IsAny<Envelope<ICommand>>()))
-                .Callback<Envelope<ICommand>>(x => this.commands.Add(x.Body));
+                .Callback<Envelope<ICommand>>(x => commands.Add(x.Body));
             bus.Setup(x => x.Send(It.IsAny<IEnumerable<Envelope<ICommand>>>()))
-                .Callback<IEnumerable<Envelope<ICommand>>>(x => this.commands.AddRange(x.Select(e => e.Body)));
+                .Callback<IEnumerable<Envelope<ICommand>>>(x => commands.AddRange(x.Select(e => e.Body)));
 
-            this.sut = new ConferenceViewModelGenerator(() => new ConferenceRegistrationDbContext(dbName), bus.Object);
+            sut = new ConferenceViewModelGenerator(() => new ConferenceRegistrationDbContext(dbName), bus.Object);
         }
     }
 
@@ -51,24 +53,21 @@ namespace Registration.Tests.ConferenceViewModelGeneratorFixture
         {
             var conferenceId = Guid.NewGuid();
 
-            this.sut.Handle(new ConferenceCreated
-            {
+            sut.Handle(new ConferenceCreated {
                 Name = "name",
                 Description = "description",
                 Slug = "test",
-                Owner = new Owner
-                {
+                Owner = new Owner {
                     Name = "owner",
-                    Email = "owner@email.com",
+                    Email = "owner@email.com"
                 },
                 SourceId = conferenceId,
                 StartDate = DateTime.UtcNow.Date,
-                EndDate = DateTime.UtcNow.Date,
+                EndDate = DateTime.UtcNow.Date
             });
 
-            using (var context = new ConferenceRegistrationDbContext(dbName))
-            {
-                var dto = context.Find<Conference>(conferenceId);
+            using (var context = new ConferenceRegistrationDbContext(dbName)) {
+                var dto = context.Find<Registration.ReadModel.Conference>(conferenceId);
 
                 Assert.NotNull(dto);
                 Assert.Equal("name", dto.Name);
@@ -83,17 +82,15 @@ namespace Registration.Tests.ConferenceViewModelGeneratorFixture
             var conferenceId = Guid.NewGuid();
             var seatId = Guid.NewGuid();
 
-            this.sut.Handle(new SeatCreated
-            {
+            sut.Handle(new SeatCreated {
                 ConferenceId = conferenceId,
                 SourceId = seatId,
                 Name = "seat",
                 Description = "description",
-                Price = 200,
+                Price = 200
             });
 
-            using (var context = new ConferenceRegistrationDbContext(dbName))
-            {
+            using (var context = new ConferenceRegistrationDbContext(dbName)) {
                 var dto = context.Set<SeatType>()
                     .FirstOrDefault(x => x.Id == seatId);
 
@@ -109,25 +106,23 @@ namespace Registration.Tests.ConferenceViewModelGeneratorFixture
 
     public class given_existing_conference : given_a_view_model_generator
     {
-        private Guid conferenceId = Guid.NewGuid();
+        private readonly Guid conferenceId = Guid.NewGuid();
 
         public given_existing_conference()
         {
-            System.Diagnostics.Trace.Listeners.Clear();
+            Trace.Listeners.Clear();
 
-            this.sut.Handle(new ConferenceCreated
-            {
+            sut.Handle(new ConferenceCreated {
                 SourceId = conferenceId,
                 Name = "name",
                 Description = "description",
                 Slug = "test",
-                Owner = new Owner
-                {
+                Owner = new Owner {
                     Name = "owner",
-                    Email = "owner@email.com",
+                    Email = "owner@email.com"
                 },
                 StartDate = DateTime.UtcNow.Date,
-                EndDate = DateTime.UtcNow.Date,
+                EndDate = DateTime.UtcNow.Date
             });
         }
 
@@ -135,24 +130,21 @@ namespace Registration.Tests.ConferenceViewModelGeneratorFixture
         public void when_conference_updated_then_conference_dto_populated()
         {
             var startDate = new DateTimeOffset(2012, 04, 20, 15, 0, 0, TimeSpan.FromHours(-8));
-            this.sut.Handle(new ConferenceUpdated
-            {
+            sut.Handle(new ConferenceUpdated {
                 Name = "newname",
                 Description = "newdescription",
                 Slug = "newtest",
-                Owner = new Owner
-                {
+                Owner = new Owner {
                     Name = "owner",
-                    Email = "owner@email.com",
+                    Email = "owner@email.com"
                 },
                 SourceId = conferenceId,
                 StartDate = startDate.UtcDateTime,
-                EndDate = DateTime.UtcNow.Date,
+                EndDate = DateTime.UtcNow.Date
             });
 
-            using (var context = new ConferenceRegistrationDbContext(dbName))
-            {
-                var dto = context.Find<Conference>(conferenceId);
+            using (var context = new ConferenceRegistrationDbContext(dbName)) {
+                var dto = context.Find<Registration.ReadModel.Conference>(conferenceId);
 
                 Assert.NotNull(dto);
                 Assert.Equal("newname", dto.Name);
@@ -166,14 +158,12 @@ namespace Registration.Tests.ConferenceViewModelGeneratorFixture
         public void when_conference_published_then_conference_dto_updated()
         {
             var startDate = new DateTimeOffset(2012, 04, 20, 15, 0, 0, TimeSpan.FromHours(-8));
-            this.sut.Handle(new ConferencePublished
-            {
-                SourceId = conferenceId,
+            sut.Handle(new ConferencePublished {
+                SourceId = conferenceId
             });
 
-            using (var context = new ConferenceRegistrationDbContext(dbName))
-            {
-                var dto = context.Find<Conference>(conferenceId);
+            using (var context = new ConferenceRegistrationDbContext(dbName)) {
+                var dto = context.Find<Registration.ReadModel.Conference>(conferenceId);
 
                 Assert.NotNull(dto);
                 Assert.Equal(true, dto.IsPublished);
@@ -184,18 +174,15 @@ namespace Registration.Tests.ConferenceViewModelGeneratorFixture
         public void when_published_conference_unpublished_then_conference_dto_updated()
         {
             var startDate = new DateTimeOffset(2012, 04, 20, 15, 0, 0, TimeSpan.FromHours(-8));
-            this.sut.Handle(new ConferencePublished
-            {
-                SourceId = conferenceId,
+            sut.Handle(new ConferencePublished {
+                SourceId = conferenceId
             });
-            this.sut.Handle(new ConferenceUnpublished
-            {
-                SourceId = conferenceId,
+            sut.Handle(new ConferenceUnpublished {
+                SourceId = conferenceId
             });
 
-            using (var context = new ConferenceRegistrationDbContext(dbName))
-            {
-                var dto = context.Find<Conference>(conferenceId);
+            using (var context = new ConferenceRegistrationDbContext(dbName)) {
+                var dto = context.Find<Registration.ReadModel.Conference>(conferenceId);
 
                 Assert.NotNull(dto);
                 Assert.Equal(false, dto.IsPublished);
@@ -207,17 +194,15 @@ namespace Registration.Tests.ConferenceViewModelGeneratorFixture
         {
             var seatId = Guid.NewGuid();
 
-            this.sut.Handle(new SeatCreated
-            {
+            sut.Handle(new SeatCreated {
                 ConferenceId = conferenceId,
                 SourceId = seatId,
                 Name = "seat",
                 Description = "description",
-                Price = 200,
+                Price = 200
             });
 
-            using (var context = new ConferenceRegistrationDbContext(dbName))
-            {
+            using (var context = new ConferenceRegistrationDbContext(dbName)) {
                 var dto = context.Set<SeatType>()
                     .Where(x => x.ConferenceId == conferenceId)
                     .Single(x => x.Id == seatId);
@@ -235,17 +220,16 @@ namespace Registration.Tests.ConferenceViewModelGeneratorFixture
         {
             var seatId = Guid.NewGuid();
 
-            this.sut.Handle(new SeatCreated
-            {
+            sut.Handle(new SeatCreated {
                 ConferenceId = conferenceId,
                 SourceId = seatId,
                 Name = "seat",
                 Description = "description",
                 Price = 200,
-                Quantity = 100,
+                Quantity = 100
             });
 
-            var e = this.commands.OfType<AddSeats>().FirstOrDefault();
+            var e = commands.OfType<AddSeats>().FirstOrDefault();
 
             Assert.NotNull(e);
             Assert.Equal(conferenceId, e.ConferenceId);
@@ -258,26 +242,23 @@ namespace Registration.Tests.ConferenceViewModelGeneratorFixture
         {
             var seatId = Guid.NewGuid();
 
-            this.sut.Handle(new SeatCreated
-            {
+            sut.Handle(new SeatCreated {
                 ConferenceId = conferenceId,
                 SourceId = seatId,
                 Name = "seat",
                 Description = "description",
-                Price = 200,
+                Price = 200
             });
 
-            this.sut.Handle(new SeatUpdated
-            {
+            sut.Handle(new SeatUpdated {
                 ConferenceId = conferenceId,
                 SourceId = seatId,
                 Name = "newseat",
                 Description = "newdescription",
-                Price = 100,
+                Price = 100
             });
 
-            using (var context = new ConferenceRegistrationDbContext(dbName))
-            {
+            using (var context = new ConferenceRegistrationDbContext(dbName)) {
                 var dto = context.Set<SeatType>()
                     .Where(x => x.ConferenceId == conferenceId)
                     .Single(x => x.Id == seatId);
@@ -295,29 +276,27 @@ namespace Registration.Tests.ConferenceViewModelGeneratorFixture
         {
             var seatId = Guid.NewGuid();
 
-            this.sut.Handle(new SeatCreated
-            {
+            sut.Handle(new SeatCreated {
                 ConferenceId = conferenceId,
                 SourceId = seatId,
                 Name = "seat",
                 Description = "description",
                 Price = 200,
-                Quantity = 100,
+                Quantity = 100
             });
 
-            this.commands.Clear();
+            commands.Clear();
 
-            this.sut.Handle(new SeatUpdated
-            {
+            sut.Handle(new SeatUpdated {
                 ConferenceId = conferenceId,
                 SourceId = seatId,
                 Name = "newseat",
                 Description = "newdescription",
                 Price = 100,
-                Quantity = 200,
+                Quantity = 200
             });
 
-            var e = this.commands.OfType<AddSeats>().FirstOrDefault();
+            var e = commands.OfType<AddSeats>().FirstOrDefault();
 
             Assert.NotNull(e);
             Assert.Equal(conferenceId, e.ConferenceId);
@@ -330,29 +309,27 @@ namespace Registration.Tests.ConferenceViewModelGeneratorFixture
         {
             var seatId = Guid.NewGuid();
 
-            this.sut.Handle(new SeatCreated
-            {
+            sut.Handle(new SeatCreated {
                 ConferenceId = conferenceId,
                 SourceId = seatId,
                 Name = "seat",
                 Description = "description",
                 Price = 200,
-                Quantity = 100,
+                Quantity = 100
             });
 
-            this.commands.Clear();
+            commands.Clear();
 
-            this.sut.Handle(new SeatUpdated
-            {
+            sut.Handle(new SeatUpdated {
                 ConferenceId = conferenceId,
                 SourceId = seatId,
                 Name = "newseat",
                 Description = "newdescription",
                 Price = 100,
-                Quantity = 50,
+                Quantity = 50
             });
 
-            var e = this.commands.OfType<RemoveSeats>().FirstOrDefault();
+            var e = commands.OfType<RemoveSeats>().FirstOrDefault();
 
             Assert.NotNull(e);
             Assert.Equal(conferenceId, e.ConferenceId);
@@ -365,24 +342,21 @@ namespace Registration.Tests.ConferenceViewModelGeneratorFixture
         {
             var seatId = Guid.NewGuid();
 
-            this.sut.Handle(new SeatCreated
-            {
+            sut.Handle(new SeatCreated {
                 ConferenceId = conferenceId,
                 SourceId = seatId,
                 Name = "seat",
                 Description = "description",
-                Price = 200,
+                Price = 200
             });
 
-            this.sut.Handle(new AvailableSeatsChanged
-            {
+            sut.Handle(new AvailableSeatsChanged {
                 SourceId = conferenceId,
                 Version = 1,
-                Seats = new[] { new SeatQuantity { SeatType = seatId, Quantity = 200 } }
+                Seats = new[] {new SeatQuantity {SeatType = seatId, Quantity = 200}}
             });
 
-            using (var context = new ConferenceRegistrationDbContext(dbName))
-            {
+            using (var context = new ConferenceRegistrationDbContext(dbName)) {
                 var dto = context.Set<SeatType>()
                     .Where(x => x.ConferenceId == conferenceId)
                     .Single(x => x.Id == seatId);
@@ -400,31 +374,27 @@ namespace Registration.Tests.ConferenceViewModelGeneratorFixture
         {
             var seatId = Guid.NewGuid();
 
-            this.sut.Handle(new SeatCreated
-            {
+            sut.Handle(new SeatCreated {
                 ConferenceId = conferenceId,
                 SourceId = seatId,
                 Name = "seat",
                 Description = "description",
-                Price = 200,
+                Price = 200
             });
 
-            this.sut.Handle(new AvailableSeatsChanged
-            {
+            sut.Handle(new AvailableSeatsChanged {
                 SourceId = conferenceId,
                 Version = 1,
-                Seats = new[] { new SeatQuantity { SeatType = seatId, Quantity = 200 } }
+                Seats = new[] {new SeatQuantity {SeatType = seatId, Quantity = 200}}
             });
 
-            this.sut.Handle(new SeatsReserved
-            {
+            sut.Handle(new SeatsReserved {
                 SourceId = conferenceId,
                 Version = 2,
-                AvailableSeatsChanged = new[] { new SeatQuantity { SeatType = seatId, Quantity = -50 } }
+                AvailableSeatsChanged = new[] {new SeatQuantity {SeatType = seatId, Quantity = -50}}
             });
 
-            using (var context = new ConferenceRegistrationDbContext(dbName))
-            {
+            using (var context = new ConferenceRegistrationDbContext(dbName)) {
                 var dto = context.Set<SeatType>()
                     .Where(x => x.ConferenceId == conferenceId)
                     .Single(x => x.Id == seatId);
@@ -442,38 +412,33 @@ namespace Registration.Tests.ConferenceViewModelGeneratorFixture
         {
             var seatId = Guid.NewGuid();
 
-            this.sut.Handle(new SeatCreated
-            {
+            sut.Handle(new SeatCreated {
                 ConferenceId = conferenceId,
                 SourceId = seatId,
                 Name = "seat",
                 Description = "description",
-                Price = 200,
+                Price = 200
             });
 
-            this.sut.Handle(new AvailableSeatsChanged
-            {
+            sut.Handle(new AvailableSeatsChanged {
                 SourceId = conferenceId,
                 Version = 1,
-                Seats = new[] { new SeatQuantity { SeatType = seatId, Quantity = 200 } }
+                Seats = new[] {new SeatQuantity {SeatType = seatId, Quantity = 200}}
             });
 
-            this.sut.Handle(new SeatsReserved
-            {
+            sut.Handle(new SeatsReserved {
                 SourceId = conferenceId,
                 Version = 2,
-                AvailableSeatsChanged = new[] { new SeatQuantity { SeatType = seatId, Quantity = -50 } }
+                AvailableSeatsChanged = new[] {new SeatQuantity {SeatType = seatId, Quantity = -50}}
             });
 
-            this.sut.Handle(new SeatsReservationCancelled
-            {
+            sut.Handle(new SeatsReservationCancelled {
                 SourceId = conferenceId,
                 Version = 3,
-                AvailableSeatsChanged = new[] { new SeatQuantity { SeatType = seatId, Quantity = 50 } }
+                AvailableSeatsChanged = new[] {new SeatQuantity {SeatType = seatId, Quantity = 50}}
             });
 
-            using (var context = new ConferenceRegistrationDbContext(dbName))
-            {
+            using (var context = new ConferenceRegistrationDbContext(dbName)) {
                 var dto = context.Set<SeatType>()
                     .Where(x => x.ConferenceId == conferenceId)
                     .Single(x => x.Id == seatId);
@@ -491,38 +456,33 @@ namespace Registration.Tests.ConferenceViewModelGeneratorFixture
         {
             var seatId = Guid.NewGuid();
 
-            this.sut.Handle(new SeatCreated
-            {
+            sut.Handle(new SeatCreated {
                 ConferenceId = conferenceId,
                 SourceId = seatId,
                 Name = "seat",
                 Description = "description",
-                Price = 200,
+                Price = 200
             });
 
-            this.sut.Handle(new AvailableSeatsChanged
-            {
+            sut.Handle(new AvailableSeatsChanged {
                 SourceId = conferenceId,
                 Version = 1,
-                Seats = new[] { new SeatQuantity { SeatType = seatId, Quantity = 200 } }
+                Seats = new[] {new SeatQuantity {SeatType = seatId, Quantity = 200}}
             });
 
-            this.sut.Handle(new SeatsReserved
-            {
+            sut.Handle(new SeatsReserved {
                 SourceId = conferenceId,
                 Version = 2,
-                AvailableSeatsChanged = new[] { new SeatQuantity { SeatType = seatId, Quantity = -50 } }
+                AvailableSeatsChanged = new[] {new SeatQuantity {SeatType = seatId, Quantity = -50}}
             });
 
-            this.sut.Handle(new SeatsReserved
-            {
+            sut.Handle(new SeatsReserved {
                 SourceId = conferenceId,
                 Version = 2,
-                AvailableSeatsChanged = new[] { new SeatQuantity { SeatType = seatId, Quantity = -50 } }
+                AvailableSeatsChanged = new[] {new SeatQuantity {SeatType = seatId, Quantity = -50}}
             });
 
-            using (var context = new ConferenceRegistrationDbContext(dbName))
-            {
+            using (var context = new ConferenceRegistrationDbContext(dbName)) {
                 var dto = context.Set<SeatType>()
                     .Where(x => x.ConferenceId == conferenceId)
                     .Single(x => x.Id == seatId);
@@ -540,38 +500,33 @@ namespace Registration.Tests.ConferenceViewModelGeneratorFixture
         {
             var seatId = Guid.NewGuid();
 
-            this.sut.Handle(new SeatCreated
-            {
+            sut.Handle(new SeatCreated {
                 ConferenceId = conferenceId,
                 SourceId = seatId,
                 Name = "seat",
                 Description = "description",
-                Price = 200,
+                Price = 200
             });
 
-            this.sut.Handle(new AvailableSeatsChanged
-            {
+            sut.Handle(new AvailableSeatsChanged {
                 SourceId = conferenceId,
                 Version = 0,
-                Seats = new[] { new SeatQuantity { SeatType = seatId, Quantity = 200 } }
+                Seats = new[] {new SeatQuantity {SeatType = seatId, Quantity = 200}}
             });
 
-            this.sut.Handle(new SeatsReserved
-            {
+            sut.Handle(new SeatsReserved {
                 SourceId = conferenceId,
                 Version = 1,
-                AvailableSeatsChanged = new[] { new SeatQuantity { SeatType = seatId, Quantity = -50 } }
+                AvailableSeatsChanged = new[] {new SeatQuantity {SeatType = seatId, Quantity = -50}}
             });
 
-            this.sut.Handle(new AvailableSeatsChanged
-            {
+            sut.Handle(new AvailableSeatsChanged {
                 SourceId = conferenceId,
                 Version = 0,
-                Seats = new[] { new SeatQuantity { SeatType = seatId, Quantity = 200 } }
+                Seats = new[] {new SeatQuantity {SeatType = seatId, Quantity = 200}}
             });
 
-            using (var context = new ConferenceRegistrationDbContext(dbName))
-            {
+            using (var context = new ConferenceRegistrationDbContext(dbName)) {
                 var dto = context.Set<SeatType>()
                     .Where(x => x.ConferenceId == conferenceId)
                     .Single(x => x.Id == seatId);

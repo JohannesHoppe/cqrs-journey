@@ -11,13 +11,13 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Collections.Generic;
+using System.Linq;
+
 namespace Infrastructure.Messaging
 {
-    using System.Collections.Generic;
-    using System.Linq;
-
     /// <summary>
-    /// Provides usability overloads for <see cref="ICommandBus"/>
+    ///     Provides usability overloads for <see cref="ICommandBus" />
     /// </summary>
     public static class CommandBusExtensions
     {

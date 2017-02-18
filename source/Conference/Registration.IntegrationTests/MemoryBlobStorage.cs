@@ -11,30 +11,30 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System.Collections.Generic;
+using Infrastructure.BlobStorage;
+
 namespace Registration.IntegrationTests
 {
-    using System.Collections.Generic;
-    using Infrastructure.BlobStorage;
-
     public class MemoryBlobStorage : IBlobStorage
     {
-        private Dictionary<string, byte[]> blobs = new Dictionary<string, byte[]>();
+        private readonly Dictionary<string, byte[]> blobs = new Dictionary<string, byte[]>();
 
         public byte[] Find(string id)
         {
             byte[] blob = null;
-            this.blobs.TryGetValue(id, out blob);
+            blobs.TryGetValue(id, out blob);
             return blob;
         }
 
         public void Save(string id, string contentType, byte[] blob)
         {
-            this.blobs[id] = blob;
+            blobs[id] = blob;
         }
 
         public void Delete(string id)
         {
-            this.blobs.Remove(id);
+            blobs.Remove(id);
         }
     }
 }

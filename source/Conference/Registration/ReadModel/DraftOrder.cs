@@ -11,58 +11,63 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel.DataAnnotations;
+
 namespace Registration.ReadModel
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Collections.ObjectModel;
-    using System.ComponentModel.DataAnnotations;
-
     public class DraftOrder
     {
         public enum States
         {
             PendingReservation = 0,
+
             PartiallyReserved = 1,
+
             ReservationCompleted = 2,
+
             Rejected = 3,
-            Confirmed = 4,
-        }
 
-        public DraftOrder(Guid orderId, Guid conferenceId, States state, int orderVersion = 0)
-            : this()
-        {
-            this.OrderId = orderId;
-            this.ConferenceId = conferenceId;
-            this.State = state;
-            this.OrderVersion = orderVersion;
-        }
-
-        protected DraftOrder()
-        {
-            this.Lines = new ObservableCollection<DraftOrderItem>();
+            Confirmed = 4
         }
 
         [Key]
-        public Guid OrderId { get; private set; }
+        public Guid OrderId { get; }
 
-        public Guid ConferenceId { get; private set; }
+        public Guid ConferenceId { get; }
 
         public DateTime? ReservationExpirationDate { get; set; }
 
-        public ICollection<DraftOrderItem> Lines { get; private set; }
+        public ICollection<DraftOrderItem> Lines { get; }
 
         public int StateValue { get; private set; }
 
         [NotMapped]
-        public States State
-        {
-            get { return (States)this.StateValue; }
-            set { this.StateValue = (int)value; }
+        public States State {
+            get { return (States) StateValue; }
+            set { StateValue = (int) value; }
         }
 
         public int OrderVersion { get; internal set; }
+
         public string RegistrantEmail { get; internal set; }
+
         public string AccessCode { get; internal set; }
+
+        public DraftOrder(Guid orderId, Guid conferenceId, States state, int orderVersion = 0)
+            : this()
+        {
+            OrderId = orderId;
+            ConferenceId = conferenceId;
+            State = state;
+            OrderVersion = orderVersion;
+        }
+
+        protected DraftOrder()
+        {
+            Lines = new ObservableCollection<DraftOrderItem>();
+        }
     }
 }

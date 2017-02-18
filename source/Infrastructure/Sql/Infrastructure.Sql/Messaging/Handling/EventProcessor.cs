@@ -11,36 +11,35 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using Infrastructure.Messaging;
+using Infrastructure.Messaging.Handling;
+using Infrastructure.Serialization;
+
 namespace Infrastructure.Sql.Messaging.Handling
 {
-    using Infrastructure.Messaging;
-    using Infrastructure.Messaging.Handling;
-    using Infrastructure.Serialization;
-    using Infrastructure.Sql.Messaging;
-
     /// <summary>
-    /// Processes incoming events from the bus and routes them to the appropriate 
-    /// handlers.
+    ///     Processes incoming events from the bus and routes them to the appropriate
+    ///     handlers.
     /// </summary>
     public class EventProcessor : MessageProcessor, IEventHandlerRegistry
     {
-        private EventDispatcher messageDispatcher;
+        private readonly EventDispatcher messageDispatcher;
 
         public EventProcessor(IMessageReceiver receiver, ITextSerializer serializer)
             : base(receiver, serializer)
         {
-            this.messageDispatcher = new EventDispatcher();
-        }
-
-        public void Register(IEventHandler eventHandler)
-        {
-            this.messageDispatcher.Register(eventHandler);
+            messageDispatcher = new EventDispatcher();
         }
 
         protected override void ProcessMessage(object payload, string correlationId)
         {
-            var @event = (IEvent)payload;
-            this.messageDispatcher.DispatchMessage(@event, null, correlationId, "");
+            var @event = (IEvent) payload;
+            messageDispatcher.DispatchMessage(@event, null, correlationId, "");
+        }
+
+        public void Register(IEventHandler eventHandler)
+        {
+            messageDispatcher.Register(eventHandler);
         }
     }
 }
