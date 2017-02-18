@@ -113,7 +113,7 @@ namespace Infrastructure.Sql.Messaging.Implementation
 
                                 var body = (string) reader["Body"];
                                 var deliveryDateValue = reader["DeliveryDate"];
-                                var deliveryDate = deliveryDateValue == DBNull.Value ? null : (DateTime) deliveryDateValue;
+                                var deliveryDate = deliveryDateValue == DBNull.Value ? null : (DateTime?) deliveryDateValue;
                                 var correlationIdValue = reader["CorrelationId"];
                                 var correlationId = (string) (correlationIdValue == DBNull.Value ? null : correlationIdValue);
 
