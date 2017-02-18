@@ -98,8 +98,7 @@ namespace WorkerRoleCommandProcessor
 
             var config = DiagnosticMonitor.GetDefaultInitialConfiguration();
 
-            var cloudStorageAccount =
-                CloudStorageAccount.Parse(RoleEnvironment.GetConfigurationSettingValue("Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString"));
+            var cloudStorageAccount = CloudStorageAccount.Parse(RoleEnvironment.GetConfigurationSettingValue("Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString"));
 
             TimeSpan transferPeriod;
             if (!TimeSpan.TryParse(RoleEnvironment.GetConfigurationSettingValue("Diagnostics.ScheduledTransferPeriod"), out transferPeriod))
@@ -176,9 +175,10 @@ namespace WorkerRoleCommandProcessor
             config.Logs.ScheduledTransferPeriod = transferPeriod;
             config.Logs.ScheduledTransferLogLevelFilter = logLevel;
 
-            DiagnosticMonitor.Start(cloudStorageAccount, config);
+            //            DiagnosticMonitor.Start(cloudStorageAccount, config);
+                        DiagnosticMonitor.Start("Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString", config);
 
-            Trace.Listeners.Add(new Microsoft.WindowsAzure.Diagnostics.DiagnosticMonitorTraceListener());
+            Trace.Listeners.Add(new DiagnosticMonitorTraceListener());
             Trace.AutoFlush = true;
 
             Database.DefaultConnectionFactory = new ServiceConfigurationSettingConnectionFactory(Database.DefaultConnectionFactory);

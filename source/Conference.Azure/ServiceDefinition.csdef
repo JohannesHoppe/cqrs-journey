@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ServiceDefinition name="Conference.Azure" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition" schemaVersion="2012-05.1.7">
+<ServiceDefinition name="Conference.Azure" xmlns="http://schemas.microsoft.com/ServiceHosting/2008/10/ServiceDefinition" schemaVersion="2015-04.2.6">
   <WebRole name="Conference.Web.Admin" vmsize="ExtraSmall">
     <Sites>
       <Site name="Web">
@@ -12,7 +12,6 @@
       <InputEndpoint name="Endpoint1" protocol="http" port="8080" />
     </Endpoints>
     <Imports>
-      <Import moduleName="Diagnostics" />
     </Imports>
     <ConfigurationSettings>
       <Setting name="Diagnostics.ScheduledTransferPeriod" />
@@ -21,6 +20,7 @@
       <Setting name="DbContext.ConferenceManagement" />
       <Setting name="DbContext.SqlBus" />
       <Setting name="MaintenanceMode" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" />
     </ConfigurationSettings>
   </WebRole>
   <WebRole name="Conference.Web.Public" vmsize="ExtraSmall">
@@ -35,7 +35,6 @@
       <InputEndpoint name="Endpoint1" protocol="http" port="80" />
     </Endpoints>
     <Imports>
-      <Import moduleName="Diagnostics" />
     </Imports>
     <ConfigurationSettings>
       <Setting name="Diagnostics.ScheduledTransferPeriod" />
@@ -47,6 +46,7 @@
       <Setting name="DbContext.BlobStorage" />
       <Setting name="MaintenanceMode" />
       <Setting name="InstrumentationEnabled" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" />
     </ConfigurationSettings>
     <Startup>
       <Task taskType="simple" executionContext="elevated" commandLine="setup\install.cmd">
@@ -63,7 +63,6 @@
   </WebRole>
   <WorkerRole name="WorkerRoleCommandProcessor" vmsize="ExtraSmall">
     <Imports>
-      <Import moduleName="Diagnostics" />
     </Imports>
     <ConfigurationSettings>
       <Setting name="Diagnostics.ScheduledTransferPeriod" />
@@ -79,6 +78,7 @@
       <Setting name="MaintenanceMode" />
       <Setting name="DbContext.MessageLog" />
       <Setting name="InstrumentationEnabled" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" />
     </ConfigurationSettings>
     <Startup>
       <Task taskType="simple" executionContext="elevated" commandLine="setup\install.cmd">

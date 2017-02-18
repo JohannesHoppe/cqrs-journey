@@ -11,6 +11,8 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+using Microsoft.WindowsAzure.Diagnostics;
+
 namespace Conference.Web.Public
 {
     using System.Runtime.Caching;
@@ -61,7 +63,7 @@ namespace Conference.Web.Public
 #if AZURESDK
             if (Microsoft.WindowsAzure.ServiceRuntime.RoleEnvironment.IsAvailable)
             {
-                System.Diagnostics.Trace.Listeners.Add(new Microsoft.WindowsAzure.Diagnostics.DiagnosticMonitorTraceListener());
+                System.Diagnostics.Trace.Listeners.Add(new DiagnosticMonitorTraceListener());
                 System.Diagnostics.Trace.AutoFlush = true;
             }
 #endif

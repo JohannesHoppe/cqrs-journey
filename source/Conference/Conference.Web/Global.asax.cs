@@ -11,6 +11,8 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
+
+
 namespace Conference.Web.Admin
 {
     using System.Data.Entity;
@@ -30,6 +32,7 @@ namespace Conference.Web.Admin
     using Infrastructure.Azure.Messaging;
     using Infrastructure.Azure;
 #endif
+    using Microsoft.WindowsAzure.Diagnostics;
 
     public class MvcApplication : HttpApplication
     {
@@ -106,7 +109,7 @@ namespace Conference.Web.Admin
 #if AZURESDK
             if (Microsoft.WindowsAzure.ServiceRuntime.RoleEnvironment.IsAvailable)
             {
-                System.Diagnostics.Trace.Listeners.Add(new Microsoft.WindowsAzure.Diagnostics.DiagnosticMonitorTraceListener());
+                System.Diagnostics.Trace.Listeners.Add(new DiagnosticMonitorTraceListener());
                 System.Diagnostics.Trace.AutoFlush = true;
             }
 #endif

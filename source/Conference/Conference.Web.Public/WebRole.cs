@@ -29,45 +29,38 @@ namespace Conference.Web.Public
                 CloudStorageAccount.Parse(RoleEnvironment.GetConfigurationSettingValue("Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString"));
 
             TimeSpan transferPeriod;
-            if (!TimeSpan.TryParse(RoleEnvironment.GetConfigurationSettingValue("Diagnostics.ScheduledTransferPeriod"), out transferPeriod))
-            {
+            if (!TimeSpan.TryParse(RoleEnvironment.GetConfigurationSettingValue("Diagnostics.ScheduledTransferPeriod"), out transferPeriod)) {
                 transferPeriod = TimeSpan.FromMinutes(1);
             }
 
             TimeSpan sampleRate;
-            if (!TimeSpan.TryParse(RoleEnvironment.GetConfigurationSettingValue("Diagnostics.PerformanceCounterSampleRate"), out sampleRate))
-            {
+            if (!TimeSpan.TryParse(RoleEnvironment.GetConfigurationSettingValue("Diagnostics.PerformanceCounterSampleRate"), out sampleRate)) {
                 sampleRate = TimeSpan.FromSeconds(30);
             }
 
             LogLevel logLevel;
-            if (!Enum.TryParse<LogLevel>(RoleEnvironment.GetConfigurationSettingValue("Diagnostics.LogLevelFilter"), out logLevel))
-            {
+            if (!Enum.TryParse<LogLevel>(RoleEnvironment.GetConfigurationSettingValue("Diagnostics.LogLevelFilter"), out logLevel)) {
                 logLevel = LogLevel.Verbose;
             }
 
             // Setup performance counters
             config.PerformanceCounters.DataSources.Add(
-                new PerformanceCounterConfiguration
-                {
+                new PerformanceCounterConfiguration {
                     CounterSpecifier = @"\Processor(_Total)\% Processor Time",
                     SampleRate = sampleRate
                 });
             config.PerformanceCounters.ScheduledTransferPeriod = transferPeriod;
 #if !LOCAL
             foreach (var counterName in
-                new[] 
-                { 
+                new[] {
                     Infrastructure.Azure.Instrumentation.EventStoreBusPublisherInstrumentation.CurrentEventPublishersCounterName,
                     Infrastructure.Azure.Instrumentation.EventStoreBusPublisherInstrumentation.EventPublishingRequestsPerSecondCounterName,
                     Infrastructure.Azure.Instrumentation.EventStoreBusPublisherInstrumentation.EventsPublishedPerSecondCounterName,
                     Infrastructure.Azure.Instrumentation.EventStoreBusPublisherInstrumentation.TotalEventsPublishedCounterName,
                     Infrastructure.Azure.Instrumentation.EventStoreBusPublisherInstrumentation.TotalEventsPublishingRequestsCounterName,
-                })
-            {
+                }) {
                 config.PerformanceCounters.DataSources.Add(
-                    new PerformanceCounterConfiguration
-                    {
+                    new PerformanceCounterConfiguration {
                         CounterSpecifier = @"\" + Infrastructure.Azure.Instrumentation.Constants.EventPublishersPerformanceCountersCategory + @"(*)\" + counterName,
                         SampleRate = sampleRate
                     });
@@ -78,7 +71,8 @@ namespace Conference.Web.Public
             config.Logs.ScheduledTransferPeriod = transferPeriod;
             config.Logs.ScheduledTransferLogLevelFilter = logLevel;
 
-            DiagnosticMonitor.Start(cloudStorageAccount, config);
+            //            DiagnosticMonitor.Start(cloudStorageAccount, config);
+            DiagnosticMonitor.Start("Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString", config);
 
             return base.OnStart();
         }
