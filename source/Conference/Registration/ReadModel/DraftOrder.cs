@@ -23,13 +23,9 @@ namespace Registration.ReadModel
         public enum States
         {
             PendingReservation = 0,
-
             PartiallyReserved = 1,
-
             ReservationCompleted = 2,
-
             Rejected = 3,
-
             Confirmed = 4
         }
 
@@ -42,13 +38,7 @@ namespace Registration.ReadModel
 
         public ICollection<DraftOrderItem> Lines { get; }
 
-        public int StateValue { get; private set; }
-
-        [NotMapped]
-        public States State {
-            get { return (States) StateValue; }
-            set { StateValue = (int) value; }
-        }
+        public States State { get; set; }
 
         public int OrderVersion { get; internal set; }
 

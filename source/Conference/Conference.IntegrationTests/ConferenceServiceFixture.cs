@@ -1,19 +1,7 @@
-﻿// ==============================================================================================================
-// Microsoft patterns & practices
-// CQRS Journey project
-// ==============================================================================================================
-// ©2012 Microsoft. All rights reserved. Certain content used with permission from contributors
-// http://go.microsoft.com/fwlink/p/?LinkID=258575
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance 
-// with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
-// Unless required by applicable law or agreed to in writing, software distributed under the License is 
-// distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
-// See the License for the specific language governing permissions and limitations under the License.
-// ==============================================================================================================
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Entity.Core;
 using System.Linq;
 using Infrastructure.Messaging;
 using Moq;
@@ -25,13 +13,11 @@ namespace Conference.IntegrationTests.ConferenceServiceFixture
     {
         private readonly List<IEvent> busEvents;
 
-        private readonly string dbName = "ConferenceServiceFixture_" + Guid.NewGuid();
-
         private readonly ConferenceService service;
 
         public given_no_conference()
         {
-            using (var context = new ConferenceContext(dbName)) {
+            using (var context = new ConferenceContext()) {
                 if (context.Database.Exists()) {
                     context.Database.Delete();
                 }
@@ -44,7 +30,7 @@ namespace Conference.IntegrationTests.ConferenceServiceFixture
             busMock.Setup(b => b.Publish(It.IsAny<Envelope<IEvent>>())).Callback<Envelope<IEvent>>(e => busEvents.Add(e.Body));
             busMock.Setup(b => b.Publish(It.IsAny<IEnumerable<Envelope<IEvent>>>())).Callback<IEnumerable<Envelope<IEvent>>>(es => busEvents.AddRange(es.Select(e => e.Body)));
 
-            service = new ConferenceService(busMock.Object, dbName);
+            service = new ConferenceService(busMock.Object);
         }
 
         [Fact]
@@ -152,7 +138,7 @@ namespace Conference.IntegrationTests.ConferenceServiceFixture
 
         public void Dispose()
         {
-            using (var context = new ConferenceContext(dbName)) {
+            using (var context = new ConferenceContext()) {
                 if (context.Database.Exists()) {
                     context.Database.Delete();
                 }
@@ -172,7 +158,7 @@ namespace Conference.IntegrationTests.ConferenceServiceFixture
 
         public given_an_existing_conference_with_a_seat()
         {
-            using (var context = new ConferenceContext(dbName)) {
+            using (var context = new ConferenceContext()) {
                 if (context.Database.Exists()) {
                     context.Database.Delete();
                 }
@@ -184,7 +170,7 @@ namespace Conference.IntegrationTests.ConferenceServiceFixture
             var busMock = new Mock<IEventBus>();
             busMock.Setup(b => b.Publish(It.IsAny<Envelope<IEvent>>())).Callback<Envelope<IEvent>>(e => busEvents.Add(e.Body));
             busMock.Setup(b => b.Publish(It.IsAny<IEnumerable<Envelope<IEvent>>>())).Callback<IEnumerable<Envelope<IEvent>>>(es => busEvents.AddRange(es.Select(e => e.Body)));
-            service = new ConferenceService(busMock.Object, dbName);
+            service = new ConferenceService(busMock.Object);
             conference = new ConferenceInfo {
                 OwnerEmail = "test@contoso.com",
                 OwnerName = "test owner",
@@ -211,7 +197,7 @@ namespace Conference.IntegrationTests.ConferenceServiceFixture
         [Fact]
         public void then_conference_is_created_unpublished()
         {
-            using (var context = new ConferenceContext(dbName)) {
+            using (var context = new ConferenceContext()) {
                 Assert.False(context.Conferences.Find(conference.Id).IsPublished);
                 Assert.False(context.Conferences.Find(conference.Id).WasEverPublished);
             }
@@ -220,7 +206,7 @@ namespace Conference.IntegrationTests.ConferenceServiceFixture
         [Fact]
         public void then_conference_is_persisted()
         {
-            using (var context = new ConferenceContext(dbName)) {
+            using (var context = new ConferenceContext()) {
                 Assert.NotNull(context.Conferences.Find(conference.Id));
             }
         }
@@ -456,7 +442,7 @@ namespace Conference.IntegrationTests.ConferenceServiceFixture
 
         public void Dispose()
         {
-            using (var context = new ConferenceContext(dbName)) {
+            using (var context = new ConferenceContext()) {
                 if (context.Database.Exists()) {
                     context.Database.Delete();
                 }

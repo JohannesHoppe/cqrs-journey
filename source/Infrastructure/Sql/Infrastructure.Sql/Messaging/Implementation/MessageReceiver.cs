@@ -15,8 +15,6 @@ using System;
 using System.Data;
 using System.Data.Entity.Infrastructure;
 using System.Data.SqlClient;
-using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -26,15 +24,24 @@ namespace Infrastructure.Sql.Messaging.Implementation
     {
         private readonly IDbConnectionFactory connectionFactory;
 
-        private readonly string deleteQuery;
-
         private readonly object lockObject = new object();
 
         private readonly string name;
 
+        private readonly string tableName;
+
         private readonly TimeSpan pollDelay;
 
-        private readonly string readQuery;
+        private const string ReadQuery = "SELECT TOP (1) "
+            + "t.[Id] AS [Id], "
+            + "t.[Body] AS [Body], "
+            + "t.[DeliveryDate] AS [DeliveryDate], "
+            + "t.[CorrelationId] AS [CorrelationId] "
+            + "FROM @Table t WITH (UPDLOCK, READPAST) "
+            + "WHERE (t.[DeliveryDate] IS NULL) OR (t.[DeliveryDate] <= @CurrentDate) "
+            + "ORDER BY t.[Id] ASC";
+
+        private const string DeleteQuery = "DELETE FROM {0} WHERE Id = @Id";
 
         private CancellationTokenSource cancellationSource;
 
@@ -45,25 +52,8 @@ namespace Infrastructure.Sql.Messaging.Implementation
         {
             this.connectionFactory = connectionFactory;
             this.name = name;
+            this.tableName = tableName;
             this.pollDelay = pollDelay;
-
-            readQuery =
-                string.Format(
-                    CultureInfo.InvariantCulture,
-                    @"SELECT TOP (1) 
-                    {0}.[Id] AS [Id], 
-                    {0}.[Body] AS [Body], 
-                    {0}.[DeliveryDate] AS [DeliveryDate],
-                    {0}.[CorrelationId] AS [CorrelationId]
-                    FROM {0} WITH (UPDLOCK, READPAST)
-                    WHERE ({0}.[DeliveryDate] IS NULL) OR ({0}.[DeliveryDate] <= @CurrentDate)
-                    ORDER BY {0}.[Id] ASC",
-                    tableName);
-            deleteQuery =
-                string.Format(
-                    CultureInfo.InvariantCulture,
-                    "DELETE FROM {0} WHERE Id = @Id",
-                    tableName);
         }
 
         protected virtual void Dispose(bool disposing)
@@ -88,23 +78,27 @@ namespace Infrastructure.Sql.Messaging.Implementation
             }
         }
 
-        [SuppressMessage("Microsoft.Security", "CA2100:Review SQL queries for security vulnerabilities", Justification = "Does not contain user input.")]
         protected bool ReceiveMessage()
         {
+            var tableParameter = new SqlParameter {
+                ParameterName = "@Table",
+                Value = tableName
+            };
             using (var connection = connectionFactory.CreateConnection(name)) {
                 var currentDate = GetCurrentDate();
 
                 connection.Open();
                 using (var transaction = connection.BeginTransaction(IsolationLevel.ReadCommitted)) {
                     try {
-                        long messageId = -1;
-                        Message message = null;
+                        long messageId;
+                        Message message;
 
                         using (var command = connection.CreateCommand()) {
                             command.Transaction = transaction;
                             command.CommandType = CommandType.Text;
-                            command.CommandText = readQuery;
+                            command.CommandText = ReadQuery;
                             ((SqlCommand) command).Parameters.Add("@CurrentDate", SqlDbType.DateTime).Value = currentDate;
+                            command.Parameters.Add(tableParameter);
 
                             using (var reader = command.ExecuteReader()) {
                                 if (!reader.Read()) {
@@ -127,8 +121,9 @@ namespace Infrastructure.Sql.Messaging.Implementation
                         using (var command = connection.CreateCommand()) {
                             command.Transaction = transaction;
                             command.CommandType = CommandType.Text;
-                            command.CommandText = deleteQuery;
+                            command.CommandText = DeleteQuery;
                             ((SqlCommand) command).Parameters.Add("@Id", SqlDbType.BigInt).Value = messageId;
+                            command.Parameters.Add(tableParameter);
 
                             command.ExecuteNonQuery();
                         }

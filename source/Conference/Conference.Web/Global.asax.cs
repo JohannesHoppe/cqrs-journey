@@ -25,14 +25,9 @@ using Infrastructure.Sql.Messaging.Implementation;
 using Microsoft.WindowsAzure.Diagnostics;
 using Microsoft.WindowsAzure.ServiceRuntime;
 
+
 namespace Conference.Web.Admin
 {
-#if LOCAL
-#else
-    using Infrastructure.Azure.Messaging;
-    using Infrastructure.Azure;
-#endif
-
     public class MvcApplication : HttpApplication
     {
         public static IEventBus EventBus { get; private set; }
@@ -46,37 +41,21 @@ namespace Conference.Web.Admin
         public static void RegisterRoutes(RouteCollection routes)
         {
             routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+            routes.MapRoute("Home", "", new {
+                controller = "Home",
+                action = "Index"
+            });
 
-            routes.MapRoute(
-                "Conference.Locate",
-                "locate",
-                new {controller = "Conference", action = "Locate"}
-            );
-
-            routes.MapRoute(
-                "Conference.Create",
-                "create",
-                new {controller = "Conference", action = "Create"}
-            );
-
-            routes.MapRoute(
-                "Conference",
-                "{slug}/{accessCode}/{action}",
-                new {controller = "Conference", action = "Index"}
-            );
-
-            routes.MapRoute(
-                "Home",
-                "",
-                new {controller = "Home", action = "Index"}
-            );
+            routes.MapMvcAttributeRoutes();
+            routes.MapRoute("Conference.Locate", "locate", new {controller = "Conference", action = "Locate"});
+            routes.MapRoute("Conference.Create", "create", new {controller = "Conference", action = "Create"});
+            routes.MapRoute("Conference", "{slug}/{accessCode}/{action}", new {controller = "Conference", action = "Index"});
         }
 
         protected void Application_Start()
         {
 #if AZURESDK
-            RoleEnvironment.Changed +=
-                (s, a) => { RoleEnvironment.RequestRecycle(); };
+            RoleEnvironment.Changed += (s, a) => RoleEnvironment.RequestRecycle();
 #endif
             MaintenanceMode.RefreshIsInMaintainanceMode();
 
@@ -93,9 +72,8 @@ namespace Conference.Web.Admin
 #else
             var settings = InfrastructureSettings.Read(HttpContext.Current.Server.MapPath(@"~\bin\Settings.xml")).ServiceBus;
 
-            if (!MaintenanceMode.IsInMaintainanceMode)
-            {
-            new ServiceBusConfig(settings).Initialize();
+            if (!MaintenanceMode.IsInMaintainanceMode) {
+                new ServiceBusConfig(settings).Initialize();
             }
 
             EventBus = new EventBus(new TopicSender(settings, "conference/events"), new StandardMetadataProvider(), serializer);

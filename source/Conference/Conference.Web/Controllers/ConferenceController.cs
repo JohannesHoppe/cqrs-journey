@@ -13,6 +13,7 @@
 
 using System;
 using System.Data;
+using System.Data.Entity.Core;
 using System.Web.Mvc;
 using AutoMapper;
 using Infrastructure.Utils;
@@ -23,15 +24,13 @@ namespace Conference.Web.Admin.Controllers
     {
         private ConferenceService service;
 
-        private ConferenceService Service {
-            get { return service ?? (service = new ConferenceService(MvcApplication.EventBus)); }
-        }
+        private ConferenceService Service => service ?? (service = new ConferenceService(MvcApplication.EventBus));
 
         public ConferenceInfo Conference { get; private set; }
 
         static ConferenceController()
         {
-            Mapper.CreateMap<EditableConferenceInfo, ConferenceInfo>();
+            Mapper.Initialize(cfg => cfg.CreateMap<EditableConferenceInfo, ConferenceInfo>());
         }
 
         // TODO: Locate and Create are the ONLY methods that don't require authentication/location info.
@@ -64,18 +63,12 @@ namespace Conference.Web.Admin.Controllers
             base.OnActionExecuting(filterContext);
         }
 
-        #region Orders
-
         public ViewResult Orders()
         {
             var orders = Service.FindOrders(Conference.Id);
 
             return View(orders);
         }
-
-        #endregion
-
-        #region Conference Details
 
         public ActionResult Locate()
         {
@@ -177,10 +170,6 @@ namespace Conference.Web.Admin.Controllers
             return RedirectToAction("Index", new {slug = Conference.Slug, accessCode = Conference.AccessCode});
         }
 
-        #endregion
-
-        #region Seat Types
-
         public ViewResult Seats()
         {
             return View();
@@ -256,7 +245,5 @@ namespace Conference.Web.Admin.Controllers
         {
             Service.DeleteSeat(id);
         }
-
-        #endregion
     }
 }

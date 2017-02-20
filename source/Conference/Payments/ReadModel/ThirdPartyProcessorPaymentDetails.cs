@@ -13,6 +13,7 @@
 
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Payments.ReadModel
 {
@@ -21,13 +22,7 @@ namespace Payments.ReadModel
         [Key]
         public Guid Id { get; }
 
-        public int StateValue { get; private set; }
-
-        [NotMapped]
-        public ThirdPartyProcessorPayment.States State {
-            get { return (ThirdPartyProcessorPayment.States) StateValue; }
-            set { StateValue = (int) value; }
-        }
+        public ThirdPartyProcessorPayment.States State {get; set; }
 
         public Guid PaymentSourceId { get; }
 

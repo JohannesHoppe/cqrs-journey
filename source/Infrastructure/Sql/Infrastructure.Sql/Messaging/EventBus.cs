@@ -34,6 +34,7 @@ namespace Infrastructure.Sql.Messaging
         /// <summary>
         ///     Initializes a new instance of the <see cref="EventBus" /> class.
         /// </summary>
+        /// <param name="sender"></param>
         /// <param name="serializer">The serializer to use for the message body.</param>
         public EventBus(IMessageSender sender, ITextSerializer serializer)
         {
@@ -55,7 +56,6 @@ namespace Infrastructure.Sql.Messaging
         public void Publish(Envelope<IEvent> @event)
         {
             var message = BuildMessage(@event);
-
             sender.Send(message);
         }
 
@@ -64,8 +64,7 @@ namespace Infrastructure.Sql.Messaging
         /// </summary>
         public void Publish(IEnumerable<Envelope<IEvent>> events)
         {
-            var messages = events.Select(e => BuildMessage(e));
-
+            var messages = events.Select(BuildMessage);
             sender.Send(messages);
         }
     }

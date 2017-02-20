@@ -29,7 +29,7 @@ namespace Conference.IntegrationTests.OrderEventHandlerFixture
 
         public given_no_order()
         {
-            using (var context = new ConferenceContext(dbName)) {
+            using (var context = new ConferenceContext()) {
                 if (context.Database.Exists()) {
                     context.Database.Delete();
                 }
@@ -37,7 +37,7 @@ namespace Conference.IntegrationTests.OrderEventHandlerFixture
                 context.Database.Create();
             }
 
-            sut = new OrderEventHandler(() => new ConferenceContext(dbName));
+            sut = new OrderEventHandler(() => new ConferenceContext());
         }
 
         [Fact]
@@ -51,7 +51,7 @@ namespace Conference.IntegrationTests.OrderEventHandlerFixture
 
             sut.Handle(e);
 
-            using (var context = new ConferenceContext(dbName)) {
+            using (var context = new ConferenceContext()) {
                 var order = context.Orders.Find(e.SourceId);
 
                 Assert.NotNull(order);
@@ -60,7 +60,7 @@ namespace Conference.IntegrationTests.OrderEventHandlerFixture
 
         public void Dispose()
         {
-            using (var context = new ConferenceContext(dbName)) {
+            using (var context = new ConferenceContext()) {
                 if (context.Database.Exists()) {
                     context.Database.Delete();
                 }
@@ -82,7 +82,7 @@ namespace Conference.IntegrationTests.OrderEventHandlerFixture
                 AccessCode = "asdf"
             };
 
-            sut = new OrderEventHandler(() => new ConferenceContext(dbName));
+            sut = new OrderEventHandler(() => new ConferenceContext());
             sut.Handle(placed);
         }
 
@@ -194,7 +194,7 @@ namespace Conference.IntegrationTests.OrderEventHandlerFixture
 
         private Order FindOrder(Guid orderId)
         {
-            using (var context = new ConferenceContext(dbName)) {
+            using (var context = new ConferenceContext()) {
                 return context.Orders.Include(x => x.Seats).FirstOrDefault(x => x.Id == orderId);
             }
         }

@@ -82,13 +82,7 @@ namespace Registration
 
         public Guid ExpirationCommandId { get; set; }
 
-        public int StateValue { get; private set; }
-
-        [NotMapped]
-        public ProcessState State {
-            get { return (ProcessState) StateValue; }
-            internal set { StateValue = (int) value; }
-        }
+        public ProcessState State { get; internal set; }
 
         [ConcurrencyCheck]
         [Timestamp]

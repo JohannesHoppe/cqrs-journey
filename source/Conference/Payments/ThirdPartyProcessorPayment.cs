@@ -14,7 +14,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel.DataAnnotations;
 using Infrastructure.Database;
 using Infrastructure.Messaging;
 using Payments.Contracts.Events;
@@ -35,23 +34,14 @@ namespace Payments
         public enum States
         {
             Initiated = 0,
-
             Accepted = 1,
-
             Completed = 2,
-
             Rejected = 3
         }
 
         private readonly List<IEvent> events = new List<IEvent>();
 
-        public int StateValue { get; private set; }
-
-        [NotMapped]
-        public States State {
-            get { return (States) StateValue; }
-            internal set { StateValue = (int) value; }
-        }
+        public States State { get; internal set; }
 
         public Guid PaymentSourceId { get; }
 
@@ -105,8 +95,6 @@ namespace Payments
 
         public Guid Id { get; }
 
-        public IEnumerable<IEvent> Events {
-            get { return events; }
-        }
+        public IEnumerable<IEvent> Events => events;
     }
 }

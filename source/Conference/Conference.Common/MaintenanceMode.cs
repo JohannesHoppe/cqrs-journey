@@ -25,8 +25,7 @@ namespace Conference.Common
         public static void RefreshIsInMaintainanceMode()
         {
             var settingValue = CloudConfigurationManager.GetSetting(MaintenanceModeSettingName);
-            IsInMaintainanceMode = !string.IsNullOrEmpty(settingValue) &&
-                string.Equals(settingValue, "true", StringComparison.OrdinalIgnoreCase);
+            IsInMaintainanceMode = !string.IsNullOrEmpty(settingValue) && string.Equals(settingValue, "true", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

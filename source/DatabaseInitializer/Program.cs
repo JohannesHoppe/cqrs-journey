@@ -36,11 +36,10 @@ namespace DatabaseInitializer
             }
 
             // Use ConferenceContext as entry point for dropping and recreating DB
-            using (var context = new ConferenceContext(connectionString)) {
+            using (var context = new ConferenceContext()) {
                 if (context.Database.Exists()) {
                     context.Database.Delete();
                 }
-
                 context.Database.Create();
             }
 
