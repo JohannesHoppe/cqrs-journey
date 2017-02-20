@@ -58,11 +58,8 @@ namespace Registration
         public enum ProcessState
         {
             NotStarted = 0,
-
             AwaitingReservationConfirmation = 1,
-
             ReservationConfirmationReceived = 2,
-
             PaymentConfirmationReceived = 3
         }
 

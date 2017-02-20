@@ -18,13 +18,15 @@ using System.Web.Mvc;
 using System.Web.Routing;
 using Conference.Common;
 using Conference.Web.Utils;
+using Infrastructure;
+using Infrastructure.Azure;
+using Infrastructure.Azure.Messaging;
 using Infrastructure.Messaging;
 using Infrastructure.Serialization;
-using Infrastructure.Sql.Messaging;
 using Infrastructure.Sql.Messaging.Implementation;
 using Microsoft.WindowsAzure.Diagnostics;
 using Microsoft.WindowsAzure.ServiceRuntime;
-
+using EventBus = Infrastructure.Sql.Messaging.EventBus;
 
 namespace Conference.Web.Admin
 {
