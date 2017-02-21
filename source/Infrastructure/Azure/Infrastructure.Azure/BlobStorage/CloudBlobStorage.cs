@@ -13,11 +13,13 @@
 
 using System;
 using System.Diagnostics;
+using System.IO;
 using Infrastructure.BlobStorage;
 using Microsoft.Practices.EnterpriseLibrary.WindowsAzure.TransientFaultHandling.AzureStorage;
 using Microsoft.Practices.TransientFaultHandling;
-using Microsoft.WindowsAzure;
-using Microsoft.WindowsAzure.StorageClient;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.RetryPolicies;
 
 namespace Infrastructure.Azure.BlobStorage
 {
@@ -39,7 +41,7 @@ namespace Infrastructure.Azure.BlobStorage
             this.rootContainerName = rootContainerName;
 
             blobClient = account.CreateCloudBlobClient();
-            blobClient.RetryPolicy = RetryPolicies.NoRetry();
+            blobClient.DefaultRequestOptions.RetryPolicy = new NoRetry();
 
             readRetryPolicy = new RetryPolicy<StorageTransientErrorDetectionStrategy>(new Incremental(1, TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(1)));
             readRetryPolicy.Retrying += (s, e) => Trace.TraceWarning("An error occurred in attempt number {1} to read from blob storage: {0}", e.LastException.Message, e.CurrentRetryCount);
@@ -47,7 +49,7 @@ namespace Infrastructure.Azure.BlobStorage
             writeRetryPolicy.Retrying += (s, e) => Trace.TraceWarning("An error occurred in attempt number {1} to write to blob storage: {0}", e.LastException.Message, e.CurrentRetryCount);
 
             var containerReference = blobClient.GetContainerReference(this.rootContainerName);
-            writeRetryPolicy.ExecuteAction(() => containerReference.CreateIfNotExist());
+            writeRetryPolicy.ExecuteAction(() => containerReference.CreateIfNotExists());
         }
 
         public byte[] Find(string id)
@@ -56,14 +58,9 @@ namespace Infrastructure.Azure.BlobStorage
             var blobReference = containerReference.GetBlobReference(id);
 
             return readRetryPolicy.ExecuteAction(() => {
-                try {
-                    return blobReference.DownloadByteArray();
-                } catch (StorageClientException e) {
-                    if (e.ErrorCode == StorageErrorCode.ResourceNotFound || e.ErrorCode == StorageErrorCode.BlobNotFound || e.ErrorCode == StorageErrorCode.ContainerNotFound) {
-                        return null;
-                    }
-
-                    throw;
+                using (var stream = new MemoryStream()) {
+                    blobReference.DownloadToStream(stream);
+                    return stream.GetBuffer();
                 }
             });
         }
@@ -73,9 +70,11 @@ namespace Infrastructure.Azure.BlobStorage
             var client = account.CreateCloudBlobClient();
             var containerReference = client.GetContainerReference(rootContainerName);
 
-            var blobReference = containerReference.GetBlobReference(id);
+            var blobReference = containerReference.GetBlockBlobReference(id);
 
-            writeRetryPolicy.ExecuteAction(() => { blobReference.UploadByteArray(blob); });
+            writeRetryPolicy.ExecuteAction(() => {
+                blobReference.UploadFromByteArray(blob, 0, blob.Length);
+            });
         }
 
         public void Delete(string id)
@@ -85,13 +84,7 @@ namespace Infrastructure.Azure.BlobStorage
             var blobReference = containerReference.GetBlobReference(id);
 
             writeRetryPolicy.ExecuteAction(() => {
-                try {
-                    blobReference.DeleteIfExists();
-                } catch (StorageClientException e) {
-                    if (e.ErrorCode != StorageErrorCode.ResourceNotFound) {
-                        throw;
-                    }
-                }
+                blobReference.DeleteIfExists();
             });
         }
     }

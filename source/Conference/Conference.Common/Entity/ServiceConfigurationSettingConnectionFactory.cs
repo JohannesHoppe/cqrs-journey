@@ -16,7 +16,7 @@ using System.Configuration;
 using System.Data.Common;
 using System.Data.Entity.Infrastructure;
 using System.Linq;
-using Microsoft.WindowsAzure;
+using Microsoft.Azure;
 
 namespace Conference.Common.Entity
 {

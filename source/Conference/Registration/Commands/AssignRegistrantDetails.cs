@@ -22,13 +22,13 @@ namespace Registration.Commands
     {
         public Guid OrderId { get; set; }
 
-        [Required(AllowEmptyStrings = false)]
+        [Required]
         public string FirstName { get; set; }
 
-        [Required(AllowEmptyStrings = false)]
+        [Required]
         public string LastName { get; set; }
 
-        [Required(AllowEmptyStrings = false)]
+        [Required]
         [RegularExpression(@"[\w-]+(\.?[\w-])*\@[\w-]+(\.[\w-]+)+", ErrorMessageResourceType = typeof(Resources), ErrorMessageResourceName = "InvalidEmail")]
         public string Email { get; set; }
 

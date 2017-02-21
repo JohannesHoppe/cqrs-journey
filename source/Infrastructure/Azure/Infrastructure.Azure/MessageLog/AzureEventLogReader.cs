@@ -17,8 +17,9 @@ using System.Linq;
 using Infrastructure.MessageLog;
 using Infrastructure.Messaging;
 using Infrastructure.Serialization;
-using Microsoft.WindowsAzure;
-using Microsoft.WindowsAzure.StorageClient;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Table;
+using Microsoft.WindowsAzure.Storage.Table.Queryable;
 
 namespace Infrastructure.Azure.MessageLog
 {
@@ -35,16 +36,16 @@ namespace Infrastructure.Azure.MessageLog
         public AzureEventLogReader(CloudStorageAccount account, string tableName, ITextSerializer serializer)
         {
             if (account == null) {
-                throw new ArgumentNullException("account");
+                throw new ArgumentNullException(nameof(account));
             }
             if (tableName == null) {
-                throw new ArgumentNullException("tableName");
+                throw new ArgumentNullException(nameof(tableName));
             }
             if (string.IsNullOrWhiteSpace(tableName)) {
                 throw new ArgumentException("tableName");
             }
             if (serializer == null) {
-                throw new ArgumentNullException("serializer");
+                throw new ArgumentNullException(nameof(serializer));
             }
 
             this.account = account;
@@ -58,7 +59,7 @@ namespace Infrastructure.Azure.MessageLog
         // expose events.
         public IEnumerable<IEvent> Query(QueryCriteria criteria)
         {
-            var context = tableClient.GetDataServiceContext();
+            var context = tableClient.GetTableServiceContext();
             var query = context.CreateQuery<MessageLogEntity>(tableName)
                 .Where(x => x.Kind == StandardMetadata.EventKind);
 
@@ -68,7 +69,7 @@ namespace Infrastructure.Azure.MessageLog
             }
 
             return query
-                .AsTableServiceQuery()
+                .AsTableQuery()
                 .Execute()
                 .Select(e => serializer.Deserialize<IEvent>(e.Payload));
         }

@@ -40,8 +40,10 @@ namespace Registration.Handlers
 
         static SeatAssignmentsViewModelGenerator()
         {
-            Mapper.CreateMap<SeatAssigned, OrderSeat>();
-            Mapper.CreateMap<SeatAssignmentUpdated, OrderSeat>();
+            Mapper.Initialize(cfg => {
+                cfg.CreateMap<SeatAssigned, OrderSeat>();
+                cfg.CreateMap<SeatAssignmentUpdated, OrderSeat>();
+            });
         }
 
         public SeatAssignmentsViewModelGenerator(

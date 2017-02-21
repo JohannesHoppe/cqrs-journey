@@ -30,6 +30,7 @@ using Infrastructure.Messaging.Handling;
 using Infrastructure.Serialization;
 using Microsoft.Practices.Unity;
 using Microsoft.WindowsAzure;
+using Microsoft.WindowsAzure.Storage;
 using Registration;
 using Registration.Handlers;
 using Order = Registration.Order;
@@ -75,14 +76,8 @@ namespace WorkerRoleCommandProcessor
             container.RegisterInstance<IMessageSender>("seatsavailability", new TopicSender(azureSettings.ServiceBus, Topics.EventsAvailability.Path));
             var eventBus = new EventBus(eventsTopicSender, metadata, serializer);
 
-            var sessionlessCommandProcessor =
-                new CommandProcessor(
-                    new SubscriptionReceiver(azureSettings.ServiceBus, Topics.Commands.Path, Topics.Commands.Subscriptions.Sessionless, false,
-                        new SubscriptionReceiverInstrumentation(Topics.Commands.Subscriptions.Sessionless, instrumentationEnabled)), serializer);
-            var seatsAvailabilityCommandProcessor =
-                new CommandProcessor(
-                    new SessionSubscriptionReceiver(azureSettings.ServiceBus, Topics.Commands.Path, Topics.Commands.Subscriptions.Seatsavailability, false,
-                        new SessionSubscriptionReceiverInstrumentation(Topics.Commands.Subscriptions.Seatsavailability, instrumentationEnabled)), serializer);
+            var sessionlessCommandProcessor = new CommandProcessor(new SubscriptionReceiver(azureSettings.ServiceBus, Topics.Commands.Path, Topics.Commands.Subscriptions.Sessionless, false), serializer);
+            var seatsAvailabilityCommandProcessor = new CommandProcessor(new SubscriptionReceiver(azureSettings.ServiceBus, Topics.Commands.Path, Topics.Commands.Subscriptions.Seatsavailability, false), serializer);
 
             var synchronousCommandBus = new SynchronousCommandBusDecorator(commandBus);
             container.RegisterInstance<ICommandBus>(synchronousCommandBus);

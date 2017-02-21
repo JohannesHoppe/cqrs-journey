@@ -35,7 +35,10 @@ namespace Infrastructure.Azure.Messaging
 
         public static MessageReleaseAction DeadLetterMessage(string reason, string description)
         {
-            return new MessageReleaseAction(MessageReleaseActionKind.DeadLetter) {DeadLetterReason = reason, DeadLetterDescription = description};
+            return new MessageReleaseAction(MessageReleaseActionKind.DeadLetter) {
+                DeadLetterReason = reason,
+                DeadLetterDescription = description
+            };
         }
     }
 

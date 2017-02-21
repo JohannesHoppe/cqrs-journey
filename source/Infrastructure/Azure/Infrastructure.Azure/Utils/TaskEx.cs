@@ -31,7 +31,7 @@ namespace Infrastructure.Azure.Utils
         public static Task Delay(int dueTime)
         {
             if (dueTime <= 0) {
-                throw new ArgumentOutOfRangeException("dueTime");
+                throw new ArgumentOutOfRangeException(nameof(dueTime));
             }
 
             var tcs = new TaskCompletionSource<bool>();

@@ -19,6 +19,7 @@ using Microsoft.Practices.EnterpriseLibrary.WindowsAzure.TransientFaultHandling.
 using Microsoft.Practices.TransientFaultHandling;
 using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
+using RetryPolicy = Microsoft.Practices.TransientFaultHandling.RetryPolicy;
 
 namespace Infrastructure.Azure.Messaging
 {

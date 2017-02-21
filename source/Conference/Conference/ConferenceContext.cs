@@ -1,4 +1,5 @@
 ﻿using System.Data.Entity;
+using System.Diagnostics;
 
 namespace Conference
 {
@@ -7,13 +8,13 @@ namespace Conference
     /// </summary>
     public class ConferenceContext : DbContext
     {
-        public const string SchemaName = "ConferenceManagement";
+        public static readonly string SchemaName = "ConferenceManagement";
 
-        public virtual DbSet<ConferenceInfo> Conferences { get; set; }
+        public virtual IDbSet<ConferenceInfo> Conferences { get; set; }
 
-        public virtual DbSet<SeatType> Seats { get; set; }
-
-        public virtual DbSet<Order> Orders { get; set; }
+        public virtual IDbSet<SeatType> Seats { get; set; }
+        
+        public virtual IDbSet<Order> Orders { get; set; }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {

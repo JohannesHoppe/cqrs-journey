@@ -51,12 +51,7 @@ namespace Infrastructure.Azure
         /// <param name="workFailedPenaltyAmount">Number of degrees of parallelism to remove when work fails.</param>
         /// <param name="workCompletedParallelismGain">Number of degrees of parallelism to restore on work completed.</param>
         /// <param name="intervalForRestoringDegreeOfParallelism">Interval in milliseconds to restore 1 degree of parallelism.</param>
-        public DynamicThrottling(
-            int maxDegreeOfParallelism,
-            int minDegreeOfParallelism,
-            int penaltyAmount,
-            int workFailedPenaltyAmount,
-            int workCompletedParallelismGain,
+        public DynamicThrottling(int maxDegreeOfParallelism, int minDegreeOfParallelism, int penaltyAmount, int workFailedPenaltyAmount, int workCompletedParallelismGain,
             int intervalForRestoringDegreeOfParallelism)
         {
             this.maxDegreeOfParallelism = maxDegreeOfParallelism;

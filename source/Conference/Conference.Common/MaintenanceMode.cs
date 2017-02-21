@@ -12,6 +12,7 @@
 // ==============================================================================================================
 
 using System;
+using Microsoft.Azure;
 using Microsoft.WindowsAzure;
 
 namespace Conference.Common

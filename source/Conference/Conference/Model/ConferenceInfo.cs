@@ -9,36 +9,6 @@ using Infrastructure.Utils;
 namespace Conference
 {
     /// <summary>
-    ///     Editable information about a conference.
-    /// </summary>
-    public class EditableConferenceInfo
-    {
-        [Required(AllowEmptyStrings = false)]
-        public string Name { get; set; }
-
-        [Required(AllowEmptyStrings = false)]
-        public string Description { get; set; }
-
-        [Required(AllowEmptyStrings = false)]
-        public string Location { get; set; }
-
-        public string Tagline { get; set; }
-
-        public string TwitterSearch { get; set; }
-
-        [DisplayFormat(ApplyFormatInEditMode = true, DataFormatString = "{0:yyyy/MM/dd}")]
-        [Display(Name = "Start")]
-        public DateTime StartDate { get; set; }
-
-        [DisplayFormat(ApplyFormatInEditMode = true, DataFormatString = "{0:yyyy/MM/dd}")]
-        [Display(Name = "End")]
-        public DateTime EndDate { get; set; }
-
-        [Display(Name = "Is Published?")]
-        public bool IsPublished { get; set; }
-    }
-
-    /// <summary>
     ///     The full conference information.
     /// </summary>
     /// <remarks>
@@ -54,15 +24,15 @@ namespace Conference
         public string AccessCode { get; set; }
 
         [Display(Name = "Owner")]
-        [Required(AllowEmptyStrings = false)]
+        [Required]
         public string OwnerName { get; set; }
 
         [Display(Name = "Email")]
-        [Required(AllowEmptyStrings = false)]
+        [Required]
         [EmailAddress(ErrorMessageResourceType = typeof(Resources), ErrorMessageResourceName = "InvalidEmail")]
         public string OwnerEmail { get; set; }
 
-        [Required(AllowEmptyStrings = false)]
+        [Required]
         [RegularExpression(@"^\w+$", ErrorMessageResourceType = typeof(Resources), ErrorMessageResourceName = "InvalidSlug")]
         public string Slug { get; set; }
 

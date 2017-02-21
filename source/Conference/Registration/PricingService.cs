@@ -27,7 +27,7 @@ namespace Registration
         public PricingService(IConferenceDao conferenceDao)
         {
             if (conferenceDao == null) {
-                throw new ArgumentNullException("conferenceDao");
+                throw new ArgumentNullException(nameof(conferenceDao));
             }
 
             this.conferenceDao = conferenceDao;

@@ -50,7 +50,7 @@ namespace Infrastructure
             StreamingContext context) : base(info, context)
         {
             if (info == null) {
-                throw new ArgumentNullException("info");
+                throw new ArgumentNullException(nameof(info));
             }
 
             EntityId = Guid.Parse(info.GetString("entityId"));

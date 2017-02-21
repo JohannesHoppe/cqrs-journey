@@ -115,7 +115,7 @@ namespace Registration
         {
             var wantedList = wantedSeats.ToList();
             if (wantedList.Any(x => !remainingSeats.ContainsKey(x.SeatType))) {
-                throw new ArgumentOutOfRangeException("wantedSeats");
+                throw new ArgumentOutOfRangeException(nameof(wantedSeats));
             }
 
             var difference = new Dictionary<Guid, SeatDifference>();

@@ -34,7 +34,7 @@ namespace Registration.Handlers
             // Mapping old version of the OrderPaymentConfirmed event to the new version.
             // Currently it is being done explicitly by the consumer, but this one in particular could be done
             // at the deserialization level, as it is just a rename, not a functionality change.
-            Mapper.CreateMap<OrderPaymentConfirmed, OrderConfirmed>();
+            Mapper.Initialize(cfg => cfg.CreateMap<OrderPaymentConfirmed, OrderConfirmed>());
         }
 
         public SeatAssignmentsHandler(IEventSourcedRepository<Order> ordersRepo, IEventSourcedRepository<SeatAssignments> assignmentsRepo)

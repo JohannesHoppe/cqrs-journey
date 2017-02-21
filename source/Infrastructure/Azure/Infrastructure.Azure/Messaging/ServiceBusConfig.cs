@@ -16,7 +16,6 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
-using Infrastructure.Azure.Instrumentation;
 using Infrastructure.Azure.Messaging.Handling;
 using Infrastructure.Messaging.Handling;
 using Infrastructure.Serialization;
@@ -95,32 +94,12 @@ namespace Infrastructure.Azure.Messaging
                         "Subscription '{0}' has not been registered for an event bus topic in the service bus configuration.",
                         subscription));
             }
-
-            IMessageReceiver receiver;
-
-            if (subscriptionSettings.RequiresSession) {
-                var instrumentation = new SessionSubscriptionReceiverInstrumentation(subscription, instrumentationEnabled);
-                try {
-                    receiver = new SessionSubscriptionReceiver(settings, topicSettings.Path, subscription, true, instrumentation);
-                } catch {
-                    instrumentation.Dispose();
-                    throw;
-                }
-            } else {
-                var instrumentation = new SubscriptionReceiverInstrumentation(subscription, instrumentationEnabled);
-                try {
-                    receiver = new SubscriptionReceiver(settings, topicSettings.Path, subscription, true, instrumentation);
-                } catch {
-                    instrumentation.Dispose();
-                    throw;
-                }
-            }
-
+            var receiver = new SubscriptionReceiver(settings, topicSettings.Path, subscription, true);
             EventProcessor processor;
             try {
                 processor = new EventProcessor(receiver, serializer);
             } catch {
-                using (receiver as IDisposable) { }
+                using (receiver) { }
                 throw;
             }
 

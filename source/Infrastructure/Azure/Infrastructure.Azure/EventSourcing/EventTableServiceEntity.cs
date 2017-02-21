@@ -11,7 +11,9 @@
 // See the License for the specific language governing permissions and limitations under the License.
 // ==============================================================================================================
 
-using Microsoft.WindowsAzure.StorageClient;
+using System;
+using System.Data.Services.Common;
+using Microsoft.WindowsAzure.Storage.Table;
 
 namespace Infrastructure.Azure.EventSourcing
 {
@@ -41,7 +43,7 @@ namespace Infrastructure.Azure.EventSourcing
         string TypeName { get; }
     }
 
-    public class EventTableServiceEntity : TableServiceEntity, IEventRecord
+    public class EventTableServiceEntity : TableEntity, IEventRecord
     {
         public string SourceId { get; set; }
 

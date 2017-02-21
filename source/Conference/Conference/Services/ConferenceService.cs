@@ -26,13 +26,8 @@ namespace Conference
         public void CreateConference(ConferenceInfo conference)
         {
             using (var context = new ConferenceContext()) {
-                var existingSlug =
-                    context.Conferences
-                        .Where(c => c.Slug == conference.Slug)
-                        .Select(c => c.Slug)
-                        .Any();
-
-                if (existingSlug) {
+                var slugExists = context.Conferences.Any(c => c.Slug == conference.Slug);
+                if (slugExists) {
                     throw new DuplicateNameException("The chosen conference slug is already taken.");
                 }
 
@@ -196,7 +191,8 @@ namespace Conference
             using (var context = new ConferenceContext()) {
                 var seat = context.Seats.Find(id);
                 if (seat == null) {
-                    throw new ObjectNotFoundException();
+                    throw new Exception();
+//                    throw new ObjectNotFoundException();
                 }
 
                 var wasPublished = context.Conferences

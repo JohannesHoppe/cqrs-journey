@@ -22,8 +22,10 @@ using System.Threading;
 using AutoMapper;
 using Microsoft.Practices.EnterpriseLibrary.WindowsAzure.TransientFaultHandling.AzureStorage;
 using Microsoft.Practices.TransientFaultHandling;
-using Microsoft.WindowsAzure;
-using Microsoft.WindowsAzure.StorageClient;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.RetryPolicies;
+using Microsoft.WindowsAzure.Storage.Table;
+using Microsoft.WindowsAzure.Storage.Table.Queryable;
 using RetryPolicy = Microsoft.Practices.TransientFaultHandling.RetryPolicy;
 
 namespace Infrastructure.Azure.EventSourcing
@@ -63,17 +65,19 @@ namespace Infrastructure.Azure.EventSourcing
 
         static EventStore()
         {
-            Mapper.CreateMap<EventTableServiceEntity, EventData>();
-            Mapper.CreateMap<EventData, EventTableServiceEntity>();
+            Mapper.Initialize(cfg => {
+                cfg.CreateMap<EventTableServiceEntity, EventData>();
+                cfg.CreateMap<EventData, EventTableServiceEntity>();
+            });
         }
 
         public EventStore(CloudStorageAccount account, string tableName)
         {
             if (account == null) {
-                throw new ArgumentNullException("account");
+                throw new ArgumentNullException(nameof(account));
             }
             if (tableName == null) {
-                throw new ArgumentNullException("tableName");
+                throw new ArgumentNullException(nameof(tableName));
             }
             if (string.IsNullOrWhiteSpace(tableName)) {
                 throw new ArgumentException("tableName");
@@ -82,7 +86,7 @@ namespace Infrastructure.Azure.EventSourcing
             this.account = account;
             this.tableName = tableName;
             tableClient = account.CreateCloudTableClient();
-            tableClient.RetryPolicy = RetryPolicies.NoRetry();
+            tableClient.DefaultRequestOptions.RetryPolicy = new NoRetry();
 
             // TODO: This could be injected.
             var backgroundRetryStrategy = new ExponentialBackoff(10, TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(1));
@@ -102,19 +106,17 @@ namespace Infrastructure.Azure.EventSourcing
                 e.LastException.Message,
                 e.CurrentRetryCount);
 
-            eventStoreRetryPolicy.ExecuteAction(() => tableClient.CreateTableIfNotExist(tableName));
+            var tableReference = eventStoreRetryPolicy.ExecuteAction(() => tableClient.GetTableReference(tableName));
+            eventStoreRetryPolicy.ExecuteAction(() => tableReference.CreateIfNotExists());
         }
 
-        private CloudTableQuery<EventTableServiceEntity> GetEntitiesQuery(string partitionKey, string minRowKey, string maxRowKey)
+        private TableQuery<EventTableServiceEntity> GetEntitiesQuery(string partitionKey, string minRowKey, string maxRowKey)
         {
-            var context = tableClient.GetDataServiceContext();
-            var query = context
-                .CreateQuery<EventTableServiceEntity>(tableName)
-                .Where(
-                    x =>
-                        x.PartitionKey == partitionKey && x.RowKey.CompareTo(minRowKey) >= 0 && x.RowKey.CompareTo(maxRowKey) <= 0);
+            var tableReference = tableClient.GetTableReference(tableName);
+            var query = tableReference.CreateQuery<EventTableServiceEntity>()
+                .Where(x => x.PartitionKey == partitionKey && x.RowKey.CompareTo(minRowKey) >= 0 && x.RowKey.CompareTo(maxRowKey) <= 0);
 
-            return query.AsTableServiceQuery();
+            return query.AsTableQuery();
         }
 
         public IEnumerable<EventData> Load(string partitionKey, int version)
@@ -128,38 +130,26 @@ namespace Infrastructure.Azure.EventSourcing
 
         public void Save(string partitionKey, IEnumerable<EventData> events)
         {
-            var context = tableClient.GetDataServiceContext();
+            var tableReference = tableClient.GetTableReference(tableName);
+            var batchOperation = new TableBatchOperation();
             foreach (var eventData in events) {
                 var creationDate = DateTime.UtcNow.ToString("o");
                 var formattedVersion = eventData.Version.ToString("D10");
-                context.AddObject(
-                    tableName,
-                    Mapper.Map(eventData, new EventTableServiceEntity {
-                        PartitionKey = partitionKey,
-                        RowKey = formattedVersion,
-                        CreationDate = creationDate
-                    }));
+                batchOperation.Insert(Mapper.Map(eventData, new EventTableServiceEntity {
+                    PartitionKey = partitionKey,
+                    RowKey = formattedVersion,
+                    CreationDate = creationDate
+                }));
 
                 // Add a duplicate of this event to the Unpublished "queue"
-                context.AddObject(
-                    tableName,
-                    Mapper.Map(eventData, new EventTableServiceEntity {
-                        PartitionKey = partitionKey,
-                        RowKey = UnpublishedRowKeyPrefix + formattedVersion,
-                        CreationDate = creationDate
-                    }));
+                batchOperation.Insert(Mapper.Map(eventData, new EventTableServiceEntity {
+                    PartitionKey = partitionKey,
+                    RowKey = UnpublishedRowKeyPrefix + formattedVersion,
+                    CreationDate = creationDate
+                }));
             }
 
-            try {
-                eventStoreRetryPolicy.ExecuteAction(() => context.SaveChanges(SaveChangesOptions.Batch));
-            } catch (DataServiceRequestException ex) {
-                var inner = ex.InnerException as DataServiceClientException;
-                if (inner != null && inner.StatusCode == (int) HttpStatusCode.Conflict) {
-                    throw new ConcurrencyException();
-                }
-
-                throw;
-            }
+            eventStoreRetryPolicy.ExecuteAction(() => tableReference.ExecuteBatch(batchOperation));
         }
 
         /// <summary>
@@ -180,15 +170,18 @@ namespace Infrastructure.Azure.EventSourcing
         public void GetPendingAsync(string partitionKey, Action<IEnumerable<IEventRecord>, bool> successCallback, Action<Exception> exceptionCallback)
         {
             var query = GetEntitiesQuery(partitionKey, UnpublishedRowKeyPrefix, UnpublishedRowKeyPrefixUpperLimit);
-            pendingEventsQueueRetryPolicy
-                .ExecuteAction(
-                    ac => query.BeginExecuteSegmented(ac, null),
-                    ar => query.EndExecuteSegmented(ar),
-                    rs => {
-                        var all = rs.Results.ToList();
-                        successCallback(rs.Results, rs.HasMoreResults);
-                    },
-                    exceptionCallback);
+            try {
+                var results = new List<IEventRecord>();
+                TableContinuationToken continuationToken = null;
+                do {
+                    var rs = query.ExecuteSegmented(continuationToken);
+                    results.AddRange(rs.Results);
+                    continuationToken = rs.ContinuationToken;
+                } while (continuationToken == null);
+                successCallback(results, false);
+            } catch(Exception e) {
+                exceptionCallback(e);
+            }
         }
 
         /// <summary>
@@ -203,7 +196,7 @@ namespace Infrastructure.Azure.EventSourcing
         /// <param name="exceptionCallback">The callback used if there is an exception that does not allow to continue.</param>
         public void DeletePendingAsync(string partitionKey, string rowKey, Action<bool> successCallback, Action<Exception> exceptionCallback)
         {
-            var context = tableClient.GetDataServiceContext();
+            var context = tableClient.GetTableServiceContext();
             var item = new EventTableServiceEntity {PartitionKey = partitionKey, RowKey = rowKey};
             context.AttachTo(tableName, item, "*");
             context.DeleteObject(item);
@@ -234,15 +227,12 @@ namespace Infrastructure.Azure.EventSourcing
         /// <returns>The list of all partitions.</returns>
         public IEnumerable<string> GetPartitionsWithPendingEvents()
         {
-            var context = tableClient.GetDataServiceContext();
+            var context = tableClient.GetTableServiceContext();
             var query = context
                 .CreateQuery<EventTableServiceEntity>(tableName)
-                .Where(
-                    x =>
-                        x.RowKey.CompareTo(UnpublishedRowKeyPrefix) >= 0 &&
-                        x.RowKey.CompareTo(UnpublishedRowKeyPrefixUpperLimit) <= 0)
+                .Where(x => x.RowKey.CompareTo(UnpublishedRowKeyPrefix) >= 0 && x.RowKey.CompareTo(UnpublishedRowKeyPrefixUpperLimit) <= 0)
                 .Select(x => new {x.PartitionKey})
-                .AsTableServiceQuery();
+                .AsTableQuery();
 
             var result = new BlockingCollection<string>();
             var tokenSource = new CancellationTokenSource();

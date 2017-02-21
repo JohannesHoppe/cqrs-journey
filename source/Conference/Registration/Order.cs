@@ -59,7 +59,7 @@ namespace Registration
         /// </summary>
         static Order()
         {
-            Mapper.CreateMap<OrderPaymentConfirmed, OrderConfirmed>();
+            Mapper.Initialize(cfg => cfg.CreateMap<OrderPaymentConfirmed, OrderConfirmed>());
         }
 
         protected Order(Guid id)

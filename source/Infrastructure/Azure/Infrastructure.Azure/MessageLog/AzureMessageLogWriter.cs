@@ -16,9 +16,9 @@ using System.Data.Services.Client;
 using System.Net;
 using Microsoft.Practices.EnterpriseLibrary.WindowsAzure.TransientFaultHandling.AzureStorage;
 using Microsoft.Practices.TransientFaultHandling;
-using Microsoft.WindowsAzure;
-using Microsoft.WindowsAzure.StorageClient;
-using RetryPolicy = Microsoft.Practices.TransientFaultHandling.RetryPolicy;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.RetryPolicies;
+using Microsoft.WindowsAzure.Storage.Table;
 
 namespace Infrastructure.Azure.MessageLog
 {
@@ -35,10 +35,10 @@ namespace Infrastructure.Azure.MessageLog
         public AzureMessageLogWriter(CloudStorageAccount account, string tableName)
         {
             if (account == null) {
-                throw new ArgumentNullException("account");
+                throw new ArgumentNullException(nameof(account));
             }
             if (tableName == null) {
-                throw new ArgumentNullException("tableName");
+                throw new ArgumentNullException(nameof(tableName));
             }
             if (string.IsNullOrWhiteSpace(tableName)) {
                 throw new ArgumentException("tableName");
@@ -47,18 +47,19 @@ namespace Infrastructure.Azure.MessageLog
             this.account = account;
             this.tableName = tableName;
             tableClient = account.CreateCloudTableClient();
-            tableClient.RetryPolicy = RetryPolicies.NoRetry();
+            tableClient.DefaultRequestOptions.RetryPolicy = new NoRetry();
 
             var retryStrategy = new ExponentialBackoff(10, TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(1));
             retryPolicy = new RetryPolicy<StorageTransientErrorDetectionStrategy>(retryStrategy);
 
-            retryPolicy.ExecuteAction(() => tableClient.CreateTableIfNotExist(tableName));
+            var tableReference = retryPolicy.ExecuteAction(() => tableClient.GetTableReference(tableName));
+            retryPolicy.ExecuteAction(() => tableReference.CreateIfNotExistsAsync());
         }
 
         public void Save(MessageLogEntity entity)
         {
             retryPolicy.ExecuteAction(() => {
-                var context = tableClient.GetDataServiceContext();
+                var context = tableClient.GetTableServiceContext();
 
                 context.AddObject(tableName, entity);
 

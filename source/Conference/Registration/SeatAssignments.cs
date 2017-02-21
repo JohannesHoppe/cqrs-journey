@@ -38,9 +38,11 @@ namespace Registration
 
         static SeatAssignments()
         {
-            Mapper.CreateMap<SeatAssigned, SeatAssignment>();
-            Mapper.CreateMap<SeatUnassigned, SeatAssignment>();
-            Mapper.CreateMap<SeatAssignmentUpdated, SeatAssignment>();
+            Mapper.Initialize(cfg => {
+                cfg.CreateMap<SeatAssigned, SeatAssignment>();
+                cfg.CreateMap<SeatUnassigned, SeatAssignment>();
+                cfg.CreateMap<SeatAssignmentUpdated, SeatAssignment>();
+            });
         }
 
         /// <summary>
@@ -87,7 +89,7 @@ namespace Registration
 
             SeatAssignment current;
             if (!seats.TryGetValue(position, out current)) {
-                throw new ArgumentOutOfRangeException("position");
+                throw new ArgumentOutOfRangeException(nameof(position));
             }
 
             if (!attendee.Email.Equals(current.Attendee.Email, StringComparison.InvariantCultureIgnoreCase)) {
@@ -113,7 +115,7 @@ namespace Registration
         {
             SeatAssignment current;
             if (!seats.TryGetValue(position, out current)) {
-                throw new ArgumentOutOfRangeException("position");
+                throw new ArgumentOutOfRangeException(nameof(position));
             }
 
             if (current.Attendee.Email != null) {
